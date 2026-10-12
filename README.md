@@ -12,8 +12,6 @@ Momentum is an EXP and merit tracking bar for Phoenix on Ashita v4, by Kipling. 
 
 For an update, enter `/addon unload momentum` first, replace the addon files, then enter `/addon load momentum`. Leave `config/addons/momentum/` alone. That separate folder holds your settings, profiles, session history, and custom sounds. Back it up if you want a copy of your setup. The release ZIP contains only the addon; developer tools and the optional server companion are separate.
 
-The `momentum-1.0.0-no-sounds.zip` option leaves out the two bundled sound files. All tracking and visual alerts work the same. You can add your own `.mp3` or `.wav` files under `config/addons/momentum/sounds/`.
-
 ## Set up your bar
 
 Open **Display** and choose a **Starter layout**: Minimal, Leveling, or Merits. The Merits layout shows LP/HR, stored merit points, LP needed, and time to the next merit point. The optional **Automatically switch EXP / Merits layouts** follows your character's earning mode, including LP overflow at a full level-75 EXP buffer. It starts off and never changes the game's EXP/LP setting.

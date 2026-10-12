@@ -12,8 +12,6 @@ If updating a running copy, enter `/addon unload momentum` first. Extract the `m
 
 Keep `config/addons/momentum/` when updating. Settings, profiles, shared layouts, session history, and custom sounds live there, separate from the addon files. Copy that folder somewhere safe to back up your setup. Updating the addon does not require resetting settings or deleting old sessions.
 
-The archive named `momentum-1.0.0-no-sounds.zip` leaves out the two bundled sound files. Tracking and visual alerts are unchanged. To use sounds with that archive, add your own `.mp3` or `.wav` files as described under Food notification. If changing from a full install to one without bundled sounds, unload Momentum and replace only `addons/momentum/` with the new folder so the old sound files are not left behind; keep `config/addons/momentum/`.
-
 ## Arrange the readouts
 
 Open **Display** and drag a readout's handle to another position, or select it and use **Up**, **Down**, **First**, or **Last**. The checkboxes control visibility. Hidden readouts keep their place in the order.
@@ -152,7 +150,7 @@ All new events start off. Initial state, reloads, zoning, death, stale reports, 
 
 Open **Alerts**, expand **Food**, and check **Play sound** under **Food effect wore off**. This is off by default. Choose a sound from the list, set the volume, and use **Play** to try it. The Play button works while the alert is off. **Food effect ending soon** is a separate alert in the same group, based on the time left on your food effect.
 
-The full archive includes **FF VII Save.mp3** and **FF IX Moogle.mp3**. The no-sounds archive omits them. To use your own sound, put an `.mp3` or `.wav` file in `config/addons/momentum/sounds/` and click **Refresh**, then select it for the alert. A bundled sound takes priority over a custom file with the same name. The bundled Square Enix sound assets are not covered by the addon's GPL license.
+The archive includes **FF VII Save.mp3** and **FF IX Moogle.mp3**. To use your own sound, put an `.mp3` or `.wav` file in `config/addons/momentum/sounds/` and click **Refresh**, then select it for the alert. A bundled sound takes priority over a custom file with the same name. The bundled Square Enix sound assets are not covered by the addon's GPL license.
 
 The notification plays once after the server reports that your active food ended. Food removal with a status message can also trigger it, so it does not prove the food expired naturally. Ordinary death, loading, zoning, turning the option on, and simply losing an icon stay quiet. A missed or stale message does not produce a delayed alert.
 

@@ -60,16 +60,13 @@ The default output is the user's Downloads folder. The archive is named
 momentum-<version>.zip using addon.version in momentum/momentum.lua. A successful
 build prints its file count and SHA-256.
 
-  python tools/build_release.py --no-sounds
   python tools/build_release.py --out dist
 
---no-sounds writes momentum-<version>-no-sounds.zip, omitting only the two bundled
-MP3s. It retains the sound notice and supports user-supplied sounds. --out chooses a
-different output directory for CI or a local build. Output must stay outside the
-runtime addon folder.
+--out chooses a different output directory for CI or a local build. Output must
+stay outside the runtime addon folder.
 
 The builder permits only the reviewed runtime manifest, LICENSE, the sound notice,
-and the bundled sounds when requested. It rejects unknown or linked files, missing
+and the bundled sounds. It rejects unknown or linked files, missing
 files, private-path or credential markers, and sound files with changed hashes.
 Text line endings, ZIP timestamps, file modes, and entry order are normalized.
 Identical reviewed input produces the same archive in the same build environment.
@@ -98,7 +95,7 @@ outside tracked source, or remove it after review.
 
 .github/workflows/verify.yml runs on pull requests, manual requests, or a call from
 another workflow. .github/workflows/draft-release.yml runs only when a maintainer
-requests it manually. It verifies on Windows first, builds the full runtime archive
+requests it manually. It verifies on Windows first, builds the runtime archive
 on Ubuntu, attaches a SHA-256 file, and creates a draft. It refuses an existing
 release or version tag so an archive cannot be attached to different source.
 It does not run from a version edit, a tag, or a schedule, and it never publishes.

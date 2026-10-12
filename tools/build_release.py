@@ -75,13 +75,11 @@ def addon_files(addon=ADDON):
     return [(addon / name, 'momentum/' + name) for name in sorted(found)]
 
 
-def build(out, addon=ADDON, license_path=LICENSE, include_sounds=True):
+def build(out, addon=ADDON, license_path=LICENSE):
     addon, out = Path(addon), Path(out)
     if out.resolve().is_relative_to(addon.resolve()):
         raise RuntimeError('Write the release archive outside the addon folder.')
     sources = [(Path(license_path), 'momentum/LICENSE')] + addon_files(addon)
-    if not include_sounds:
-        sources = [(path, name) for path, name in sources if name.removeprefix('momentum/') not in SOUNDS]
     version = addon_version(addon)
     contents = [(name, checked_bytes(path, name)) for path, name in sources]
     for name in ('README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'docs/GUIDE.md', 'docs/RELEASING.md'):
@@ -89,7 +87,7 @@ def build(out, addon=ADDON, license_path=LICENSE, include_sounds=True):
         if path.exists():
             checked_bytes(path, name)
     out.mkdir(parents=True, exist_ok=True)
-    path = out / ('momentum-%s%s.zip' % (version, '' if include_sounds else '-no-sounds'))
+    path = out / ('momentum-%s.zip' % version)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(prefix='.momentum-', suffix='.zip', dir=out, delete=False) as handle:
@@ -114,10 +112,9 @@ def build(out, addon=ADDON, license_path=LICENSE, include_sounds=True):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, default=Path.home() / 'Downloads')
-    parser.add_argument('--no-sounds', action='store_true', help='Leave the bundled MP3s out of a separate no-sounds archive.')
     parser.add_argument('--server', action='store_true', help='Also build the optional Phoenix server companion.')
     args = parser.parse_args()
-    path, count, digest = build(args.out, include_sounds=not args.no_sounds)
+    path, count, digest = build(args.out)
     print('Wrote %s with %d files.' % (path, count))
     print('SHA-256 ' + digest)
     if args.server:

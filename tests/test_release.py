@@ -39,26 +39,14 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Unexpected'):
             release.addon_files(self.addon)
 
-    def test_no_sounds_archive_keeps_code_and_full_archive(self):
-        full, _, full_digest = release.build(self.folder / 'out', self.addon)
-        quiet, count, _ = release.build(self.folder / 'out', self.addon, include_sounds=False)
-        self.assertEqual(quiet.name, full.stem + '-no-sounds.zip')
-        self.assertEqual(release.hashlib.sha256(full.read_bytes()).hexdigest(), full_digest)
-        with zipfile.ZipFile(full) as full_zip, zipfile.ZipFile(quiet) as quiet_zip:
-            missing = set(full_zip.namelist()) - set(quiet_zip.namelist())
-            self.assertEqual(missing, {'momentum/' + name for name in release.SOUNDS})
-            self.assertEqual(count, len(full_zip.namelist()) - len(release.SOUNDS))
-            for name in quiet_zip.namelist():
-                self.assertEqual(quiet_zip.read(name), full_zip.read(name))
-
     def test_cli_custom_output_directory(self):
         import subprocess
         import sys
         output = self.folder / 'ci-artifacts'
-        result = subprocess.run([sys.executable, str(ROOT / 'tools/build_release.py'), '--out', str(output), '--no-sounds'],
+        result = subprocess.run([sys.executable, str(ROOT / 'tools/build_release.py'), '--out', str(output)],
                                 text=True, capture_output=True, check=True)
         self.assertIn('SHA-256 ', result.stdout)
-        self.assertTrue((output / ('momentum-%s-no-sounds.zip' % release.addon_version())).is_file())
+        self.assertTrue((output / ('momentum-%s.zip' % release.addon_version())).is_file())
 
     def test_missing_runtime_file_is_rejected(self):
         (self.addon / 'core/tracker.lua').unlink()

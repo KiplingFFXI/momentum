@@ -29,10 +29,9 @@ For a performance change, compare operation counts with a previous archive and r
 
 ```powershell
 python tools/build_release.py
-python tools/build_release.py --no-sounds
 ```
 
-The archives go to Downloads by default. Use `--out PATH` for another output folder. The builder prints a SHA-256 for each archive. Inspect the ZIP contents and use the printed hash when recording the build. The no-sounds archive is a separate option; it does not change the full archive.
+The archive goes to Downloads by default. Use `--out PATH` for another output folder. The builder prints its SHA-256. Inspect the ZIP contents and use the printed hash when recording the build.
 
 The runtime ZIP contains `momentum/` with the reviewed addon files and license. It must not include settings, profiles, sessions, test output, private paths, or developer files. See [tools/README.txt](../tools/README.txt) for the manifest checks and reproducibility rules.
 
@@ -45,15 +44,13 @@ After the reviewed source is available in the GitHub repository, a maintainer ca
 1. Runs the reusable **Verify** workflow on Windows with pinned Ashita libraries.
 2. Reads the current version and changelog entry.
 3. Refuses an existing release or tag named `v<version>`, keeping the archive tied to the reviewed source.
-4. Builds the full runtime ZIP and a SHA-256 file on Ubuntu.
+4. Builds the runtime ZIP and a SHA-256 file on Ubuntu.
 5. Creates a draft named `Momentum <version>` for the selected commit.
 
-The workflow runs only by manual request. Version edits, pushes, tags, and schedules do not create a release. It does not regenerate Phoenix data or upload the optional server package. The no-sounds archive can be built and attached separately when wanted.
+The workflow runs only by manual request. Version edits, pushes, tags, and schedules do not create a release. It does not regenerate Phoenix data or upload the optional server package.
 
 Review the draft's version, target commit, notes, archive, and checksum. Publishing remains a separate maintainer action on the Releases page. An existing release's files should not be silently replaced.
 
 ## Update an installed copy
 
 If Momentum is running, enter `/addon unload momentum` before replacing `addons/momentum/` with the reviewed runtime folder. Keep `config/addons/momentum/`, which holds settings, profiles, shared layouts, sessions, and custom sounds. Enter `/addon load momentum` after replacing the files.
-
-If switching to the no-sounds archive, replace the old runtime folder rather than merging over it so old bundled MP3s are not left behind. The separate configuration folder still stays in place.

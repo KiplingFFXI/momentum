@@ -70,7 +70,7 @@ The focused suites cover:
 
 The archive suite checks the exact runtime manifest, reproducibility, normalized
 line endings, private-path rejection, links, missing or extra files, sound hashes,
-and the separate no-sounds and optional server packages. The public repository
+and the separate optional server package. The public repository
 check validates text, release documents, local Markdown links, and the changelog
 version. Developer files do not enter the runtime ZIP.
 

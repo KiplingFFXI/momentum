@@ -15,4 +15,4 @@ Initial release.
 - Optional visual and sound alerts, grouped by purpose with enabled counts. Food wear-off sounds stay off until chosen, and alerts respect pause and event mute settings.
 - Eight skins, separate bar and settings colors and text sizes, custom fonts, rounded corners, opacity, and progress fill controls.
 - Searchable settings, hover help, Live/Sample previews, Undo, saved profiles, job profiles, and shared layouts. Escape closes settings even during combat or an active edit.
-- Reproducible runtime archives, an option without bundled sounds, source-rule checks, offline tests, and rendered UI checks for contributors.
+- Reproducible runtime archives, source-rule checks, offline tests, and rendered UI checks for contributors.
