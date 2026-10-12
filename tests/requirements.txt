@@ -1,0 +1,5 @@
+-r ../tools/requirements.txt
+pillow
+imgui-bundle==1.92.3
+munch
+numpy

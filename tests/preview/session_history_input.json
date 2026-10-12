@@ -1,0 +1,20 @@
+[
+  {"frame":2,"target":"##Current session name"},
+  {"frame":3,"target":"##Current session name","down":true},
+  {"frame":4,"target":"##Current session name","down":false},
+  {"frame":5,"text":"Evening camp"},
+  {"frame":6,"target":"Rename current session"},
+  {"frame":7,"target":"Rename current session","down":true},
+  {"frame":8,"target":"Rename current session","down":false},
+  {"frame":9,"lua":"assert(PREVIEW.renamed_session.name=='Evening camp','Rename did not use text entered in UI')","target":"Save current session"},
+  {"frame":10,"target":"Save current session","down":true},
+  {"frame":11,"target":"Save current session","down":false},
+  {"frame":12,"lua":"assert(PREVIEW.session_saves==1 and PREVIEW.saved_session_name==nil,'Checkpoint must save without applying a history name')","target":"Reset session"},
+  {"frame":13,"target":"Reset session","down":true},
+  {"frame":14,"target":"Reset session","down":false},
+  {"frame":15,"lua":"assert(PREVIEW.session_resets==1,'One Reset session click did not reset')"},
+  {"frame":18,"lua":"assert(PREVIEW.session_resets==1,'Rendering reset the session again')","target":"Pause session"},
+  {"frame":19,"target":"Pause session","down":true},
+  {"frame":20,"target":"Pause session","down":false},
+  {"frame":21,"lua":"assert(PREVIEW.view.paused,'Session pause button did not pause')"}
+]

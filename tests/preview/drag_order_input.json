@@ -1,0 +1,45 @@
+[
+  {
+    "frame": 4,
+    "target": "::##drag_progress"
+  },
+  {
+    "frame": 5,
+    "target": "::##drag_progress",
+    "down": true
+  },
+  {
+    "frame": 6,
+    "target": "01  Job and level",
+    "point": [
+      0.4,
+      0.1
+    ]
+  },
+  {
+    "frame": 7,
+    "down": false
+  },
+  {
+    "frame": 8,
+    "lua": "assert(settings.display.order[1]=='progress' and settings.display.order[2]=='job','Drag handle failed to reorder whole readout')"
+  },
+  {
+    "frame": 9,
+    "target": "Down##order"
+  },
+  {
+    "frame": 10,
+    "target": "Down##order",
+    "down": true
+  },
+  {
+    "frame": 11,
+    "target": "Down##order",
+    "down": false
+  },
+  {
+    "frame": 12,
+    "lua": "assert(settings.display.order[1]=='job' and settings.display.order[2]=='progress','Button fallback failed after drag')"
+  }
+]

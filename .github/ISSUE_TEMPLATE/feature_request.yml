@@ -1,0 +1,10 @@
+name: Feature request
+description: Suggest an improvement to EXP or merit tracking.
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: What would help?
+      description: Tell us what you want to track or make easier, and when you would use it.
+    validations:
+      required: true

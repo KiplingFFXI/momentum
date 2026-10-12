@@ -1,0 +1,7 @@
+[
+  {"frame": 2, "lua": "PREVIEW.original_height=PREVIEW_PY.window_height('##momentum_bar'); PREVIEW.original_x=PREVIEW_PY.window_x('##momentum_bar'); PREVIEW.original_width=PREVIEW_PY.window_width('##momentum_bar')"},
+  {"frame": 3, "target": "##Bar height", "point": [0.38, 0.5]},
+  {"frame": 4, "target": "##Bar height", "point": [0.38, 0.5], "down": true},
+  {"frame": 5, "down": false},
+  {"frame": 7, "mouse": [-100, -100], "lua": "local p,n=PREVIEW_PY,'##momentum_bar'; local y,h=p.window_y(n),p.window_height(n); assert(settings.bar.height>PREVIEW.original_height, 'Height slider did not increase the requested height'); assert(p.window_x(n)==PREVIEW.original_x and p.window_width(n)==PREVIEW.original_width, 'Height slider changed the horizontal bounds'); if settings.bar.docked then local gap=math.max(2,settings.bar.bottom); if settings.bar.anchor=='top' then assert(y+h==MOCK.chat.y-gap, 'Top height slider moved the chat-facing edge'); assert(h==math.min(settings.bar.height,MOCK.chat.y-gap), 'Top height did not fit its available space'); else assert(y==MOCK.chat.y+MOCK.chat.height+gap, 'Bottom height slider moved the chat-facing edge'); assert(h==math.min(settings.bar.height,900-y) and y+h<=900, 'Bottom height did not fit its available space'); end; assert(h>=12, 'Slider produced an unreadably short dock'); else assert(h==settings.bar.height, 'Free height slider was not reflected in the bar'); end"}
+]

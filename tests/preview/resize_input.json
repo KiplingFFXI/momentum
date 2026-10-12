@@ -1,0 +1,8 @@
+[
+  {"frame": 2, "shift": true, "lua": "PREVIEW.original_height=settings.bar.height; PREVIEW.original_width=settings.bar.width; PREVIEW.original_auto_width=settings.bar.auto_width"},
+  {"frame": 3, "target": "##momentum_drag", "point": [0.5, 0.98]},
+  {"frame": 4, "target": "##momentum_drag", "point": [0.5, 0.98], "down": true},
+  {"frame": 5, "delta": [0, 12]},
+  {"frame": 6, "down": false},
+  {"frame": 7, "shift": false, "lua": "assert(settings.bar.docked, 'Height resize detached the dock'); assert(settings.bar.height > PREVIEW.original_height, 'Height resize did not grow the bar'); assert(settings.bar.auto_width == PREVIEW.original_auto_width, 'Height resize changed automatic sizing'); assert(settings.bar.width == PREVIEW.original_width, 'Height resize changed the maximum width')"}
+]

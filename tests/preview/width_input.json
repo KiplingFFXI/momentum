@@ -1,0 +1,8 @@
+[
+  {"frame": 2, "shift": true, "lua": "PREVIEW.original_drawn_width=PREVIEW_PY.window_width('##momentum_bar'); PREVIEW.original_drawn_height=PREVIEW_PY.window_height('##momentum_bar')"},
+  {"frame": 3, "target": "##momentum_drag", "point": [0.997, 0.4]},
+  {"frame": 4, "target": "##momentum_drag", "point": [0.997, 0.4], "down": true},
+  {"frame": 5, "delta": [100, 0]},
+  {"frame": 6, "down": false},
+  {"frame": 7, "shift": false, "lua": "assert(not settings.bar.docked, 'Width drag stayed attached'); assert(not settings.bar.auto_width, 'Width drag did not select fixed sizing'); assert(settings.bar.width==PREVIEW.original_drawn_width+100, 'Width drag did not follow the actual drawn edge'); assert(PREVIEW_PY.window_width('##momentum_bar')==settings.bar.width, 'Manual width was not drawn'); assert(settings.bar.height==PREVIEW.original_drawn_height and PREVIEW_PY.window_height('##momentum_bar')==PREVIEW.original_drawn_height, 'Width-only resize changed the visible height')"}
+]

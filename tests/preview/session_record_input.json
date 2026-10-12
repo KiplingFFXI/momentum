@@ -1,0 +1,18 @@
+[
+  {"frame":3,"target":"##Session record"},
+  {"frame":4,"target":"##Session record","down":true},
+  {"frame":5,"target":"##Session record","down":false},
+  {"frame":6,"target":"Saved camp - WAR - Date unknown"},
+  {"frame":7,"target":"Saved camp - WAR - Date unknown","down":true},
+  {"frame":8,"target":"Saved camp - WAR - Date unknown","down":false},
+  {"frame":9,"target":"Rename selected"},
+  {"frame":10,"target":"Rename selected","down":true},
+  {"frame":11,"target":"Rename selected","down":false},
+  {"frame":12,"lua":"assert(PREVIEW.renamed_session.id=='saved' and PREVIEW.renamed_session.name=='Saved camp','Rename must use selected record and its editable name')","target":"Delete selected session"},
+  {"frame":13,"target":"Delete selected session","down":true},
+  {"frame":14,"target":"Delete selected session","down":false},
+  {"frame":15,"lua":"assert(not PREVIEW.deleted_session,'Delete must wait for inline confirmation')","target":"Delete record now"},
+  {"frame":16,"target":"Delete record now","down":true},
+  {"frame":17,"target":"Delete record now","down":false},
+  {"frame":18,"lua":"assert(PREVIEW.deleted_session=='saved','Confirmed delete must target selected completed record')"}
+]

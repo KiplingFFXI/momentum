@@ -1,0 +1,13 @@
+[
+  {"frame": 2, "shift": true, "lua": "PREVIEW.original_drawn_width=PREVIEW_PY.window_width('##momentum_bar')"},
+  {"frame": 3, "target": "##momentum_drag"},
+  {"frame": 4, "target": "##momentum_drag", "down": true},
+  {"frame": 5, "mouse": [520, 430]},
+  {"frame": 6, "down": false},
+  {"frame": 7, "lua": "assert(not settings.bar.docked, 'Dragging did not release the dock'); assert(settings.bar.y < 500, 'Drag did not change the bar position'); assert(PREVIEW_PY.window_width('##momentum_bar')==PREVIEW.original_drawn_width, 'Dragging away changed the visible width')"},
+  {"frame": 8, "target": "##momentum_drag"},
+  {"frame": 9, "target": "##momentum_drag", "down": true},
+  {"frame": 10, "mouse": [200, 870]},
+  {"frame": 11, "down": false},
+  {"frame": 12, "shift": false, "lua": "assert(settings.bar.docked, 'Release beside chat did not snap into the dock'); assert(PREVIEW_PY.window_x('##momentum_bar')==MOCK.chat.x, 'Dock did not follow the chat left edge'); assert(PREVIEW_PY.window_width('##momentum_bar')==MOCK.chat.width, 'Dock did not restore full chat width'); assert(PREVIEW_PY.window_y('##momentum_bar')>=MOCK.chat.y+MOCK.chat.height+2, 'Dock covered the chat border')"}
+]

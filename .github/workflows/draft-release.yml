@@ -1,0 +1,67 @@
+name: Draft release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  draft:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Prepare release notes
+        id: version
+        run: |
+          python tools/release_notes.py --out "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Check for an existing release or tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release list --limit 1000 --json tagName > "$RUNNER_TEMP/releases.json"
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v$VERSION" > "$RUNNER_TEMP/tags.json"
+          python - "$RUNNER_TEMP/releases.json" "$RUNNER_TEMP/tags.json" <<'PY'
+          import json, os, sys
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              releases = json.load(handle)
+          if any(row['tagName'] == 'v' + os.environ['VERSION'] for row in releases):
+              raise SystemExit('This version already has a release. Keep its existing files.')
+          with open(sys.argv[2], encoding='utf-8') as handle:
+              tags = json.load(handle)
+          if any(row['ref'] == 'refs/tags/v' + os.environ['VERSION'] for row in tags):
+              raise SystemExit('This version already has a tag. Choose a new version before drafting a release.')
+          PY
+
+      - name: Build the release archive
+        run: python tools/build_release.py --out "$RUNNER_TEMP"
+
+      - name: Create a draft
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cd "$RUNNER_TEMP"
+          sha256sum "momentum-$VERSION.zip" > "momentum-$VERSION.sha256"
+          gh release create "v$VERSION" "momentum-$VERSION.zip" "momentum-$VERSION.sha256" \
+            --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" \
+            --title "Momentum $VERSION" --notes-file notes.md

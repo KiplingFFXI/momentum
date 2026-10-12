@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "local text=PREVIEW_PY.drawn_text(); assert(not text:find('...',1,true), 'Default readouts did not fit'); assert(text:find('TNL',1,true), 'TNL label missing'); assert(text:find('EXP/HR 8,500',1,true), 'Hourly label must precede value'); assert(text:find('Chain',1,true), 'Chain readout missing')"}
+]

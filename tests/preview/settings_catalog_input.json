@@ -1,0 +1,22 @@
+[
+  {"frame":2,"target":"Add readout","lua":"PREVIEW.order=table.concat(settings.display.order,','); assert(not PREVIEW.rows['05  Time to next level or merit'],'Default list contains unchosen readings')"},
+  {"frame":3,"target":"Add readout","down":true},
+  {"frame":4,"down":false},
+  {"frame":6,"target":"##Find readout to add","lua":"local n=0; for _,item in ipairs(require('ui.defaults').READOUTS) do assert(PREVIEW.rows[item.name..'##add_'..item.id],'Catalog omitted '..item.id); n=n+1 end; assert(n==42,'Catalog coverage changed')"},
+  {"frame":7,"target":"##Find readout to add","down":true},
+  {"frame":8,"down":false},
+  {"frame":9,"text":"food"},
+  {"frame":11,"target":"Food effect##add_food","lua":"assert(PREVIEW.rows['Food effect##add_food'] and not PREVIEW.rows['Middle recent gain##add_median'],'Catalog filter did not narrow entries')"},
+  {"frame":12,"target":"Food effect##add_food","down":true},
+  {"frame":13,"down":false},
+  {"frame":15,"target":"##Readout list","lua":"assert(settings.display.enabled.food,'Catalog did not enable Food effect'); assert(settings.display.labels.food=='Lunch','Catalog changed saved label'); assert(table.concat(settings.display.order,',')==PREVIEW.order,'Catalog changed global order'); assert(PREVIEW.rows['36  Food effect'],'New readout is absent from chosen list')"},
+  {"frame":16,"target":"##Readout list","down":true},
+  {"frame":17,"down":false},
+  {"frame":18,"target":"All readouts"},
+  {"frame":19,"target":"All readouts","down":true},
+  {"frame":20,"down":false},
+  {"frame":22,"target":"Add readout","lua":"assert(PREVIEW.rows['05  Time to next level or merit'],'All readouts is no longer available')"},
+  {"frame":23,"target":"Add readout","down":true},
+  {"frame":24,"down":false},
+  {"frame":26,"mouse":[-100,-100]}
+]

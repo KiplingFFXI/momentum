@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "local text=PREVIEW_PY.drawn_text(); assert(PREVIEW_PY.image_count()==1, 'Job picture was not drawn exactly once'); assert(text:find('(WAR) 61',1,true), 'Job abbreviation and level missing beside the picture'); assert(text:find('TNL',1,true), 'TNL label missing'); assert(text:find('Chain',1,true), 'Chain readout missing'); assert(not text:find('...',1,true), 'Picture and default readouts did not fit')"}
+]

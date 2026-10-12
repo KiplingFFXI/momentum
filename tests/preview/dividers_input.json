@@ -1,0 +1,143 @@
+[
+  {
+    "frame": 2,
+    "lua": "PREVIEW.order=table.concat(settings.display.order,','); PREVIEW.count_dividers=function(value) local count=0; for _,run in ipairs(PREVIEW_PY.hud_runs()) do if run.text==value then count=count+1 end end; return count end",
+    "target": "Add dividers to all"
+  },
+  {
+    "frame": 3,
+    "target": "Add dividers to all",
+    "down": true
+  },
+  {
+    "frame": 4,
+    "down": false
+  },
+  {
+    "frame": 6,
+    "lua": "assert(settings.display.divider==' | ','Add all did not choose visible pipes'); for _,item in ipairs(require('ui.defaults').READOUTS) do assert(settings.display.dividers[item.id],'Add all skipped a readout') end; PREVIEW.pipe_count=PREVIEW.count_dividers(' | '); assert(PREVIEW.pipe_count>=4,'Visible pipes were not drawn')",
+    "target": "##divider_progress"
+  },
+  {
+    "frame": 7,
+    "target": "##divider_progress",
+    "down": true
+  },
+  {
+    "frame": 8,
+    "down": false
+  },
+  {
+    "frame": 10,
+    "lua": "assert(settings.display.dividers.progress==false,'Row checkbox did not remove divider'); assert(PREVIEW.count_dividers(' | ')==PREVIEW.pipe_count-1,'Removed divider was still drawn')",
+    "target": "##divider_progress"
+  },
+  {
+    "frame": 11,
+    "target": "##divider_progress",
+    "down": true
+  },
+  {
+    "frame": 12,
+    "down": false
+  },
+  {
+    "frame": 14,
+    "lua": "assert(settings.display.dividers.progress==true,'Row checkbox did not restore divider'); assert(PREVIEW.count_dividers(' | ')==PREVIEW.pipe_count,'Restored divider was not drawn')",
+    "target": "##Divider style"
+  },
+  {
+    "frame": 15,
+    "target": "##Divider style",
+    "down": true
+  },
+  {
+    "frame": 16,
+    "down": false
+  },
+  {
+    "frame": 17,
+    "target": "Slash /"
+  },
+  {
+    "frame": 18,
+    "target": "Slash /",
+    "down": true
+  },
+  {
+    "frame": 19,
+    "down": false
+  },
+  {
+    "frame": 21,
+    "lua": "assert(settings.display.divider==' / ','Style selector did not choose Slash'); assert(PREVIEW.count_dividers(' / ')==PREVIEW.pipe_count,'Slash dividers were not drawn')",
+    "target": "Remove all dividers"
+  },
+  {
+    "frame": 22,
+    "target": "Remove all dividers",
+    "down": true
+  },
+  {
+    "frame": 23,
+    "down": false
+  },
+  {
+    "frame": 25,
+    "lua": "for _,item in ipairs(require('ui.defaults').READOUTS) do assert(settings.display.dividers[item.id]==false,'Remove all skipped a readout') end; assert(settings.display.divider==' / ','Remove all changed the saved style'); assert(PREVIEW.count_dividers(' / ')==0,'Remove all left visible dividers'); settings.window.sections['Display/Dividers and formatting']=true; PREVIEW.edit_custom=true"
+  },
+  {
+    "frame": 28,
+    "target": "##Custom divider",
+    "point": [
+      0.98,
+      0.5
+    ]
+  },
+  {
+    "frame": 29,
+    "target": "##Custom divider",
+    "point": [
+      0.98,
+      0.5
+    ],
+    "down": true
+  },
+  {
+    "frame": 30,
+    "down": false
+  },
+  {
+    "frame": 31,
+    "text": "~"
+  },
+  {
+    "frame": 33,
+    "mouse": [
+      -100,
+      -100
+    ],
+    "lua": "assert(settings.display.divider:find('~',1,true),'Custom divider input was not editable'); PREVIEW.custom_divider=settings.display.divider; PREVIEW.edit_custom=false"
+  },
+  {
+    "frame": 36,
+    "target": "Add dividers to all"
+  },
+  {
+    "frame": 37,
+    "target": "Add dividers to all",
+    "down": true
+  },
+  {
+    "frame": 38,
+    "down": false
+  },
+  {
+    "frame": 40,
+    "mouse": [
+      -100,
+      -100
+    ],
+    "lua": "assert(settings.display.divider==PREVIEW.custom_divider,'Add all replaced custom text'); assert(PREVIEW.count_dividers(PREVIEW.custom_divider)==PREVIEW.pipe_count,'Custom dividers were not drawn'); assert(table.concat(settings.display.order,',')==PREVIEW.order,'Divider edits changed readout order')"
+  }
+]

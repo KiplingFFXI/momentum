@@ -1,0 +1,16 @@
+[
+  {"frame": 3, "target": "##Placement"},
+  {"frame": 4, "target": "##Placement", "down": true},
+  {"frame": 5, "down": false},
+  {"frame": 6, "target": "Above chat"},
+  {"frame": 7, "target": "Above chat", "down": true},
+  {"frame": 8, "down": false},
+  {"frame": 10, "lua": "assert(settings.bar.docked and settings.bar.anchor=='top', 'Above chat choice did not attach above'); assert(PREVIEW_PY.window_y('##momentum_bar')+PREVIEW_PY.window_height('##momentum_bar')==MOCK.chat.y-2, 'Above chat selection was not rendered')"},
+  {"frame": 11, "target": "##Placement"},
+  {"frame": 12, "target": "##Placement", "down": true},
+  {"frame": 13, "down": false},
+  {"frame": 14, "target": "Below chat"},
+  {"frame": 15, "target": "Below chat", "down": true},
+  {"frame": 16, "down": false},
+  {"frame": 18, "mouse": [-100, -100], "lua": "assert(settings.bar.docked and settings.bar.anchor=='bottom', 'Below chat choice did not attach below'); assert(PREVIEW_PY.window_y('##momentum_bar')==MOCK.chat.y+MOCK.chat.height+2, 'Below chat selection was not rendered')"}
+]

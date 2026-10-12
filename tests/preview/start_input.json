@@ -1,0 +1,6 @@
+[
+  {"frame": 3, "target": "##Starting point", "point": [0.55, 0.5]},
+  {"frame": 4, "target": "##Starting point", "point": [0.55, 0.5], "down": true},
+  {"frame": 5, "down": false},
+  {"frame": 7, "mouse": [-100, -100], "lua": "assert(settings.bar.start>0, 'Starting point slider did not change the offset'); local x,w=PREVIEW_PY.window_x('##momentum_bar'),PREVIEW_PY.window_width('##momentum_bar'); assert(math.abs(x-MOCK.chat.x-settings.bar.start)<=1, 'Starting point was not applied to the rendered bar'); assert(x+w==MOCK.chat.x+MOCK.chat.width, 'Starting point moved the fixed right edge'); assert(w>=120, 'Starting point left less than the minimum width')"}
+]

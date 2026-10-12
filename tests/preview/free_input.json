@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "assert(PREVIEW_PY.window_present('##momentum_bar'), 'Missing native chat hid a free bar'); assert(PREVIEW_PY.window_x('##momentum_bar')==45, 'Native chat changed free horizontal position'); assert(PREVIEW_PY.window_y('##momentum_bar')==300, 'Native chat changed free vertical position'); assert(PREVIEW_PY.window_width('##momentum_bar')<=settings.bar.width, 'Free bar ignored its width limit')"}
+]

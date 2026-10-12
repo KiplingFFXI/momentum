@@ -1,0 +1,22 @@
+[
+  {"frame": 2, "shift": true, "mouse": [300, 408]},
+  {"frame": 3, "down": true},
+  {"frame": 4, "mouse": [350, 350]},
+  {"frame": 5, "down": false},
+  {"frame": 6, "lua": "assert(settings.bar.locked and settings.bar.x==100 and settings.bar.y==400, 'An explicitly locked free bar moved'); MOCK.fire('command', {command='/momentum free',blocked=false})"},
+  {"frame": 7, "target": "##momentum_drag", "point": [0.3, 0.4], "lua": "assert(not settings.bar.locked, 'Free command left movement locked')"},
+  {"frame": 8, "target": "##momentum_drag", "point": [0.3, 0.4], "down": true},
+  {"frame": 9, "delta": [50, -80]},
+  {"frame": 10, "down": false},
+  {"frame": 11, "shift": false, "lua": "assert(settings.bar.x==150 and settings.bar.y==320 and not settings.bar.docked, 'Unlocked free bar did not follow Shift-drag'); settings.bar.hide_typing=false"},
+  {"frame": 12, "mouse": [350, 328]},
+  {"frame": 13, "down": true},
+  {"frame": 14, "mouse": [410, 280]},
+  {"frame": 15, "down": false},
+  {"frame": 16, "shift": true, "mouse": [350, 328], "lua": "assert(settings.bar.x==150 and settings.bar.y==320, 'A click without Shift moved the free bar'); assert(not require('imgui').GetIO().WantCaptureMouse, 'Free bar captured an ordinary mouse click'); MOCK.typing=true"},
+  {"frame": 17, "down": true},
+  {"frame": 18, "mouse": [400, 240]},
+  {"frame": 19, "down": false},
+  {"frame": 20, "shift": false, "mouse": [-100, -100], "lua": "assert(settings.bar.x==150 and settings.bar.y==320, 'Typing did not suppress Shift-drag'); assert(not require('imgui').GetIO().WantCaptureMouse, 'Typing did not preserve mouse pass-through'); MOCK.typing=false; MOCK.fire('command', {command='/momentum undo',blocked=false})"},
+  {"frame": 23, "lua": "assert(settings.bar.x==100 and settings.bar.y==400 and not settings.bar.locked, 'Undo did not restore the completed drag as one edit')"}
+]

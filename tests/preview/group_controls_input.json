@@ -1,0 +1,22 @@
+[
+  {"frame":2,"target":"Use separate alignment groups"},
+  {"frame":3,"target":"Use separate alignment groups","down":true},
+  {"frame":4,"target":"Use separate alignment groups","down":false},
+  {"frame":5,"lua":"assert(settings.display.groups_enabled,'Group checkbox did not enable groups');PREVIEW.edit_group=true"},
+  {"frame":7,"target":"##Readout group"},
+  {"frame":8,"target":"##Readout group","down":true},
+  {"frame":9,"target":"##Readout group","down":false},
+  {"frame":10,"target":"Center"},
+  {"frame":11,"target":"Center","down":true},
+  {"frame":12,"target":"Center","down":false},
+  {"frame":13,"lua":"assert(settings.display.groups.progress=='center','Group selector failed')","target":"Keep visible first"},
+  {"frame":14,"target":"Keep visible first","down":true},
+  {"frame":15,"target":"Keep visible first","down":false},
+  {"frame":16,"lua":"assert(settings.display.pinned.progress,'Pin checkbox failed')","target":"##Show when"},
+  {"frame":17,"target":"##Show when","down":true},
+  {"frame":18,"target":"##Show when","down":false},
+  {"frame":19,"target":"While showing LP"},
+  {"frame":20,"target":"While showing LP","down":true},
+  {"frame":21,"target":"While showing LP","down":false},
+  {"frame":22,"lua":"assert(settings.display.conditions.progress=='lp','Conditional readout selector failed')"}
+]

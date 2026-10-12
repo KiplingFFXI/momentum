@@ -1,0 +1,14 @@
+[
+  {"frame":2,"target":"##Find settings"},
+  {"frame":3,"target":"##Find settings","down":true},
+  {"frame":4,"down":false},
+  {"frame":5,"text":"automatic"},
+  {"frame":7,"target":"Display: Readouts and order##find","lua":"assert(PREVIEW.auto_found,'Search did not locate automatic layouts')"},
+  {"frame":8,"target":"Display: Readouts and order##find","down":true},
+  {"frame":9,"down":false},
+  {"frame":11,"mouse":[-100,-100],"lua":"PREVIEW.auto_reveal=true"},
+  {"frame":14,"target":"Automatically switch EXP / Merits layouts","lua":"assert(settings.display.auto_layout==false,'Automatic layouts did not start disabled'); PREVIEW.saves_before=MOCK.saved"},
+  {"frame":15,"target":"Automatically switch EXP / Merits layouts","down":true},
+  {"frame":16,"down":false},
+  {"frame":19,"mouse":[-100,-100],"lua":"assert(settings.display.auto_layout,'Checkbox did not enable automatic layouts'); assert(MOCK.saved>PREVIEW.saves_before,'Checkbox change did not reach settings persistence'); assert(require('settings').last_saved.display.auto_layout,'Saved checkbox choice was lost')"}
+]

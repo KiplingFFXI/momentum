@@ -1,0 +1,6 @@
+[
+  {"frame": 1, "lua": "PREVIEW.palette=require('preview.palette_assertions'); PREVIEW.palette.prepare(settings)"},
+  {"frame": 3, "lua": "PREVIEW.palette.check(settings); PREVIEW.view=require('ui.readouts').sample('Merits')"},
+  {"frame": 5, "lua": "PREVIEW.palette.check(settings); PREVIEW.view=require('ui.readouts').sample('Leveling')"},
+  {"frame": 7, "lua": "PREVIEW.palette.check(settings)"}
+]

@@ -1,0 +1,120 @@
+[
+  {
+    "frame": 2,
+    "lua": "PREVIEW.assert_alerts_unchanged(); for _,open in pairs(PREVIEW.alert_sections) do assert(not open,'Alert groups must start collapsed') end; PREVIEW.assert_alert_counts({Food=0,['EXP chains']=0,Dedication=0,['EXP rings']=0,['Levels and merit points']=0,['Level Sync and missed EXP']=0})"
+  },
+  {
+    "frame": 2,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 3,
+    "down": true,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 4,
+    "down": false
+  },
+  {
+    "frame": 6,
+    "lua": "assert(settings.window.sections['Alerts/Levels and merit points'],'Opening group was not saved'); PREVIEW.scroll_target='level/Show notice'"
+  },
+  {
+    "frame": 8,
+    "target": "level/Show notice"
+  },
+  {
+    "frame": 9,
+    "down": true,
+    "target": "level/Show notice"
+  },
+  {
+    "frame": 10,
+    "down": false
+  },
+  {
+    "frame": 11,
+    "lua": "assert(settings.alerts.events.level.visual and not settings.alerts.events.level.sound,'Notice checkbox changed the wrong flag'); assert(not settings.alerts.events.merit.visual,'Checkbox changed another alert'); PREVIEW.scroll_target='level/Play sound'"
+  },
+  {
+    "frame": 12,
+    "lua": "PREVIEW.assert_alert_count('Levels and merit points',1)"
+  },
+  {
+    "frame": 13,
+    "target": "level/Play sound"
+  },
+  {
+    "frame": 14,
+    "down": true,
+    "target": "level/Play sound"
+  },
+  {
+    "frame": 15,
+    "down": false
+  },
+  {
+    "frame": 16,
+    "lua": "assert(settings.alerts.events.level.visual and settings.alerts.events.level.sound,'Checkboxes did not enable both'); assert(settings.alerts.events.level.file=='Custom.wav' and settings.alerts.events.level.volume==37 and settings.alerts.events.level.cooldown==12,'Toggling changed saved sound choices'); assert(PREVIEW.notification_calls==0 and not PREVIEW.sound_plays,'Enabling played a sound'); PREVIEW.scroll_target='level/Test notification'; PREVIEW.assert_alert_count('Levels and merit points',1)"
+  },
+  {
+    "frame": 18,
+    "target": "level/Test notification"
+  },
+  {
+    "frame": 19,
+    "down": true,
+    "target": "level/Test notification"
+  },
+  {
+    "frame": 20,
+    "down": false
+  },
+  {
+    "frame": 21,
+    "lua": "assert(PREVIEW.notification_calls==1 and PREVIEW.notification_tested=='level','Test did not run exactly once for this alert'); PREVIEW.scroll_target='header/Levels and merit points'"
+  },
+  {
+    "frame": 23,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 24,
+    "down": true,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 25,
+    "down": false
+  },
+  {
+    "frame": 27,
+    "lua": "assert(settings.window.sections['Alerts/Levels and merit points']==false and not PREVIEW.alert_sections['Levels and merit points'],'Collapse was not saved'); assert(settings.alerts.events.level.visual and settings.alerts.events.level.sound,'Collapsing disabled an alert'); PREVIEW.assert_alert_count('Levels and merit points',1)"
+  },
+  {
+    "frame": 27,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 28,
+    "down": true,
+    "target": "##section_Alerts/Levels and merit points"
+  },
+  {
+    "frame": 29,
+    "down": false
+  },
+  {
+    "frame": 31,
+    "lua": "assert(PREVIEW.alert_sections['Levels and merit points'] and settings.window.sections['Alerts/Levels and merit points'],'Reopening failed'); assert(PREVIEW.notification_calls==1,'Reopening ran another test'); PREVIEW.scroll_target='level/Show notice'; PREVIEW.assert_alert_count('Levels and merit points',1)"
+  },
+  {
+    "frame": 34,
+    "lua": "assert(settings.alerts.events.level.visual and settings.alerts.events.level.sound and not settings.alerts.events.merit.sound,'Saved independent choices changed'); PREVIEW.assert_alert_count('Levels and merit points',1)",
+    "mouse": [
+      -100,
+      -100
+    ]
+  }
+]

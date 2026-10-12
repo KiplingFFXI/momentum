@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "assert(not MOMENTUM_TEST.state.broken, 'Startup failed'); assert(not settings.preview.show, 'Startup test is using sample mode'); assert(PREVIEW_PY.window_present('##momentum_bar'), 'Bar was not immediately visible'); assert(not PREVIEW_PY.window_present('Momentum##settings'), 'Startup opened settings'); assert(PREVIEW_PY.window_width('##momentum_bar')==MOCK.chat.width, 'Dock did not use native chat width'); assert(PREVIEW_PY.window_x('##momentum_bar')==MOCK.chat.x, 'Dock did not use native chat left edge'); assert(PREVIEW_PY.window_y('##momentum_bar')>=MOCK.chat.y+MOCK.chat.height+2, 'Dock covered the chat border')"}
+]

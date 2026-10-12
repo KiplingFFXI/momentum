@@ -1,0 +1,4 @@
+[
+  {"frame":1,"lua":"settings.display.groups_enabled=true;settings.display.priority_overflow=true;settings.display.groups.rate='right';settings.display.pinned.rate=true;settings.display.priorities.progress=0;settings.display.priorities.chain=1"},
+  {"frame":3,"lua":"local text='';local p=PREVIEW_PY;local right=p.window_x('##momentum_bar')+p.window_width('##momentum_bar')-9;local last=0;for _,r in ipairs(p.hud_runs()) do assert(r.x>=last-0.1 and r.x+r.width<=right+0.1,'Priority layout overlapped or escaped bar');last=r.x+r.width;text=text..r.text end;assert(text:find('8,500',1,true),'Pinned rate disappeared');assert(text:find('...',1,true),'Priority overflow cue missing');assert(not text:find('12,450',1,true),'Low-priority progress remained unexpectedly')"}
+]

@@ -1,0 +1,10 @@
+[
+  {"frame": 2, "target": "Up##order"},
+  {"frame": 3, "target": "Up##order", "down": true},
+  {"frame": 4, "target": "Up##order", "down": false},
+  {"frame": 5, "lua": "assert(settings.display.order[1] == 'progress', 'Up did not move the selected readout')"},
+  {"frame": 6, "target": "Down##order"},
+  {"frame": 7, "target": "Down##order", "down": true},
+  {"frame": 8, "target": "Down##order", "down": false},
+  {"frame": 9, "lua": "assert(settings.display.order[1] == 'job' and settings.display.order[2] == 'progress', 'Down did not restore readout order')"}
+]

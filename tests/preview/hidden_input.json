@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "assert(not MOMENTUM_TEST.state.broken); assert(not PREVIEW_PY.window_present('##momentum_bar'), 'Bar covered an area that should keep it hidden')"}
+]

@@ -1,0 +1,15 @@
+tests/.venv/
+tests/out/
+tests/preview/fonts/
+.venv/
+.ci/
+dist/
+__pycache__/
+*.py[cod]
+*.zip
+.DS_Store
+Thumbs.db
+/.env
+/.env.*
+/config/
+/.vscode/

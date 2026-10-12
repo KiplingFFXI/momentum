@@ -1,0 +1,14 @@
+[
+  {"frame":2,"target":"##Find settings"},
+  {"frame":3,"target":"##Find settings","down":true},
+  {"frame":4,"down":false},
+  {"frame":5,"text":"EXP chain timer"},
+  {"frame":7,"target":"EXP chain timer##find","lua":"assert(not PREVIEW.sections['Display/Position and size'],'Search opened unrelated placement controls'); assert(settings.window.sections['Display/Position and size'],'Search changed saved sections')"},
+  {"frame":8,"target":"EXP chain timer##find","down":true},
+  {"frame":9,"down":false},
+  {"frame":12,"lua":"assert(PREVIEW.sections['Display/Selected readout'],'Readout result did not open inspector'); assert(not PREVIEW.sections['Display/Readouts and order'],'Result opened unrelated list'); assert(PREVIEW.colors['Value color'] and PREVIEW.colors['Below 10 seconds'],'Countdown colors are not together'); PREVIEW.fixed_y=PREVIEW.preview_y","target":"Clear##settings_search"},
+  {"frame":13,"target":"Clear##settings_search","down":true},
+  {"frame":14,"down":false},
+  {"frame":17,"lua":"assert(PREVIEW.sections['Display/Position and size'],'Clearing search did not restore placement fold'); assert(not PREVIEW.sections['Display/Readouts and order'],'Clearing search did not restore saved collapsed list'); settings.window.sections['Display/Selected readout']=true; PREVIEW.inspect=true","mouse":[-100,-100]},
+  {"frame":19,"lua":"assert(PREVIEW.fit.bar_width==700 and PREVIEW.fit.preview_clipped,'Narrow inspector preview lost real bar width')"}
+]

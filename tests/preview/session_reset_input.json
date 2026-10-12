@@ -1,0 +1,13 @@
+[
+  { "frame": 2, "target": "##Preview source" },
+  { "frame": 3, "target": "##Preview source", "down": true },
+  { "frame": 4, "down": false },
+  { "frame": 5, "target": "Sample" },
+  { "frame": 6, "target": "Sample", "down": true },
+  { "frame": 7, "down": false },
+  { "frame": 9, "target": "Reset session", "lua": "PREVIEW.assert_sample()" },
+  { "frame": 10, "target": "Reset session", "down": true },
+  { "frame": 11, "down": false },
+  { "frame": 13, "mouse": [-100, -100], "lua": "PREVIEW.assert_reset()" },
+  { "frame": 15, "lua": "PREVIEW.assert_reset()" }
+]

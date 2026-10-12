@@ -1,0 +1,6 @@
+[
+  {"frame":4,"target":"02  EXP / LP progress","lua":"local rows=PREVIEW.readout_rows; local a,b=rows['01  Job and level'],rows['02  EXP / LP progress']; assert(a and b,'Readout rows were not rendered'); assert(b.bottom-b.y>a.bottom-a.y,'Long readout did not wrap to a taller selectable row: '..tostring(b.bottom-b.y)..' vs '..tostring(a.bottom-a.y)); assert(b.y>=a.bottom,'Wrapped readout overlaps prior row')"},
+  {"frame":5,"target":"02  EXP / LP progress","point":[0.4,0.75],"down":true},
+  {"frame":6,"down":false},
+  {"frame":8,"mouse":[-100,-100],"lua":"assert(settings.window.sections['Display/Selected readout'],'Second line of wrapped readout was not selectable'); assert(settings.display.order[2]=='progress','Selecting wrapped text changed readout order')"}
+]

@@ -1,0 +1,58 @@
+local chains = require('core.chains')
+local checks = 0
+local function equal(actual, expected, label)
+    checks = checks + 1
+    assert(actual == expected, label .. ': expected ' .. tostring(expected) .. ', got ' .. tostring(actual))
+end
+
+local state = chains.new()
+state:award({ source = 'battle', chain = 0 }, { effective_level = 75 }, 0)
+equal(state:view(0).chain, nil, 'An ordinary reward does not identify a first kill')
+equal(state:view(0).chain_source, 'unknown', 'Chain-zero reward does not invent an estimated window')
+state:award({ source = 'battle', chain = 1 }, { effective_level = 75 }, 10)
+equal(state:view(10).chain, 1, 'Positive reward chain is confirmed')
+equal(state:view(10).chain_left, 240, 'Chain one leaves 240 seconds at 50+')
+equal(state:view(10).chain_left_min, 240, 'All eligible 50+ brackets agree')
+equal(state:view(10).chain_bonus, 20, 'Chain one bonus')
+equal(state:view(10).chain_estimated, true, 'Receipt-time timer is marked estimated')
+equal(state:view(10).chain_source, 'local', 'Phoenix-derived timer is local')
+equal(state:view(10).chain_active, nil, 'Local estimate does not assert native activity')
+equal(state:view(10).chain_started, 10, 'Observed reward timestamp accompanies local timer')
+state:award({ source = 'battle', chain = 0 }, { effective_level = 75 }, 50)
+equal(state:view(50).chain_left, 200, 'Nonchain reward does not extend the clock')
+state:award({ source = 'item', chain = 9 }, { effective_level = 75 }, 60)
+equal(state:view(60).chain, 1, 'Item reward cannot replace the chain')
+equal(state:view(250).chain, 1, 'Estimated expiry preserves the last observed count')
+equal(state:view(250).chain_left, nil, 'Estimated expiry ends the conservative countdown')
+equal(state:view(250).chain_active, nil, 'Estimated expiry does not claim confirmed inactivity')
+equal(state:view(250).chain_source, 'local', 'Expired local estimate remains identified')
+equal(state:view(250).best_chain, 1, 'Expiry preserves session best')
+
+for chain, expected in ipairs({ 240, 180, 120, 60, 60, 60, 60 }) do
+    state:award({ source = 'battle', chain = chain }, { effective_level = 50 }, 300 + chain)
+    equal(state:view(300 + chain).chain_left, expected, 'Next window for chain ' .. chain)
+end
+equal(state:view(307).chain_bonus, 50, 'Chain seven still has a 50 percent bonus')
+
+state:award({ source = 'battle', chain = 1 }, { effective_level = 49 }, 400)
+equal(state:view(400).chain_left_min, 230, '49 can use the 40-49 mob bracket')
+equal(state:view(400).chain_left, 230, '49 uses the earliest eligible window, not the longer possible bracket')
+equal(state:view(400).chain_window, 230, 'Local strip uses the same conservative window')
+state:award({ source = 'battle', chain = 2 }, { effective_level = 19 }, 500)
+equal(state:view(500).chain_left_min, 80, '19 minimum window')
+equal(state:view(500).chain_left, 80, '19 shows a single conservative countdown')
+equal(state:view(590).chain_left_min, nil, 'Estimated deadline passing removes timing instead of a range')
+equal(state:view(590).chain, 2, 'Observed chain remains after conservative estimate ends')
+state:award({ source = 'battle', chain = 4, mob_level = 9 }, { effective_level = 9 }, 700)
+equal(state:view(700).chain_left, 15, 'Verified mob level selects its actual bracket')
+equal(state:view(700).chain_estimated, true, 'Verified mob bracket still uses estimated receipt timing')
+state:award({ source = 'battle', chain = 1 }, {}, 800)
+equal(state:view(800).chain_left_min, 60, 'Unknown level uses the earliest eligible window')
+equal(state:view(800).chain_left, 60, 'Unknown level displays one conservative timer')
+state:clear()
+equal(state:view(801).chain, nil, 'Discontinuity clears active chain')
+equal(state:view(801).best_chain, 7, 'Discontinuity preserves best')
+state:reset()
+equal(state:view(801).best_chain, 0, 'Session reset clears best')
+
+return tostring(checks) .. ' assertions'

@@ -1,0 +1,9 @@
+[
+  {"frame": 2, "shift": true, "lua": "local p=PREVIEW_PY; PREVIEW.before={x=p.window_x('##momentum_bar'),y=p.window_y('##momentum_bar'),width=p.window_width('##momentum_bar'),height=p.window_height('##momentum_bar')}"},
+  {"frame": 3, "target": "##momentum_drag", "point": [0.997, 0.4]},
+  {"frame": 4, "target": "##momentum_drag", "point": [0.997, 0.4], "down": true},
+  {"frame": 5, "delta": [100, 0]},
+  {"frame": 7, "delta": [-100, 0], "lua": "assert(PREVIEW_PY.window_width('##momentum_bar')==PREVIEW.before.width+100, 'Width gesture did not first move away from its origin')"},
+  {"frame": 8, "down": false},
+  {"frame": 9, "shift": false, "mouse": [-100, -100], "lua": "local p,b=PREVIEW_PY,PREVIEW.before; assert(settings.bar.width==b.width and p.window_width('##momentum_bar')==b.width, 'Returning the mouse to its exact starting point did not restore width'); assert(p.window_x('##momentum_bar')==b.x and p.window_y('##momentum_bar')==b.y and p.window_height('##momentum_bar')==b.height, 'Returning the width gesture changed another edge')"}
+]

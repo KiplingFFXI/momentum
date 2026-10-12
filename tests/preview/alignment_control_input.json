@@ -1,0 +1,10 @@
+[
+  {"frame": 2, "lua": "PREVIEW.alignment=require('preview.alignment_assertions'); PREVIEW.alignment.capture(settings)"},
+  {"frame": 3, "target": "##Readout alignment"},
+  {"frame": 4, "target": "##Readout alignment", "down": true},
+  {"frame": 5, "down": false},
+  {"frame": 6, "target": "Right"},
+  {"frame": 7, "target": "Right", "down": true},
+  {"frame": 8, "down": false},
+  {"frame": 10, "mouse": [-100, -100], "lua": "PREVIEW.alignment.check(settings)"}
+]

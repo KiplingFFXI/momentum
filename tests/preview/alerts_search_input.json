@@ -1,0 +1,112 @@
+[
+  {
+    "frame": 2,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 3,
+    "down": true,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 4,
+    "down": false
+  },
+  {
+    "frame": 6,
+    "lua": "assert(settings.window.sections['Alerts/EXP chains'],'Chain open state not saved'); PREVIEW.scroll_target=nil; PREVIEW.assert_alerts_unchanged()"
+  },
+  {
+    "frame": 6,
+    "target": "##Find settings"
+  },
+  {
+    "frame": 7,
+    "down": true,
+    "target": "##Find settings"
+  },
+  {
+    "frame": 8,
+    "down": false
+  },
+  {
+    "frame": 9,
+    "text": "food"
+  },
+  {
+    "frame": 11,
+    "lua": "assert(PREVIEW.alert_sections.Food and not PREVIEW.alert_sections['EXP chains'],'Search failed to expose only the matching type'); assert(settings.window.sections['Alerts/EXP chains'] and settings.window.sections['Alerts/Food']==nil,'Search changed saved folds'); PREVIEW.assert_alerts_unchanged()"
+  },
+  {
+    "frame": 11,
+    "target": "Alerts: Food##find"
+  },
+  {
+    "frame": 12,
+    "down": true,
+    "target": "Alerts: Food##find"
+  },
+  {
+    "frame": 13,
+    "down": false
+  },
+  {
+    "frame": 15,
+    "lua": "assert(PREVIEW.alert_sections.Food and PREVIEW.alert_widgets['food_end/Play sound'],'Search result did not open Food controls'); PREVIEW.assert_alerts_unchanged()"
+  },
+  {
+    "frame": 15,
+    "target": "Clear##settings_search"
+  },
+  {
+    "frame": 16,
+    "down": true,
+    "target": "Clear##settings_search"
+  },
+  {
+    "frame": 17,
+    "down": false
+  },
+  {
+    "frame": 20,
+    "lua": "assert(PREVIEW.alert_sections['EXP chains'] and not PREVIEW.alert_sections.Food,'Clear search did not restore saved folds'); PREVIEW.assert_alerts_unchanged(); PREVIEW.scroll_target='header/EXP chains'"
+  },
+  {
+    "frame": 22,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 23,
+    "down": true,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 24,
+    "down": false
+  },
+  {
+    "frame": 26,
+    "lua": "assert(settings.window.sections['Alerts/EXP chains']==false and not PREVIEW.alert_sections['EXP chains'],'Collapse after search was not saved'); PREVIEW.assert_alerts_unchanged()"
+  },
+  {
+    "frame": 26,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 27,
+    "down": true,
+    "target": "##section_Alerts/EXP chains"
+  },
+  {
+    "frame": 28,
+    "down": false
+  },
+  {
+    "frame": 31,
+    "lua": "assert(settings.window.sections['Alerts/EXP chains'] and PREVIEW.alert_sections['EXP chains'],'Group did not reopen after search'); PREVIEW.assert_alerts_unchanged()",
+    "mouse": [
+      -100,
+      -100
+    ]
+  }
+]

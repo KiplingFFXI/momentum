@@ -1,0 +1,22 @@
+[
+  { "frame": 2, "target": "##reset_actions" },
+  { "frame": 3, "target": "##reset_actions", "down": true },
+  { "frame": 4, "down": false },
+  { "frame": 6, "target": "Reset layout" },
+  { "frame": 7, "target": "Reset layout", "down": true },
+  { "frame": 8, "down": false },
+  { "frame": 10, "lua": "PREVIEW.assert_confirmation(); assert(PREVIEW_PY.window_x('Momentum##settings')==40 and PREVIEW_PY.window_y('Momentum##settings')==90 and PREVIEW_PY.window_width('Momentum##settings')==920,'Title-bar geometry changed')", "mouse": [946,102] },
+  { "frame": 11, "down": true },
+  { "frame": 12, "down": false },
+  { "frame": 15, "lua": "PREVIEW.assert_closed(); PREVIEW.reopen()" },
+  { "frame": 18, "lua": "PREVIEW.assert_reopened(); PREVIEW.show_label()" },
+  { "frame": 21, "target": "##Label##readout" },
+  { "frame": 22, "target": "##Label##readout", "down": true },
+  { "frame": 23, "down": false },
+  { "frame": 24, "text": "My EXP" },
+  { "frame": 27, "lua": "PREVIEW.assert_editing()", "mouse": [946,102] },
+  { "frame": 28, "down": true },
+  { "frame": 29, "down": false },
+  { "frame": 32, "lua": "PREVIEW.assert_closed(); PREVIEW.assert_saved(); PREVIEW.reopen()" },
+  { "frame": 35, "lua": "PREVIEW.assert_reopened(); PREVIEW.assert_saved()", "mouse": [-100,-100] }
+]

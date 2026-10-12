@@ -1,0 +1,13 @@
+[
+  {"frame":1,"mouse":[42,108]},
+  {"frame":8,"lua":"assert(PREVIEW.tip=='','Tooltip appeared before the hover delay')"},
+  {"frame":24,"lua":"assert(PREVIEW.tip:find('EXP/HR',1,true),'Rate tooltip did not appear under the actual mouse'); assert(PREVIEW.tip:find('8,500',1,true),'Tooltip lost the current value'); assert(PREVIEW.tip:find('Level Sync penalty is already included',1,true),'Tooltip did not explain received penalties')"},
+  {"frame":25,"shift":true},
+  {"frame":28,"lua":"assert(PREVIEW.tip=='','Holding Shift did not suppress the tooltip')","shift":false},
+  {"frame":48,"lua":"assert(PREVIEW.tip:find('EXP/HR',1,true),'Rate tooltip did not resume after Shift'); settings.display.order={'sync'}; settings.display.enabled.sync=true; PREVIEW.view.sync_active=true; PREVIEW.view.sync_level=50; PREVIEW.view.effective_level=50"},
+  {"frame":51,"lua":"assert(PREVIEW.tip=='','Changing the hovered readout did not restart the delay')"},
+  {"frame":70,"lua":"assert(PREVIEW.tip:find('Level Sync',1,true),'Sync tooltip did not appear'); assert(PREVIEW.tip:find('Phoenix has not sent your current Level Sync penalty',1,true),'Unknown sync penalty was not explained'); assert(not PREVIEW.tip:find('EXP/LP received counts',1,true),'Prior tooltip explanation leaked into sync help'); PREVIEW.hidden=true"},
+  {"frame":80,"lua":"assert(PREVIEW.tip=='','Hidden bar kept a tooltip'); PREVIEW.hidden=false"},
+  {"frame":82,"lua":"assert(PREVIEW.tip=='','Returning after hidden reused the old hover delay')"},
+  {"frame":102,"lua":"assert(PREVIEW.tip:find('Level Sync',1,true),'Hover help did not return after a fresh dwell')"}
+]

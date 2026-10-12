@@ -1,0 +1,4 @@
+[
+  {"frame":1,"lua":"settings.display.groups_enabled=true;settings.display.groups.progress='center';settings.display.groups.remaining='center';settings.display.groups.rate='right';settings.display.groups.chain='right'"},
+  {"frame":3,"lua":"local runs=PREVIEW_PY.hud_runs();local left=PREVIEW_PY.window_x('##momentum_bar')+9;local right=left+PREVIEW_PY.window_width('##momentum_bar')-18;local prior=left;local text='';for _,r in ipairs(runs) do assert(r.x>=prior-0.1,'Grouped values overlap');assert(r.x+r.width<=right+0.1,'Grouped values escape inner right edge');prior=r.x+r.width;text=text..r.text end;assert(text:find('WAR',1,true) and text:find('12,450',1,true) and text:find('8,500',1,true),'Expected groups were not rendered');assert(math.abs(prior-right)<0.1,'Right group did not align')"}
+]

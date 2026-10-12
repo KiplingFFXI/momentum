@@ -1,0 +1,112 @@
+[
+  {
+    "frame": 2,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 3,
+    "down": true,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 4,
+    "down": false
+  },
+  {
+    "frame": 6,
+    "lua": "assert(settings.window.sections['Alerts/Food'] and PREVIEW.alert_sections.Food,'Food group did not open'); assert(PREVIEW.alert_widgets['food_end/Play sound'] and not PREVIEW.alert_widgets['food_end/Show notice'],'Food wear-off must be sound only'); assert(not settings.alerts.food_enabled and not PREVIEW.sound_plays,'Food alert did not start quietly off'); PREVIEW.scroll_target='food_end/Play##food_sound'; PREVIEW.assert_alert_count('Food',0)"
+  },
+  {
+    "frame": 8,
+    "target": "food_end/Play##food_sound"
+  },
+  {
+    "frame": 9,
+    "down": true,
+    "target": "food_end/Play##food_sound"
+  },
+  {
+    "frame": 10,
+    "down": false
+  },
+  {
+    "frame": 11,
+    "lua": "assert(PREVIEW.sound_plays==1 and not settings.alerts.food_enabled,'Manual Play must work once while disabled'); PREVIEW.scroll_target='food_end/Play sound'; PREVIEW.assert_alert_count('Food',0)"
+  },
+  {
+    "frame": 13,
+    "target": "food_end/Play sound"
+  },
+  {
+    "frame": 14,
+    "down": true,
+    "target": "food_end/Play sound"
+  },
+  {
+    "frame": 15,
+    "down": false
+  },
+  {
+    "frame": 16,
+    "lua": "assert(settings.alerts.food_enabled and PREVIEW.sound_plays==1,'Enabling food sound failed or played automatically'); assert(not settings.alerts.events.food_soon.sound,'Food wear-off changed food-warning sound')"
+  },
+  {
+    "frame": 16,
+    "target": "food_end/Play sound"
+  },
+  {
+    "frame": 17,
+    "down": true,
+    "target": "food_end/Play sound"
+  },
+  {
+    "frame": 17,
+    "lua": "PREVIEW.assert_alert_count('Food',1)"
+  },
+  {
+    "frame": 18,
+    "down": false
+  },
+  {
+    "frame": 20,
+    "lua": "assert(not settings.alerts.food_enabled and PREVIEW.sound_plays==1,'Disabling food sound failed or played automatically'); assert(settings.alerts.food_sound=='FF VII Save.mp3' and settings.alerts.food_volume==100,'Toggling lost saved food sound choices'); PREVIEW.scroll_target='header/Food'; PREVIEW.assert_alert_count('Food',0)"
+  },
+  {
+    "frame": 22,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 23,
+    "down": true,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 24,
+    "down": false
+  },
+  {
+    "frame": 26,
+    "lua": "assert(settings.window.sections['Alerts/Food']==false and not PREVIEW.alert_sections.Food,'Food collapse did not persist'); assert(PREVIEW.sound_plays==1,'Collapsing played a sound'); PREVIEW.assert_alert_count('Food',0)"
+  },
+  {
+    "frame": 26,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 27,
+    "down": true,
+    "target": "##section_Alerts/Food"
+  },
+  {
+    "frame": 28,
+    "down": false
+  },
+  {
+    "frame": 31,
+    "lua": "assert(settings.window.sections['Alerts/Food'] and PREVIEW.alert_sections.Food,'Food did not reopen'); assert(not settings.alerts.food_enabled and settings.alerts.events.food_end==nil,'Food saved keys changed'); assert(PREVIEW.sound_plays==1 and PREVIEW.notification_calls==0,'Unexpected automatic test playback'); PREVIEW.assert_alert_count('Food',0)",
+    "mouse": [
+      -100,
+      -100
+    ]
+  }
+]

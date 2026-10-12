@@ -1,0 +1,13 @@
+[
+  {"frame": 2, "shift": true, "lua": "PREVIEW.original_drawn_width=PREVIEW_PY.window_width('##momentum_bar')"},
+  {"frame": 3, "target": "##momentum_drag"},
+  {"frame": 4, "target": "##momentum_drag", "down": true},
+  {"frame": 5, "mouse": [520, 330]},
+  {"frame": 6, "down": false},
+  {"frame": 7, "lua": "assert(not settings.bar.docked, 'Body drag did not detach'); assert(PREVIEW_PY.window_width('##momentum_bar')==PREVIEW.original_drawn_width, 'Body drag changed the visible width')"},
+  {"frame": 8, "target": "##momentum_drag"},
+  {"frame": 9, "target": "##momentum_drag", "down": true},
+  {"frame": 10, "mouse": [200, 509]},
+  {"frame": 11, "down": false},
+  {"frame": 12, "shift": false, "mouse": [-100, -100], "lua": "assert(settings.bar.docked and settings.bar.anchor=='top', 'Release near the upper edge did not choose top attachment'); assert(PREVIEW_PY.window_y('##momentum_bar')+PREVIEW_PY.window_height('##momentum_bar')==MOCK.chat.y-2, 'Upper snap was not drawn above the chat border')"}
+]

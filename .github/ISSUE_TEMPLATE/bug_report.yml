@@ -1,0 +1,28 @@
+name: Bug report
+description: Tell us what went wrong and how to reproduce it.
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Momentum version
+      description: Include your Ashita version if you know it.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened?
+      description: Tell us what you were doing, what you expected, and how to repeat it.
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Relevant settings
+      description: Include placement, EXP or merit mode, and any settings that affect the problem.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Error or screenshot
+      description: Copy the error or attach a screenshot. Remove character names and private chat first.

@@ -1,0 +1,7 @@
+[
+  {
+    "frame": 3,
+    "lua": "PREVIEW.assert_alerts_unchanged(); PREVIEW.assert_alert_counts({Food=2,['EXP chains']=1,Dedication=1,['EXP rings']=1,['Levels and merit points']=3,['Level Sync and missed EXP']=1}); for _,open in pairs(PREVIEW.alert_sections) do assert(not open,'Count overview must stay collapsed') end",
+    "mouse": [-100, -100]
+  }
+]

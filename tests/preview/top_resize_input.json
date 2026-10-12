@@ -1,0 +1,8 @@
+[
+  {"frame": 2, "shift": true, "lua": "PREVIEW.original_height=settings.bar.height; PREVIEW.original_width=settings.bar.width; PREVIEW.original_bottom=PREVIEW_PY.window_y('##momentum_bar')+PREVIEW_PY.window_height('##momentum_bar'); PREVIEW.original_auto_width=settings.bar.auto_width"},
+  {"frame": 3, "target": "##momentum_drag", "point": [0.5, 0.02]},
+  {"frame": 4, "target": "##momentum_drag", "point": [0.5, 0.02], "down": true},
+  {"frame": 5, "delta": [0, -12]},
+  {"frame": 6, "down": false},
+  {"frame": 7, "shift": false, "mouse": [-100, -100], "lua": "assert(settings.bar.docked and settings.bar.anchor=='top', 'Top-edge height resize detached or changed sides'); assert(settings.bar.height==PREVIEW.original_height+12, 'Top-edge drag did not grow upward'); assert(PREVIEW_PY.window_y('##momentum_bar')+PREVIEW_PY.window_height('##momentum_bar')==PREVIEW.original_bottom, 'Top-edge drag moved the chat-facing edge'); assert(settings.bar.auto_width==PREVIEW.original_auto_width and settings.bar.width==PREVIEW.original_width, 'Top-edge height change also changed width')"}
+]

@@ -1,0 +1,12 @@
+[
+  {"frame":2,"lua":"PREVIEW.label_order=table.concat(settings.display.order,','); local text=''; for _,r in ipairs(PREVIEW_PY.hud_runs()) do text=text..r.text end; assert(text:find('EXP/HR 8,500',1,true),'Default label is not before its value')"},
+  {"frame":3,"target":"##Label position"},
+  {"frame":4,"target":"##Label position","down":true},
+  {"frame":5,"down":false},
+  {"frame":6,"target":"After value"},
+  {"frame":7,"target":"After value","down":true},
+  {"frame":8,"down":false},
+  {"frame":10,"mouse":[-100,-100],"lua":"assert(settings.display.label_position=='after','Actual selector did not change label position'); local text=''; for _,r in ipairs(PREVIEW_PY.hud_runs()) do text=text..r.text end; assert(text:find('8,500 EXP/HR',1,true),'Suffix was not rendered'); assert(text:find('7,550 TNL',1,true),'TNL did not follow its value'); assert(table.concat(settings.display.order,',')==PREVIEW.label_order,'Label position reordered the readouts'); assert(settings.display.alignment=='left','Label position changed row alignment'); PREVIEW.view.mode='lp'; PREVIEW.view.rate=nil"},
+  {"frame":12,"lua":"local text=''; for _,r in ipairs(PREVIEW_PY.hud_runs()) do text=text..r.text end; assert(text:find('-- LP/HR',1,true),'Unknown LP suffix missing'); settings.display.label_position='before'"},
+  {"frame":14,"lua":"local text=''; for _,r in ipairs(PREVIEW_PY.hud_runs()) do text=text..r.text end; assert(text:find('LP/HR --',1,true),'Unknown LP prefix missing')"}
+]

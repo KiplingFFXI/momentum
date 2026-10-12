@@ -1,0 +1,10 @@
+[
+  {
+    "frame": 2,
+    "lua": "PREVIEW.notice_before={x=PREVIEW_PY.window_x('##momentum_bar'),y=PREVIEW_PY.window_y('##momentum_bar'),w=PREVIEW_PY.window_width('##momentum_bar'),h=PREVIEW_PY.window_height('##momentum_bar')};PREVIEW.notice_runs=PREVIEW_PY.hud_runs();PREVIEW.view.notice={text='Level gained. This deliberately long notification must remain entirely inside the existing bar without changing any placement or progress.',id='level'}"
+  },
+  {
+    "frame": 4,
+    "lua": "local p=PREVIEW_PY;local b=PREVIEW.notice_before;assert(p.window_x('##momentum_bar')==b.x and p.window_y('##momentum_bar')==b.y and p.window_width('##momentum_bar')==b.w and p.window_height('##momentum_bar')==b.h,'Notice changed geometry');local runs=p.hud_runs();assert(#runs==#PREVIEW.notice_runs+1,'Notice displaced a reading');for i,before in ipairs(PREVIEW.notice_runs) do assert(runs[i].text==before.text and runs[i].x==before.x,'Notice changed readout text or order') end;local badge=runs[#runs];assert(badge.text=='!' and badge.x>=b.x and badge.x+badge.width<=b.x+9,'Alert badge escaped existing padding');assert(#p.hud_rects()>=3,'Notice removed progress rail')"
+  }
+]

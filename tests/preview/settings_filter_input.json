@@ -1,0 +1,20 @@
+[
+  {"frame":2,"target":"##Readout list","lua":"PREVIEW.order=table.concat(settings.display.order,','); PREVIEW.fixed_y=PREVIEW.preview_y; assert(PREVIEW.fit.preview_clipped and not PREVIEW.fit.overflow,'Preview crop was confused with bar overflow')"},
+  {"frame":3,"target":"##Readout list","down":true},
+  {"frame":4,"down":false},
+  {"frame":5,"target":"Shown only"},
+  {"frame":6,"target":"Shown only","down":true},
+  {"frame":7,"down":false},
+  {"frame":8,"lua":"assert(not PREVIEW.rows['02  EXP / LP progress'],'Disabled row remained in Shown only'); assert(PREVIEW.rows['03  TNL / LP needed'],'Enabled row missing')","target":"::##drag_remaining"},
+  {"frame":9,"target":"::##drag_remaining","down":true},
+  {"frame":10,"target":"01  Job and level","point":[0.4,0.1]},
+  {"frame":11,"down":false},
+  {"frame":12,"lua":"assert(settings.display.order[1]=='remaining' and settings.display.order[2]=='job','Filtered drag did not use saved order indexes'); assert(settings.display.order[3]=='progress' and settings.display.order[5]=='eta','Filtered drag reordered hidden rows')","target":"##Filter readouts"},
+  {"frame":13,"target":"##Filter readouts","down":true},
+  {"frame":14,"down":false},
+  {"frame":15,"text":"chain"},
+  {"frame":17,"lua":"assert(not PREVIEW.rows['02  Job and level'] and PREVIEW.rows['06  EXP chain'],'Local text filter did not narrow readouts'); assert(not PREVIEW.rows['07  EXP chain timer'],'Shown filter did not combine with text filter'); assert(PREVIEW.preview_y==PREVIEW.fixed_y,'Preview moved with list changes')","target":"Clear##readout_filter"},
+  {"frame":18,"target":"Clear##readout_filter","down":true},
+  {"frame":19,"down":false},
+  {"frame":21,"lua":"assert(PREVIEW.rows['02  Job and level'],'Clearing local filter did not restore shown rows'); assert(not settings.display.enabled.progress,'Filtering changed saved visibility'); assert(PREVIEW.fit.bar_width==700,'Preview modeled settings width instead of actual bar width')","mouse":[-100,-100]}
+]

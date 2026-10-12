@@ -1,0 +1,5 @@
+[
+  {"frame": 2, "lua": "PREVIEW.alignment=require('preview.alignment_assertions'); PREVIEW.alignment.capture(settings)"},
+  {"frame": 3, "lua": "settings.display.alignment='right'"},
+  {"frame": 5, "lua": "PREVIEW.alignment.check(settings)"}
+]

@@ -1,0 +1,3 @@
+[
+  {"frame": 3, "lua": "assert(PREVIEW_PY.drawn_text():find('...',1,true), 'Narrow bar did not show overflow'); assert(PREVIEW_PY.window_width('##momentum_bar')==240, 'Custom narrow width was not honored')"}
+]

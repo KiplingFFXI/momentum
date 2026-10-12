@@ -1,0 +1,4 @@
+[
+  {"frame": 3, "lua": "assert(PREVIEW_PY.window_x('##momentum_bar')==12); assert(PREVIEW_PY.window_width('##momentum_bar')==900); assert(PREVIEW_PY.window_y('##momentum_bar')==866); MOCK.chat={x=54,y=500,width=730,height=352,windows={}}"},
+  {"frame": 5, "lua": "assert(PREVIEW_PY.window_x('##momentum_bar')==54, 'Dock did not follow the changed chat left edge'); assert(PREVIEW_PY.window_width('##momentum_bar')==730, 'Dock did not follow the changed chat right edge'); assert(PREVIEW_PY.window_y('##momentum_bar')==854, 'Dock did not follow the changed chat bottom'); assert(settings.bar.docked, 'Native chat resizing detached the dock')"}
+]

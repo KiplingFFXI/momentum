@@ -1,0 +1,104 @@
+[
+  {
+    "frame": 6,
+    "target": "Narrow width test##narrow_preview",
+    "lua": "assert(settings.window.tab=='Display','Saved Preview tab did not migrate'); assert(#PREVIEW.inline_calls==1 and PREVIEW.inline_calls[1].preview,'Legacy Preview did not show local sample'); assert(not settings.preview.show,'Local preview replaced game readings'); assert(PREVIEW.fit.bar_width==700,'Local sample lost actual bar width')"
+  },
+  {
+    "frame": 7,
+    "target": "Narrow width test##narrow_preview",
+    "down": true
+  },
+  {
+    "frame": 8,
+    "down": false
+  },
+  {
+    "frame": 10,
+    "target": "Show sample on game bar",
+    "lua": "assert(#PREVIEW.inline_calls==2,'Narrow test did not expand'); local narrow=PREVIEW.inline_calls[2]; assert(narrow.preview and narrow.info.bar_width==280 and narrow.info.overflow and narrow.info.hidden_count>0 and not narrow.info.preview_clipped,'Narrow sample did not simulate real overflow'); assert(settings.bar.width==700,'Narrow test resized real bar')"
+  },
+  {
+    "frame": 11,
+    "target": "Show sample on game bar",
+    "down": true
+  },
+  {
+    "frame": 12,
+    "down": false
+  },
+  {
+    "mouse": [
+      700,
+      700
+    ],
+    "frame": 14,
+    "down": true,
+    "lua": "assert(settings.preview.show,'Explicit game sample toggle did not enable it')"
+  },
+  {
+    "down": false,
+    "frame": 15
+  },
+  {
+    "frame": 16,
+    "target": "##Preview source"
+  },
+  {
+    "frame": 17,
+    "target": "##Preview source",
+    "down": true
+  },
+  {
+    "frame": 18,
+    "down": false
+  },
+  {
+    "frame": 19,
+    "target": "Live"
+  },
+  {
+    "frame": 20,
+    "target": "Live",
+    "down": true
+  },
+  {
+    "frame": 21,
+    "down": false
+  },
+  {
+    "frame": 23,
+    "lua": "assert(#PREVIEW.inline_calls==1 and not PREVIEW.inline_calls[1].preview,'Live selector did not restore local live preview'); assert(settings.preview.show,'Local Live selector silently changed game sample setting')",
+    "target": "Preview options"
+  },
+  {
+    "frame": 24,
+    "target": "Preview options",
+    "down": true
+  },
+  {
+    "frame": 25,
+    "down": false
+  },
+  {
+    "frame": 27,
+    "target": "Show sample on game bar"
+  },
+  {
+    "frame": 28,
+    "target": "Show sample on game bar",
+    "down": true
+  },
+  {
+    "frame": 29,
+    "down": false
+  },
+  {
+    "frame": 32,
+    "lua": "assert(not settings.preview.show,'Explicit toggle did not restore live game bar'); assert(#PREVIEW.inline_calls==2 and PREVIEW.inline_calls[2].preview,'Narrow sample disappeared when game sample was disabled')",
+    "mouse": [
+      -100,
+      -100
+    ]
+  }
+]
