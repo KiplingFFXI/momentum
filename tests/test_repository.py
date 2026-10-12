@@ -63,6 +63,22 @@ class RepositoryTests(unittest.TestCase):
         path.write_bytes(b'\x00\xff')
         self.assertEqual(check_repository.check(self.root)[0], [])
 
+    def test_documentation_pngs_are_allowed_only_under_images(self):
+        image = self.root / 'docs/images/example.png'
+        image.parent.mkdir()
+        image.write_bytes(b'\x89PNG\r\n\x1a\n')
+        (self.root / 'README.md').write_text('![Bar](docs/images/example.png)\n', encoding='ascii')
+        self.assertEqual(check_repository.check(self.root), ([], 1))
+
+        (self.root / 'docs/example.png').write_bytes(image.read_bytes())
+        (image.parent / 'unexpected.bin').write_bytes(b'\x00\xff')
+        problems, links = check_repository.check(self.root)
+        self.assertEqual(set(problems), {
+            'docs/example.png: unexpected public file type',
+            'docs/images/unexpected.bin: unexpected public file type',
+        })
+        self.assertEqual(links, 1)
+
     def test_release_notes_stop_at_next_version(self):
         text = '# Changelog\n\n## 1.0.1\n\n- New.\n\n## 1.0.0\n\n- Old.\n'
         self.assertEqual(release_notes.notes(text, '1.0.1'), '- New.\n')

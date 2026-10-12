@@ -37,7 +37,8 @@ def check(root=ROOT):
         if path.is_symlink():
             problems.append(relative + ': linked source file')
         if path.suffix not in TEXT and path.name not in {'LICENSE', '.gitignore', '.gitattributes'}:
-            if path.suffix != '.mp3':
+            documentation_image = path.suffix == '.png' and relative.startswith('docs/images/')
+            if path.suffix != '.mp3' and not documentation_image:
                 problems.append(relative + ': unexpected public file type')
             continue
         try:

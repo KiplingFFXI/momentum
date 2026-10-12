@@ -2,6 +2,10 @@
 
 Momentum is an EXP and merit tracking bar for Phoenix on Ashita v4, by Kipling. It sits above or below your chat window, or anywhere you want to drag it. The default bar shows your job, current EXP, TNL, EXP/HR, and EXP chain in a compact, rounded row.
 
+![Momentum EXP bar showing EXP, TNL, EXP/HR, and an EXP chain countdown](docs/images/momentum-example.png)
+
+*Example EXP layout with sample values.*
+
 [Download the latest release](https://github.com/KiplingFFXI/momentum/releases/latest) | [Guide](docs/GUIDE.md) | [Changelog](CHANGELOG.md) | [Contributing](CONTRIBUTING.md)
 
 ## Install or update
