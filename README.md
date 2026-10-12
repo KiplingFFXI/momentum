@@ -2,11 +2,11 @@
 
 Momentum is an EXP and merit tracking bar for Phoenix on Ashita v4, by Kipling. It sits above or below your chat window, or anywhere you want to drag it. The default bar shows your job, current EXP, TNL, EXP/HR, and EXP chain in a compact, rounded row.
 
-[Guide](docs/GUIDE.md) | [Changelog](CHANGELOG.md) | [Contributing](CONTRIBUTING.md)
+[Download the latest release](https://github.com/KiplingFFXI/momentum/releases/latest) | [Guide](docs/GUIDE.md) | [Changelog](CHANGELOG.md) | [Contributing](CONTRIBUTING.md)
 
 ## Install or update
 
-1. If updating a running copy, enter `/addon unload momentum` first. Extract the `momentum` folder from `momentum-1.0.0.zip` into your Phoenix client's `addons` folder. The result should be `addons/momentum/momentum.lua`.
+1. Download `momentum-1.0.0.zip` from the release page. If updating a running copy, enter `/addon unload momentum` first. Extract the `momentum` folder into your Phoenix client's `addons` folder. The result should be `addons/momentum/momentum.lua`.
 2. Enter `/addon load momentum` in game.
 3. Enter `/momentum` to open settings. Escape closes them, including during combat or while editing a field or dropdown.
 

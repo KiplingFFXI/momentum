@@ -1,4 +1,5 @@
 """Check the release notes and public-document validation used by CI."""
+from contextlib import chdir
 from pathlib import Path
 import sys
 import tempfile
@@ -40,6 +41,21 @@ class RepositoryTests(unittest.TestCase):
         problems, _ = check_repository.check(self.root)
         for text in ('missing local link', 'private path', 'match addon.version'):
             self.assertTrue(any(text in item for item in problems), problems)
+
+    def test_relative_and_aliased_roots_report_link_problems(self):
+        (self.root / 'README.md').write_text(
+            '[guide](docs/GUIDE.md#test)\n[missing](absent.md)\n[heading](docs/GUIDE.md#absent)\n',
+            encoding='ascii')
+        expected = [
+            'README.md: missing local link absent.md',
+            'README.md: missing heading docs/GUIDE.md#absent',
+        ]
+        with chdir(self.root.parent):
+            for root in (Path(self.root.name), self.root / 'docs' / '..'):
+                with self.subTest(root=root):
+                    problems, links = check_repository.check(root)
+                    self.assertEqual(problems, expected)
+                    self.assertEqual(links, 3)
 
     def test_local_output_does_not_enter_public_source_check(self):
         path = self.root / 'tests/out/private.bin'

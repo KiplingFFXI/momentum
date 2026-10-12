@@ -30,6 +30,7 @@ def anchors(text):
 
 
 def check(root=ROOT):
+    root = Path(root).resolve()
     problems, documents = [], {}
     for path in public_files(root):
         relative = path.relative_to(root).as_posix()
@@ -66,7 +67,7 @@ def check(root=ROOT):
                 continue
             destination = (path.parent / unquote(split.path)).resolve() if split.path else path
             links += 1
-            if not destination.is_relative_to(root.resolve()) or not destination.exists():
+            if not destination.is_relative_to(root) or not destination.exists():
                 problems.append(path.relative_to(root).as_posix() + ': missing local link ' + target)
             elif split.fragment and destination in documents and unquote(split.fragment) not in anchors(documents[destination]):
                 problems.append(path.relative_to(root).as_posix() + ': missing heading ' + target)
