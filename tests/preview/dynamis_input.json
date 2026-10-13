@@ -1,0 +1,14 @@
+[
+  {
+    "frame": 2,
+    "lua": "local text=PREVIEW_PY.drawn_text(); assert(text:find('Time 1:03:52',1,true),'Dynamis timer must keep seconds after one hour'); assert(text:find('TE +55m',1,true),'Time extension total missing'); assert(text:find('Currency 247',1,true),'Currency total missing'); assert(text:find('AF2 4',1,true),'Relic armor total missing'); assert(not text:find('EXP/HR',1,true),'Compact Dynamis starter should not show EXP rate'); PREVIEW.view.dynamis.remaining=590; PREVIEW.view.dynamis.extension_minutes=70"
+  },
+  {
+    "frame": 4,
+    "lua": "local text=PREVIEW_PY.drawn_text(); assert(text:find('Time 9:50',1,true),'Updated timer did not reach the HUD'); assert(text:find('TE +70m',1,true),'Updated extension did not reach the HUD'); PREVIEW.view.dynamis.remaining=nil"
+  },
+  {
+    "frame": 6,
+    "lua": "local text=PREVIEW_PY.drawn_text(); assert(text:find('Time --',1,true),'Unknown time must not become zero'); PREVIEW.view.dynamis.remaining=3832; PREVIEW.view.dynamis.extension_minutes=55"
+  }
+]
