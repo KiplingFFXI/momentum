@@ -114,6 +114,14 @@ Release notes and GitHub
 This extracts the current version's entry from CHANGELOG.md. Keep temporary output
 outside tracked source, or remove it after review.
 
+For a next-release draft before assigning a new version:
+
+  python tools/release_notes.py --unreleased --out tests/out/next-release-notes.md
+
+Unreleased may appear above the current numbered changelog entry. Repository
+checks still require that numbered entry to match addon.version. Before building
+a release, assign its version and promote the Unreleased notes into that entry.
+
 .github/workflows/verify.yml runs on pull requests, manual requests, or a call from
 another workflow. .github/workflows/draft-release.yml runs only when a maintainer
 requests it manually. It verifies on Windows first, builds the runtime archive

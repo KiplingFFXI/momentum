@@ -79,7 +79,18 @@ Expand **Position and size** under **Display**, then choose **Below chat**, **Ab
 
 Use **Bar height** directly below Placement to make the bar taller or shorter, from 12 to 120 pixels. The text size stays separate under **Appearance > Bar text size**. An attached bar fits the space outside chat without covering its text or border.
 
-For either chat anchor, **Starting point** sets the bar's left end in pixels from the left edge of chat. Its right end stays aligned with chat, leaving at least 120 pixels for the bar where possible. The starting point is limited automatically when chat becomes narrower. **Gap from chat** leaves space outside its border. The bar fits the available height on the selected side; it stays hidden if chat cannot be read or that side has no room.
+For either chat anchor, **Starting point** sets the bar's left end in pixels from the left edge of chat. Its right end stays aligned with chat, leaving at least 120 pixels for the bar where possible. The starting point is limited automatically when chat becomes narrower. **Gap from chat** leaves space outside its border. The bar fits the available height on the selected side; it stays hidden if that side has no room.
+
+Under **Tracking > Visibility**, **Bar visibility** controls what happens when chat closes:
+
+- **Follow placement** keeps the original behavior. An attached bar hides without chat bounds; Free placement stays up. Your other hide settings apply.
+- **Hide with chat** hides when your main chat log closes, even in Free placement. Your other hide settings apply.
+- **Keep visible when chat closes** keeps the bar up when chat closes. Your typing, map, cutscene, game UI, and idle hide settings still apply.
+- **Always visible** also keeps the bar up while typing, viewing the map, during cutscenes and NPC conversations, while the game UI is hidden, and before a session starts. Your other hide settings are saved for when you switch back.
+
+The last two choices keep an attached bar at its last verified chat position while chat is closed. If no usable position is available, the bar temporarily uses your saved Free placement position. It attaches again when chat returns without changing your saved anchor, size, or position. If you Shift drag or resize that temporary free bar, it switches to Free placement and keeps your edit. With readable chat bounds, the dock still needs enough space outside either chat border. **Hide with chat** uses the game's reported main chat window state; an unreadable state is not treated as a closed window.
+
+`/momentum hide` and `/momentum show` still work when Sample preview is off. Sample preview remains available, and closing chat does not close the settings menu. Tracking, alerts, and EXP chain, food, Dedication, EXP ring, and Dynamis timers keep running while the bar is hidden.
 
 **Free placement** preserves the visible size and position and turns snapping off, so dragging near chat keeps the bar free. Drag the right edge for width and the bottom edge for height. Above chat, use the outer top edge to change height while keeping the anchor. Dragging the right edge of an attached bar detaches it. **Fit width to readouts** uses the space the visible readouts need, up to **Maximum width**; turn it off for a fixed **Custom bar width**.
 

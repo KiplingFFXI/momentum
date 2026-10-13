@@ -281,6 +281,8 @@ class ClientSettingsTests(unittest.TestCase):
             local s=MOMENTUM_TEST.settings()
             assert(s.bar.anchor=='top' and s.bar.start==135)
             assert(s.display.alignment=='right')
+            assert(s.visibility.mode=='placement')
+            s.visibility.mode='always'
             assert(MOMENTUM_TEST.services.placement('free'))
             assert(not s.bar.docked and not s.bar.snap and not s.bar.auto_width)
             local x,y,w,h=s.bar.x,s.bar.y,s.bar.width,s.bar.height
@@ -290,6 +292,7 @@ class ClientSettingsTests(unittest.TestCase):
             assert(s.bar.anchor=='top' and s.bar.start==135)
             assert(s.bar.x==x and s.bar.y==y and s.bar.width==w and s.bar.height==h)
             assert(s.display.alignment=='right')
+            assert(s.visibility.mode=='always' and s.visibility.map and s.visibility.event and s.bar.hide_typing)
         """)
         self.assert_current_root(lua)
 

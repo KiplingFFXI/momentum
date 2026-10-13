@@ -60,6 +60,9 @@ separation, secondary-window avoidance, and short-strip height on the chosen sid
 Both top and bottom placements are checked. A blocked side stays hidden even when
 the opposite side has space. Large starting points leave at least 120 pixels.
 chat_resize_input.json changes native bounds between frames and checks all three edges.
+chat_visibility_input.json selects Hide with chat, Keep visible when chat closes,
+and Always visible through the real settings dropdown in a narrow window. It
+checks that switching these choices preserves the saved individual hide settings.
 diagnostic_chat_input.json loads the actual core/chat.lua projection directly, bypassing
 the mocked reader. It supplies the user-reported native endpoints (16,821)-(1086,1044)
 at 1920x1080, checks the resulting 1070x223 rectangle, then verifies both top and bottom

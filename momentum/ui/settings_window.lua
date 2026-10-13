@@ -47,6 +47,7 @@ local section_names = {
 
 local tips = {
     ['Placement'] = 'Attach the bar above or below your chat log. Choose Free placement to move it anywhere. Hold Shift to drag the bar or resize its edges.',
+    ['Bar visibility'] = 'Choose when the bar stays up. This works above chat, below chat, and in Free placement. Tracking and timers keep running while the bar is hidden.',
     ['Bar height'] = 'Set the bar height from 12 to 120 pixels. When attached to chat, it stays outside the border and fits the space available.',
     ['Starting point'] = 'Move the left end of the bar along your chat log by this many pixels. Zero lines it up with the left edge. The right end stays lined up with chat.',
     ['Gap from chat'] = 'Set the space between the bar and your chat log.',
@@ -271,7 +272,11 @@ local function position(settings, services)
     pick(settings.display, 'label_position', 'Label position', {
         { name = 'Before value', value = 'before' }, { name = 'After value', value = 'after' } },
         'Before value shows EXP/HR 8,500. After value shows 8,500 EXP/HR. This applies to readout labels, including TNL and Chain.');
-    checkbox(settings.bar, 'hide_typing', 'Hide while typing', 'Keeps the bar out of the way while you enter chat.');
+    if settings.visibility.mode == 'always' then
+        note('Always visible keeps the bar up while you type. Change Bar visibility under Tracking to use Hide while typing.');
+    else
+        checkbox(settings.bar, 'hide_typing', 'Hide while typing', 'Hide the bar while you enter chat.');
+    end
     checkbox(settings.bar, 'locked', 'Lock movement and resizing', 'Keep the bar in place. Turn this off to move or resize it while holding Shift. Free placement unlocks it. You cannot move it while typing in chat.');
     checkbox(settings.bar, 'snap', 'Snap to chat when dropped nearby', 'When moving the bar, dropping it close to the top or bottom of chat attaches it there. Choosing Free placement turns this off so the bar stays where you drop it.');
     if not settings.bar.docked then note(settings.bar.locked and 'Locked. Turn off Lock movement and resizing to move the bar.' or 'Hold Shift and drag to move. Shift-drag the right edge to resize.'); end
@@ -281,7 +286,9 @@ local function position(settings, services)
         tip(tips['Starting point']);
         slider(settings.bar, 'bottom', 'Gap from chat', 2, 40);
         local problem = services.dock_problem and services.dock_problem();
-        if problem then note(problem .. ' Choose Free placement to move the bar anywhere.'); end
+        if services.chat_fallback and services.chat_fallback() then
+            note('Using your saved Free placement position until chat returns. Your chat anchor is still saved.');
+        elseif problem then note(problem .. ' Choose Free placement to move the bar anywhere.'); end
     else
         checkbox(settings.bar, 'auto_width', 'Fit width to readouts', 'Uses only the space your readouts need, up to the maximum width below.');
         slider(settings.bar, 'width', settings.bar.auto_width and 'Maximum width' or 'Custom bar width', 120, 3840);
@@ -621,11 +628,31 @@ local function tracking_page(settings, view, services)
             if view.goal.available and view.goal.blocked and view.goal.reason then note(view.goal.reason); end
         end
     end
-    if section('Visibility', 'Hide the bar temporarily while other game screens are open. Tracking continues while the bar is hidden.', false) then
-        checkbox(settings.tracking, 'hide_idle', 'Hide until the session starts', 'Keep the bar hidden until your session timer starts. Sample previews still appear.');
-        checkbox(settings.visibility, 'map', 'Hide while the map is open', 'Hide the bar while viewing the in-game map.');
-        checkbox(settings.visibility, 'event', 'Hide during cutscenes', 'Hide the bar during cutscenes and NPC conversations.');
-        checkbox(settings.visibility, 'game_ui', 'Hide with the game UI', 'Hide the bar when the game interface is hidden.');
+    if section('Visibility', 'Choose when the bar stays up. Tracking and timers keep running while it is hidden.', false) then
+        pick(settings.visibility, 'mode', 'Bar visibility', {
+            { name = 'Follow placement', value = 'placement' },
+            { name = 'Hide with chat', value = 'chat' },
+            { name = 'Keep visible when chat closes', value = 'keep' },
+            { name = 'Always visible', value = 'always' },
+        });
+        if settings.visibility.mode == 'always' then
+            note('Keep the bar up while typing, viewing the map, and during cutscenes. Your other hide settings are saved but do not apply. /momentum hide still works when Sample preview is off.');
+        else
+            if settings.visibility.mode == 'chat' then
+                note('Hide when your main chat log closes, including in Free placement.');
+            elseif settings.visibility.mode == 'keep' then
+                note('Keep the bar up when chat closes. Your other hide settings still apply.');
+            else
+                note('An attached bar hides when chat closes. A freely placed bar stays up.');
+            end
+            checkbox(settings.tracking, 'hide_idle', 'Hide until the session starts', 'Keep the bar hidden until your session timer starts. Sample previews still appear.');
+            checkbox(settings.visibility, 'map', 'Hide while the map is open', 'Hide the bar while viewing the in-game map.');
+            checkbox(settings.visibility, 'event', 'Hide during cutscenes', 'Hide the bar during cutscenes and NPC conversations.');
+            checkbox(settings.visibility, 'game_ui', 'Hide with the game UI', 'Hide the bar when the game interface is hidden.');
+        end
+        if settings.visibility.mode == 'keep' or settings.visibility.mode == 'always' then
+            note('When chat closes, an attached bar keeps its last chat position. If that position is unavailable, it uses your saved Free placement position until chat returns.');
+        end
     end
 end
 
@@ -816,7 +843,7 @@ local search_sections = {
     { 'Display', 'Dividers and formatting', 'divider custom spacing separator short numbers hover chain strip' },
     { 'Tracking', 'EXP and merits', 'rate hour window exp limit points mode merits reward sample earned net' },
     { 'Tracking', 'Progress goal', 'goal target level session buffer merit' },
-    { 'Tracking', 'Visibility', 'hide map event game ui visibility' },
+    { 'Tracking', 'Visibility', 'hide map event game ui visibility chat close disappear keep always permanent typing idle' },
     { 'Dynamis', 'Dynamis options', 'dynamis automatic layout mode enabled tracking history retention' },
     { 'Dynamis', 'Current Dynamis run', 'dynamis time hourglass currency relic armor af2 received found reset clear summary copy weakness support job clear' },
     { 'Dynamis', 'Objectives and time extensions', 'dynamis te time extension boss weakening wave monsters unknown objectives' },

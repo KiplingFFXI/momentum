@@ -140,9 +140,12 @@ end
 package.preload['core.chat'] = function ()
     return {
         load = function () return true; end,
+        reset = function () MOCK.chat_retained = nil; end,
         read = function ()
             MOCK.chat_reads = (MOCK.chat_reads or 0) + 1;
-            return MOCK.chat, MOCK.chat == nil and 'Chat fixture unavailable.' or nil;
+            local visible = MOCK.chat_visible;
+            if visible == nil and MOCK.chat then visible = true; end
+            return MOCK.chat, MOCK.chat == nil and 'Chat fixture unavailable.' or nil, visible, MOCK.chat_retained;
         end,
     };
 end

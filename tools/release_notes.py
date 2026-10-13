@@ -16,8 +16,9 @@ def notes(changelog, version):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', required=True, type=Path)
+    parser.add_argument('--unreleased', action='store_true', help='Export the next-release draft without changing addon.version.')
     args = parser.parse_args()
-    version = addon_version()
+    version = 'Unreleased' if args.unreleased else addon_version()
     text = notes((ROOT / 'CHANGELOG.md').read_text(encoding='ascii'), version)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(text, encoding='ascii', newline='\n')

@@ -24,6 +24,7 @@ Updates replace `addons/momentum/`. Leave `config/addons/momentum/` in place; it
 Type `/momentum` to open settings. Use **Bar mode** at the top to choose **EXP**, **Merits**, or **Dynamis**. Your choice stays selected until you change it. Choose **Automatic** to follow your automatic layout settings again. Escape closes settings, including during combat or while editing a field.
 
 - **Display** holds starter layouts, readouts, ordering, labels, dividers, and alignment. EXP, Merits, and Dynamis keep their own readout setups. **Position and size** attaches the bar above or below chat. Choose **Free placement**, then hold Shift to drag or resize it.
+- **Visibility** lets you hide with chat, keep the bar up when chat closes, or always show it. **Follow placement** preserves your existing behavior. Find these choices under **Tracking > Visibility > Bar visibility**. [Visibility and placement](docs/GUIDE.md#place-the-bar).
 - **Appearance** holds eight skins, colors, fonts, and text sizes. Job pictures come from your client, with the abbreviation and level beside them, such as `(WAR) 32`.
 - **Live/Sample** previews let you try a layout. Search finds settings, and hover help explains controls and readings. **Undo** restores recent edits; **Profiles** saves setups for different jobs or shared use.
 - **Alerts** groups notices and sounds by purpose and shows how many are on. All start off. For a food wear-off sound, open **Food** and check **Play sound** under **Food effect wore off**. [Set up alerts](docs/GUIDE.md#alerts).

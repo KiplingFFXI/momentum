@@ -69,6 +69,8 @@ The focused suites cover:
   sharing, saved folds, search, Undo, layout preservation, and Escape handling.
 - Bounded frame work, cache invalidation, counted alert-header measurements,
   hidden displays, readout fit, and readable colors across the existing skins.
+- Chat visibility choices, retained anchors, temporary free placement, unknown
+  chat state, hide-setting precedence, and continued tracking while chat closes.
 - Dynamis hourglass and packet parsing, extensions, pool deduplication, found and
   received drops, observed objectives, partial runs, reloads, history, registration
   timing, separate layouts, wanted drops, and optional alerts. EXP reset and pause
@@ -109,6 +111,10 @@ The benchmark counts repeated work in fixed HUD, countdown, settings, packet,
 hidden-display, mature-session, and ring-demand fixtures. It counts layout work,
 tracker views, rate-bucket visits, chat and inventory reads, profile reads,
 history sorting, and date formatting. It does not measure live FPS.
+
+Closed-chat fixtures cover Hide with chat, both keep-visible choices, and Free
+placement. Native reader tests separately count retained-position projections
+and verify that skipping an unused anchor does not skip validation or add reads.
 
 The release comparison sends the same EXP/LP trace through both versions and
 compares tracking views and readouts, including pauses, resets, recovery, rates,

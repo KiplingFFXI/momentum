@@ -4,12 +4,18 @@ This checklist prepares a reviewable release. It does not publish one or establi
 
 ## Prepare the version
 
-1. Set `addon.version` in `momentum/momentum.lua` to the intended `major.minor.patch` version.
-2. Put that same version at the top of [CHANGELOG.md](../CHANGELOG.md), with player-facing notes for the final change.
+1. Choose the next `major.minor.patch` version, then set `addon.version` in `momentum/momentum.lua` to match.
+2. Move the **Unreleased** notes in [CHANGELOG.md](../CHANGELOG.md) into that version's entry. Review them against the final changes and preserve the notes for previous releases.
 3. Update installation examples and the [guide](GUIDE.md) when names or behavior change. Preserve saved settings, profiles, and session compatibility.
 4. For game-rule changes, review the pinned Phoenix revision and loaded modules, regenerate the rules deliberately, and run the source check. A release build does not refresh them.
 
-The current release target is **1.1.1**.
+Keep new work under **Unreleased** until a release version is assigned. Assign the version and promote those notes before building the release archive or generating release notes. An Unreleased entry does not change the installed version or publish an update.
+
+To review the pending notes without assigning a release version:
+
+```powershell
+python tools/release_notes.py --unreleased --out tests/out/next-release-notes.md
+```
 
 ## Verify
 
@@ -29,6 +35,14 @@ For a performance change, compare operation counts with a previous archive and r
 For Dynamis, check a readable Perpetual Hourglass, extensions, a reload and late join, zone changes, found drops versus personal awards, duplicate pool updates, and the separate clear-totals action. Check that EXP reset and pause preserve Dynamis timing and collection, the prior layout returns on exit, unseen objectives stay unknown, and chosen alerts stay quiet during initial loading. Verify the recorded registration countdown without describing it as confirmed account eligibility. Include partial-run and saved-history behavior in the results.
 
 For Bar mode, switch among EXP, Merits, and Dynamis from both settings and chat. Check that each keeps its readout edits through switching, closing settings, reloading, and zoning, with both automatic layout options enabled. Return to Automatic and check that the previous regular setup and configured switching resume. Selecting a bar must not change gameplay mode, reset a session or run, or stop timers or Dynamis collection. Check manual Dynamis outside the zone with unknown run readings.
+
+Before releasing the visibility changes, record these live-client checks separately from the offline results:
+
+- Try each Bar visibility choice above chat, below chat, and in Free placement. Close and reopen the main chat log, then change the chat size and resolution. Confirm the native active flag follows the visible chat window.
+- With chat unavailable, check the temporary free position and Shift dragging and resizing. Close and reopen chat during a held resize; the last valid size should stay put until you release and begin a new drag. With readable chat but no room on the chosen side, check that the dock stays hidden and does not cover either chat window.
+- Check typing, map, cutscene, hidden game UI, and idle behavior. Always visible should bypass those hide settings, while `/momentum hide` still works with Sample preview off. Escape must close settings during combat and an active edit.
+- Load profiles and check their saved visibility policy and placement. Switch bar modes, zone, and reload without changing that choice or carrying a stale chat rectangle into another character or zone.
+- Hide and show the bar during an active session and Dynamis run. Confirm rates, drops, alerts, and EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep updating. Reset and Pause must still preserve their active timers.
 
 ## Build and inspect
 

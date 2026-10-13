@@ -57,6 +57,22 @@ class RepositoryTests(unittest.TestCase):
                     self.assertEqual(problems, expected)
                     self.assertEqual(links, 3)
 
+    def test_unreleased_notes_preserve_the_numbered_version_check(self):
+        path = self.root / 'CHANGELOG.md'
+        released = path.read_text(encoding='ascii')
+        pending = '## Unreleased\n\n- Pending change.\n\n'
+        path.write_text(released.replace('## 1.0.0', pending + '## 1.0.0'), encoding='ascii')
+        self.assertEqual(check_repository.check(self.root)[0], [])
+        text = path.read_text(encoding='ascii')
+        self.assertEqual(release_notes.notes(text, 'Unreleased'), '- Pending change.\n')
+        self.assertEqual(release_notes.notes(text, '1.0.0'), 'Initial release.\n')
+        path.write_text(text.replace('## 1.0.0', '## 2.0.0'), encoding='ascii')
+        self.assertTrue(any('match addon.version' in item for item in check_repository.check(self.root)[0]))
+        for text in ('# Changelog\n\n' + pending, released + pending,
+                     '# Changelog\n\n' + pending + pending + released):
+            path.write_text(text, encoding='ascii')
+            self.assertTrue(check_repository.check(self.root)[0])
+
     def test_local_output_does_not_enter_public_source_check(self):
         path = self.root / 'tests/out/private.bin'
         path.parent.mkdir(parents=True)

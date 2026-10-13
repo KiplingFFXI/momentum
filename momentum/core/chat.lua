@@ -68,6 +68,11 @@ function chat.new(backend)
     return setmetatable({ backend = backend, loaded = false, reason = 'The chat window position and size have not loaded yet.' }, reader);
 end
 
+function reader:reset()
+    self.last, self.last_display, self.retained, self.visible = nil, nil, nil, nil;
+    if self.loaded then self.reason = 'The chat window position and size have not loaded yet.'; end
+end
+
 function reader:bytes(address, size)
     if not span(address, size) then return nil; end
     local ok, value = pcall(self.backend.read, address, size);
@@ -91,7 +96,7 @@ function reader:operand(pattern, offset)
 end
 
 function reader:load()
-    self.loaded, self.last = false, nil;
+    self.loaded, self.last, self.retained, self.visible = false, nil, nil, nil;
     if not self.backend then
         self.backend, self.reason = native_backend();
         if not self.backend then return false, self.reason; end
@@ -134,6 +139,7 @@ function reader:snapshot()
             if not data then return nil, 'Momentum cannot find a chat window.'; end
             local active = data:byte(14);
             if active ~= 0 and active ~= 1 then return nil, 'The chat window is not ready yet.'; end
+            if index == 1 then snapshot.main_active = active == 1; end
             if active == 1 then
                 snapshot.windows[index] = {
                     x = u16(data, 0), y = u16(data, 2), right = u16(data, 4), bottom = u16(data, 6),
@@ -145,7 +151,7 @@ function reader:snapshot()
         or self:bytes(scale_address + 0x10, 8) ~= dimensions then
         return nil, 'The chat window moved or resized. Waiting for it to settle.';
     end
-    return snapshot;
+    return snapshot, nil, pointers:sub(1, 4) .. scale_pointer;
 end
 
 -- Keep menu-to-screen conversion separate from the native reads.
@@ -158,7 +164,7 @@ function chat.project(snapshot, display_width, display_height)
         or snapshot.window_width <= 0 or snapshot.window_height <= 0 then
         return nil, 'The game menu size is not available yet.';
     end
-    if type(snapshot.windows) ~= 'table' or type(snapshot.windows[1]) ~= 'table' then
+    if type(snapshot.windows) ~= 'table' then
         return nil, 'The main chat window is not active.';
     end
     local scale_x, scale_y = display_width / menu_width, display_height / menu_height;
@@ -176,28 +182,51 @@ function chat.project(snapshot, display_width, display_height)
                 width = (window.right - window.x) * scale_x, height = (window.bottom - window.y) * scale_y, index = index };
         end
     end
+    if not snapshot.windows[1] then return nil, 'The main chat window is not active.', true; end
     local main = windows[1];
-    return { x = main.x, y = main.y, width = main.width, height = main.height, windows = windows };
+    return { x = main.x, y = main.y, width = main.width, height = main.height, windows = windows }, nil, true;
 end
 
-function reader:read(display_width, display_height)
-    local snapshot, reason = self:snapshot();
+function reader:read(display_width, display_height, keep_anchor)
+    local snapshot, reason, identity = self:snapshot();
     self.last = snapshot;
     self.last_display = { width = display_width, height = display_height };
-    local result;
-    if snapshot then result, reason = chat.project(snapshot, display_width, display_height); end
+    local result, valid, retained;
+    self.visible = nil;
+    if snapshot then result, reason, valid = chat.project(snapshot, display_width, display_height); end
+    if valid then self.visible = snapshot.main_active; end
+    if result and self.visible == true then
+        self.retained = self.retained or {};
+        self.retained.native, self.retained.identity = snapshot, identity;
+    elseif self.visible == false and self.retained then
+        local saved = self.retained.native;
+        if self.retained.identity ~= identity or saved.menu_width ~= snapshot.menu_width
+            or saved.menu_height ~= snapshot.menu_height or saved.window_width ~= snapshot.window_width
+            or saved.window_height ~= snapshot.window_height then
+            self.retained = nil;
+        elseif keep_anchor == true then
+            -- Keep the last chat edge while closed, but protect the current second window.
+            local anchored = copy(snapshot);
+            anchored.windows[1] = saved.windows[1];
+            retained = chat.project(anchored, display_width, display_height);
+            if not retained then self.retained = nil; end
+        end
+    else
+        self.retained = nil;
+    end
     self.reason = reason;
-    return result, reason;
+    return result, reason, self.visible, retained;
 end
 
 function reader:status()
-    return { loaded = self.loaded, reason = self.reason, native = copy(self.last) };
+    return { loaded = self.loaded, reason = self.reason, visible = self.visible, native = copy(self.last) };
 end
 
 function reader:describe()
     if not self.last then return self.reason or 'The chat window position and size are not available yet.'; end
     local parts = {};
     if self.reason then parts[#parts + 1] = self.reason; end
+    parts[#parts + 1] = 'Chat state: ' .. (self.visible == true and 'active' or self.visible == false and 'inactive' or 'unknown');
     for index = 1, 2 do
         local window = self.last.windows[index];
         parts[#parts + 1] = window and string.format('Chat %d: L=%d T=%d R=%d B=%d', index, window.x, window.y, window.right, window.bottom)
@@ -211,7 +240,8 @@ end
 
 local current = chat.new();
 function chat.load() return current:load(); end
-function chat.read(width, height) return current:read(width, height); end
+function chat.reset() return current:reset(); end
+function chat.read(width, height, keep_anchor) return current:read(width, height, keep_anchor); end
 function chat.status() return current:status(); end
 function chat.describe() return current:describe(); end
 

@@ -160,6 +160,138 @@ r, s = fixture(); r:load(); s:write(s.main + 0x4D, 0, 1);
 check(r:read(1920, 1080) == nil, 'An inactive main window does not become a guessed screen dock.');
 r, s = fixture(); r:load(); s:write(s.main + 0x4D, 255, 1);
 check(r:read(1920, 1080) == nil, 'An invalid native bool is rejected.');
+
+r, s = fixture(); r:load();
+local visible, retained;
+local reads_before = s.reads;
+result, reason, visible, retained = r:read(1920, 1080, true);
+local reads_per_snapshot = s.reads - reads_before;
+check(result and visible == true and retained == nil, 'Active chat returns current bounds and confirmed visibility.');
+s:write(s.main + 0x4D, 0, 1);
+reads_before = s.reads;
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(result == nil and type(reason) == 'string' and visible == false and retained and retained.x == 14
+    and retained.width == 980, 'Closed chat keeps the old read result and separately offers its last verified anchor.');
+check(s.reads - reads_before == reads_per_snapshot and s.finds == 4,
+    'Closed chat adds no native reads or signature scans.');
+check(r:status().visible == false and r:describe():find('Chat state: inactive', 1, true),
+    'Diagnostics distinguish confirmed inactive chat from unknown state.');
+retained.x = 999;
+result, reason, visible, retained = r:read(960, 540, true);
+check(result == nil and visible == false and retained.x == 7 and retained.width == 490,
+    'Display scaling reprojects native retained bounds, and returned rectangles cannot change the cache.');
+s:window(s.secondary, 100, 500, 800, 1060, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == false and #retained.windows == 2 and retained.windows[2].x == 100
+    and retained.windows[2].y + retained.windows[2].height == 1060,
+    'A newly opened or moved second window remains a current exclusion area while main chat is closed.');
+s:write(s.secondary + 0x4D, 0, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(#retained.windows == 1, 'An inactive second window does not linger in the retained anchor.');
+s:window(s.main, 30, 650, 1030, 1040, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(result.x == 30 and result.width == 1000 and visible == true and retained == nil,
+    'Reopening chat immediately returns its current position and size.');
+s:write(s.main + 0x4D, 0, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(retained.x == 30 and retained.width == 1000, 'A later close uses the newly verified anchor.');
+local reads_before_reset, finds_before_reset = s.reads, s.finds;
+r:reset();
+check(r:status().loaded and r:status().visible == nil and r:status().native == nil,
+    'Runtime reset clears visibility and cached geometry while keeping the reader loaded.');
+check(s.reads == reads_before_reset and s.finds == finds_before_reset, 'Runtime reset does not read or scan native memory.');
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == false and retained == nil, 'Closed chat cannot retain an anchor from before reset.');
+s:write(s.main + 0x4D, 1, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == true and result.x == 30, 'Active chat recovers immediately after reset without rescanning.');
+s:write(s.main + 0x4D, 0, 1);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == false and retained.x == 30 and s.finds == finds_before_reset,
+    'An anchor observed after reset can be retained on the next close.');
+check(r:load(), 'Reloading the reader remains supported.');
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(result == nil and visible == false and retained == nil,
+    'A closed chat without a current-load observation never gets a guessed anchor.');
+
+for _, change in ipairs({ 'throw_read', 'short_read', 'null_main', 'invalid_active', 'bad_main', 'bad_secondary', 'bad_dimensions' }) do
+    r, s = fixture(); r:load(); r:read(1920, 1080, true);
+    if change == 'null_main' then s:write(s.chat_table, 0, 4);
+    elseif change == 'invalid_active' then s:write(s.main + 0x4D, 255, 1);
+    elseif change == 'bad_main' then s:window(s.main, 14, 700, 14, 1050, 1);
+    elseif change == 'bad_secondary' then s:window(s.secondary, 1000, 850, 999, 1040, 1);
+    elseif change == 'bad_dimensions' then s:write(s.scale_object + 0x14, 0, 2);
+    else s[change] = true; end
+    result, reason, visible, retained = r:read(1920, 1080, true);
+    check(result == nil and visible == nil and retained == nil, 'Invalid state is unknown, not closed: ' .. change);
+    s.throw_read, s.short_read = false, false;
+    s:write(s.chat_table, s.main, 4);
+    s:write(s.scale_object + 0x14, 1920, 2);
+    s:window(s.main, 14, 700, 994, 1050, 0);
+    s:window(s.secondary, 1000, 850, 1600, 1040, 0);
+    result, reason, visible, retained = r:read(1920, 1080, true);
+    check(visible == false and retained == nil, 'A read failure clears the old anchor until chat is observed again: ' .. change);
+end
+for _, offset in ipairs({ 0x10, 0x12, 0x14, 0x16 }) do
+    r, s = fixture(); r:load(); r:read(1920, 1080, true);
+    s:write(s.main + 0x4D, 0, 1);
+    local original = (offset == 0x10 or offset == 0x14) and 1920 or 1080;
+    s:write(s.scale_object + offset, original + 100, 2);
+    result, reason, visible, retained = r:read(1920, 1080, true);
+    check(visible == false and retained == nil, 'A changed native resolution invalidates retained geometry: ' .. offset);
+    s:write(s.scale_object + offset, original, 2);
+    result, reason, visible, retained = r:read(1920, 1080, true);
+    check(retained == nil, 'Returning to an old resolution cannot revive a cleared anchor: ' .. offset);
+end
+r, s = fixture(); r:load(); r:read(1920, 1080, true);
+s:write(s.chat_table, s.secondary, 4);
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == false and retained == nil, 'A replacement main window cannot inherit another window\'s anchor.');
+r, s = fixture(); r:load(); r:read(1920, 1080, true);
+s:write(s.main + 0x4D, 0, 1);
+result, reason, visible, retained = r:read(0, 1080, true);
+check(visible == nil and retained == nil, 'Invalid display dimensions cannot expose retained geometry.');
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(retained == nil, 'An invalid projection clears the retained anchor.');
+
+local project, projections = chat.project, 0;
+chat.project = function(...)
+    projections = projections + 1;
+    return project(...);
+end;
+r, s = fixture(); r:load(); r:read(1920, 1080);
+s:write(s.main + 0x4D, 0, 1);
+local projections_before, native_before = projections, s.reads;
+result, reason, visible, retained = r:read(1920, 1080);
+check(result == nil and visible == false and retained == nil,
+    'Ordinary reads preserve closed visibility without returning an unused anchor.');
+check(projections - projections_before == 1 and s.reads - native_before == reads_per_snapshot,
+    'A closed-chat read without an anchor request projects only once with unchanged native reads.');
+projections_before, native_before = projections, s.reads;
+result, reason, visible, retained = r:read(1920, 1080, true);
+check(visible == false and retained and retained.width == 980,
+    'Enabling retained anchoring while chat is already closed can use its verified earlier position.');
+check(projections - projections_before == 2 and s.reads - native_before == reads_per_snapshot,
+    'Only an explicit anchor request adds the retained projection, without extra native reads.');
+projections_before = projections;
+result, reason, visible, retained = r:read(1920, 1080, false);
+check(visible == false and retained == nil and projections - projections_before == 1,
+    'An explicit false request also skips the retained projection.');
+chat.project = project;
+for _, failure in ipairs({ 'dimensions', 'pointer', 'unreadable' }) do
+    r, s = fixture(); r:load(); r:read(1920, 1080);
+    s:write(s.main + 0x4D, 0, 1);
+    if failure == 'dimensions' then s:write(s.scale_object + 0x14, 2020, 2);
+    elseif failure == 'pointer' then s:write(s.chat_table, s.secondary, 4);
+    else s.throw_read = true; end
+    result, reason, visible, retained = r:read(1920, 1080);
+    check(result == nil and retained == nil, 'Unused anchoring still checks changed native state: ' .. failure);
+    s.throw_read = false;
+    s:write(s.chat_table, s.main, 4);
+    s:write(s.scale_object + 0x14, 1920, 2);
+    result, reason, visible, retained = r:read(1920, 1080, true);
+    check(visible == false and retained == nil, 'A later anchor request cannot revive invalidated bounds: ' .. failure);
+end
 r, s = fixture(); r:load(); s:write(s.scale_slot, 0, 4);
 check(r:read(1920, 1080) == nil, 'A disappearing scaling object is handled.');
 r, s = fixture(); r:load(); s:write(s.scale_object + 0x16, 0, 2);

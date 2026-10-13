@@ -106,6 +106,11 @@ if CASE == 'entry-profiles-idle' then settings.window.open, settings.window.tab 
 if CASE == 'entry-history-idle' then settings.window.open, settings.window.tab = true, 'Session' end
 if CASE == 'entry-hidden' then MOMENTUM_TEST.state.hidden = true end
 if CASE == 'entry-event-hidden' then MOCK.player.status = 4 end
+if CASE == 'entry-chat-hidden' or CASE == 'entry-chat-kept' or CASE == 'entry-chat-always' or CASE == 'entry-chat-free' then
+    settings.visibility.mode = CASE == 'entry-chat-hidden' and 'chat' or CASE == 'entry-chat-always' and 'always' or 'keep'
+    settings.bar.docked = CASE ~= 'entry-chat-free'
+    MOCK.chat_retained, MOCK.chat, MOCK.chat_visible = MOCK.chat, nil, false
+end
 if CASE == 'entry-ring-alert' then settings.alerts.events.ring_ready.visual = true end
 if CASE == 'entry-mature' or CASE == 'entry-hidden' or CASE == 'entry-event-hidden' then
     local current = MOMENTUM_TEST.tracker()
@@ -153,6 +158,7 @@ def measure(addon):
         for case in ('docked-default', 'free-fixed-default', 'narrow-grouped', 'countdown', 'active-rates',
                      'entry-idle', 'entry-settings-idle', 'entry-profiles-idle', 'entry-history-idle',
                      'entry-mature', 'entry-hidden', 'entry-event-hidden',
+                     'entry-chat-hidden', 'entry-chat-kept', 'entry-chat-always', 'entry-chat-free',
                      'entry-rings-unused', 'entry-ring-alert', 'unrelated-combat'):
             with tempfile.TemporaryDirectory(prefix='momentum_benchmark_') as folder:
                 lua = run.runtime(folder)

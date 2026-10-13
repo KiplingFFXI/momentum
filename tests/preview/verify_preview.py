@@ -112,6 +112,9 @@ def main():
                                '--input-script', str(HERE / 'free_input.json')] + free),
     ]
     cases.extend([
+        ('settings-chat-visibility', ['--full', '--window', 'settings', '--tab', 'Tracking', '--window-size', '420', '660',
+                                      '--exec', heading_scroll('Visibility', 'Tracking'), '--frames', '27',
+                                      '--input-script', str(HERE / 'chat_visibility_input.json')]),
         ('settings-manual-modes', ['--full', '--window', 'settings', '--tab', 'Display', '--window-size', '400', '660',
                                    '--frames', '39', '--input-script', str(HERE / 'manual_modes_input.json')]),
         ('dynamis-bar', ['--hud', '--window', 'momentum', '--scene', 'Dynamis', '--frames', '8',

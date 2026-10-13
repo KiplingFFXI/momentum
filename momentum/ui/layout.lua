@@ -43,10 +43,10 @@ function layout.dock(bar, screen_width, screen_height, chat, anchor)
     return { x = left, y = y, width = right - left, height = height, anchor = anchor };
 end
 
-function layout.rect(bar, screen_width, screen_height, chat, content_width)
+function layout.rect(bar, screen_width, screen_height, chat, content_width, keep_visible)
     screen_width = math.max(1, screen_width);
     screen_height = math.max(1, screen_height);
-    if bar.docked then return layout.dock(bar, screen_width, screen_height, chat); end
+    if bar.docked and (chat or not keep_visible) then return layout.dock(bar, screen_width, screen_height, chat); end
     local width = math.min(bar.width, screen_width);
     if bar.auto_width and finite(content_width) then width = math.min(width, math.max(1, math.ceil(content_width))); end
     local height = math.min(bar.height, screen_height);

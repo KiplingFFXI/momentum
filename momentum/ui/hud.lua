@@ -120,9 +120,13 @@ end
 
 function hud.bounds(settings, view, context)
     local display = imgui.GetIO().DisplaySize;
+    local mode = settings.visibility.mode;
+    local keep_visible = mode == 'keep' or mode == 'always';
     local desired;
-    if not settings.bar.docked and settings.bar.auto_width then desired = content_width(settings, view, math.min(settings.bar.height, display.y), context and context.preview); end
-    return layout.rect(settings.bar, display.x, display.y, context and context.chat, desired);
+    if (not settings.bar.docked or keep_visible and not (context and context.chat)) and settings.bar.auto_width then
+        desired = content_width(settings, view, math.min(settings.bar.height, display.y), context and context.preview);
+    end
+    return layout.rect(settings.bar, display.x, display.y, context and context.chat, desired, keep_visible);
 end
 
 function hud.place(settings, view, context, mode)
@@ -414,16 +418,17 @@ local function controls(settings, rect, width, height, chat)
     imgui.InvisibleButton('##momentum_drag', { rect.width, rect.height });
     local mx, my = imgui.GetMousePos();
     local edge_x = mx >= rect.x + rect.width - 7;
-    local top_edge = settings.bar.docked and settings.bar.anchor == 'top';
+    local top_edge = rect.anchor == 'top';
     local edge_y = top_edge and my < rect.y + 6 or not top_edge and my >= rect.y + rect.height - 6;
     if imgui.IsItemActivated() then
         gesture = { x = mx, y = my, rect = rect, width = edge_x, height = edge_y, docked = settings.bar.docked, dirty = false,
-            auto_width = settings.bar.auto_width, top_edge = top_edge,
+            auto_width = settings.bar.auto_width, top_edge = top_edge, anchor = rect.anchor,
             saved_width = settings.bar.width, screen_width = width, screen_height = height };
     end
     if gesture and imgui.IsItemActive() then
         local dx, dy = mx - gesture.x, my - gesture.y;
         if gesture.dirty or dx ~= 0 or dy ~= 0 then
+            if settings.bar.docked and not gesture.rect.anchor then layout.detach(settings.bar, gesture.rect); end
             if gesture.width or gesture.height then
                 local next_width = gesture.width and gesture.rect.width + dx or gesture.rect.width;
                 local next_height = gesture.height and gesture.rect.height + dy * (gesture.top_edge and -1 or 1) or gesture.rect.height;
@@ -442,6 +447,7 @@ local function controls(settings, rect, width, height, chat)
                 if settings.bar.docked then layout.detach(settings.bar, gesture.rect); end
                 layout.move(settings.bar, gesture.rect.x + dx, gesture.rect.y + dy, width, height, false, gesture.rect.width, chat);
             end
+            gesture.anchor = settings.bar.docked and rect.anchor or nil;
             gesture.dirty = true;
         end
     end
@@ -478,6 +484,10 @@ function hud.draw(settings, view, context)
         gesture = nil;
     end
     local rect = hud.bounds(settings, view, context);
+    if gesture and (rect.hidden or rect.anchor ~= gesture.anchor) then
+        changed = gesture.dirty or changed;
+        gesture = nil;
+    end
     if rect.hidden then hover_id, hover_since = nil, nil; return changed; end
     local mx, my = imgui.GetMousePos();
     local hovering = settings.display.hover and not context.shift and not context.typing and not gesture and inside(rect, mx, my)

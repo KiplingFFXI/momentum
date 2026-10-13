@@ -57,8 +57,12 @@ def check(root=ROOT):
     version = addon_version(root / 'momentum')
     changelog = documents.get((root / 'CHANGELOG.md').resolve(), '')
     headings = re.findall(r'^## (.+)$', changelog, re.M)
+    if 'Unreleased' in headings[1:]:
+        problems.append('CHANGELOG.md: Unreleased must appear only once, at the top')
+    if headings and headings[0] == 'Unreleased':
+        headings = headings[1:]
     if not headings or headings[0] != version:
-        problems.append('CHANGELOG.md: newest section must match addon.version')
+        problems.append('CHANGELOG.md: newest numbered section must match addon.version')
     links = 0
     for path, text in documents.items():
         for target in re.findall(r'\[[^\]\n]*\]\(([^)\n]+)\)', text):

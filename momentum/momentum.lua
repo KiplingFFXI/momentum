@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.1.1';
+addon.version = '1.2.0';
 addon.desc = 'A movable EXP, merit and Dynamis tracking bar for Phoenix.';
 
 require('common');
@@ -413,6 +413,7 @@ services.sound_files = sound.files;
 services.sound_refresh = sound.refresh;
 services.sound_problem = function() return sound.problem(state.settings.alerts.food_sound); end;
 services.dock_problem = function() return state.dock_problem; end;
+services.chat_fallback = function() return state.chat_fallback; end;
 services.chat_width = function() return state.chat_width; end;
 services.preview_context = function() return { chat = state.chat, chat_checked = true, now = now() }; end;
 services.rings_visible = function(open)
@@ -420,10 +421,20 @@ services.rings_visible = function(open)
     refresh_rings(state.snapshot, now());
     return state.rings;
 end;
+local function read_chat_context(settings, context, display)
+    local reason, retained;
+    local keep_anchor = settings.bar.docked and (settings.visibility.mode == 'keep' or settings.visibility.mode == 'always');
+    context.chat, reason, context.chat_visible, retained = chat_window.read(display.x, display.y, keep_anchor);
+    context.chat_checked = true;
+    if not context.chat and keep_anchor then context.chat = retained; end
+    return reason;
+end
+
 services.placement = function(mode)
     return change(function(s)
         local display = imgui.GetIO().DisplaySize;
-        local context = { chat = chat_window.read(display.x, display.y), preview = s.preview.show };
+        local context = { preview = s.preview.show };
+        read_chat_context(s, context, display);
         local view = s.preview.show and readouts.sample(s.preview.scenario) or current_view(now());
         return hud.place(s, view, context, mode);
     end);
@@ -530,6 +541,7 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
         food:discontinuity();
         state.rings, state.rings_at, state.snapshot = nil, nil, nil;
         state.food_pending = nil;
+        chat_window.reset();
         player.on_zone(id);
         state.player_id, state.sampled = id, -1;
         return;
@@ -627,24 +639,32 @@ local function render()
     dynamis:save(t, false);
     update_dynamis_layout();
     update_auto_layout();
-    if player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
+    local visibility = state.settings.visibility.mode;
+    local always = visibility == 'always';
+    if not always and player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
     local typing = player.typing();
-    local hide_idle = state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
+    local hide_idle = not always and state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
         and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0;
     local hud_visible = ((not state.hidden and not hide_idle) or state.settings.preview.show)
-        and not (state.settings.bar.hide_typing and typing);
+        and not (not always and state.settings.bar.hide_typing and typing);
     if not hud_visible and not state.settings.window.open then hud.cancel_layout_gesture(); finish_edit(); return; end
+    local context = { typing = typing, now = t, preview = state.settings.preview.show };
+    local display = imgui.GetIO().DisplaySize;
+    local chat_problem = read_chat_context(state.settings, context, display);
+    state.chat = context.chat;
+    state.chat_width = context.chat and context.chat.width or nil;
+    state.chat_fallback = state.settings.bar.docked and context.chat == nil and (visibility == 'keep' or always);
+    local dock = layout.dock(state.settings.bar, display.x, display.y, context.chat);
+    state.dock_problem = dock.hidden and (chat_problem or dock.reason) or nil;
+    if visibility == 'chat' and context.chat_visible == false and not context.preview then hud_visible = false; end
+    if not hud_visible then
+        hud.cancel_layout_gesture();
+        if not state.settings.window.open then finish_edit(); return; end
+    end
     refresh_rings(state.snapshot, t);
     local view = current_view(t);
     local shift = bit.band(ffi.C.GetAsyncKeyState(0x10), 0x8000) ~= 0;
-    local context = { shift = shift, typing = typing, now = t, preview = state.settings.preview.show };
-    local display = imgui.GetIO().DisplaySize;
-    local chat_problem;
-    context.chat, chat_problem = chat_window.read(display.x, display.y);
-    state.chat = context.chat;
-    state.chat_width = context.chat and context.chat.width or nil;
-    local dock = layout.dock(state.settings.bar, display.x, display.y, context.chat);
-    state.dock_problem = dock.hidden and (chat_problem or dock.reason) or nil;
+    context.shift = shift;
     local editable = state.settings.window.open or shift;
     if editable and not state.edit_baseline then state.edit_baseline = history.copy(state.settings); end
     local before = editable and state.edit_baseline or nil;
@@ -751,6 +771,7 @@ settings.register('settings', 'momentum_settings', function(loaded)
     state.settings = state.own;
     state.before, state.edit_baseline, state.dirty, state.last_job, state.shared_data = nil, nil, migration_pending, nil, nil;
     state.player_id, state.sampled = nil, -1;
+    chat_window.reset();
     undo:clear();
     refresh_shared();
 end);
