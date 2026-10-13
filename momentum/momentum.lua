@@ -1,7 +1,7 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.0.0';
-addon.desc = 'A movable EXP, chain and merit tracking bar for Phoenix.';
+addon.version = '1.1.1';
+addon.desc = 'A movable EXP, merit and Dynamis tracking bar for Phoenix.';
 
 require('common');
 local ffi = require('ffi');
@@ -22,6 +22,9 @@ local phoenix_status = require('core.phoenix_status');
 local phoenix = phoenix_status.new();
 local rings = require('core.rings');
 local notifications = require('core.notifications').new();
+local dynamis_notifications = require('core.notifications').new();
+local dynamis_layout = require('ui.dynamis_layout');
+local modes = require('ui.modes');
 local food = require('core.food').new();
 local sound = require('core.sound');
 local fonts = require('ui.fonts');
@@ -34,6 +37,8 @@ local job_icons = require('ui.job_icons');
 pcall(ffi.cdef, 'short __stdcall GetAsyncKeyState(int vKey);');
 
 local folder = AshitaCore:GetInstallPath() .. '\\config\\addons\\momentum\\';
+local dynamis = require('core.dynamis_runtime').new(folder, { utc = player.utc,
+    report = function(message) print('[Momentum] ' .. message); end });
 local shared_file = folder .. 'shared_layout.json';
 local saved_profiles = profiles.new(folder);
 local saved_sessions = sessions.new(folder .. 'sessions.json', { write = function(path, data)
@@ -82,7 +87,8 @@ local function current_view(t)
     for key, value in pairs(phoenix:view(t)) do view[key] = value; end
     phoenix:apply_chain(view, t);
     view.rings = state.rings or { available = false, entries = {} };
-    view.notice = notifications:view(t);
+    view.dynamis = dynamis:view(t, state.settings);
+    view.notice = dynamis_notifications:view(t) or notifications:view(t);
     return view;
 end
 
@@ -188,6 +194,8 @@ end
 
 local function update_auto_layout()
     local s = state.settings;
+    if s.modes.selected ~= 'auto' then return; end
+    if s.dynamis.layout_active then return; end
     if not s.display.auto_layout then state.auto_layout = nil; return; end
     local snapshot = state.snapshot;
     local mode = tracker_module.earning_mode(snapshot);
@@ -204,6 +212,30 @@ local function update_auto_layout()
     -- Rebase an idle editor so this automatic switch is not a saved edit.
     if state.edit_baseline then defaults.apply_starter(state.edit_baseline, name); end
     state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job, mode = mode };
+end
+
+local function update_dynamis_layout()
+    local s, snapshot = state.settings, state.snapshot;
+    local manual = s.modes.selected ~= 'auto';
+    if not manual and (not snapshot or not snapshot.valid) then return; end
+    local active = manual and s.modes.selected == 'dynamis' or not manual and s.dynamis.enabled
+        and (s.dynamis.auto_layout and dynamis:view(now(), s).active or not s.dynamis.auto_layout and s.dynamis.layout_active);
+    if not manual and state.dynamis_edit and s.window.open and s.dynamis.enabled then active = state.dynamis_edit == 'dynamis';
+    elseif state.dynamis_edit then state.dynamis_edit = nil; end
+    if s.dynamis.layout_active == active then return; end
+    if imgui.IsMouseDown(ImGuiMouseButton_Left) or imgui.IsAnyItemActive() then return; end
+    finish_edit();
+    if state.dirty then return; end
+    if dynamis_layout.switch(s, active) then
+        state.before, state.edit_baseline = nil, nil;
+        if not state.auto_layout and snapshot and snapshot.valid then
+            state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job,
+                mode = tracker_module.earning_mode(snapshot) };
+        end
+        undo:clear();
+        state.dirty = true;
+        save();
+    end
 end
 
 local function change(callback)
@@ -223,6 +255,34 @@ local function change(callback)
 end
 
 local services = {};
+services.bar_mode = function(selected)
+    local result = change(function(s)
+        local okay, problem = modes.select(s, selected);
+        if okay then state.auto_layout, state.dynamis_edit = nil, nil; end
+        return okay, problem;
+    end);
+    return result;
+end;
+services.dynamis_clear = function() return dynamis:clear(now()); end;
+services.dynamis_layout_active = function() return state.settings.dynamis.layout_active; end;
+services.dynamis_layout = function(mode)
+    finish_edit();
+    if state.dirty then return false, 'Your layout could not be saved yet.'; end
+    state.dynamis_edit = mode;
+    if dynamis_layout.switch(state.settings, mode == 'dynamis') then
+        state.before, state.edit_baseline = nil, nil;
+        if not state.auto_layout and state.snapshot and state.snapshot.valid then
+            state.auto_layout = { settings = state.settings, id = state.snapshot.id, job = state.snapshot.job,
+                mode = tracker_module.earning_mode(state.snapshot) };
+        end
+        undo:clear();
+        state.dirty = true;
+        save();
+    end
+    state.handled = true;
+    return true;
+end;
+services.dynamis_history = function() return dynamis:view(now(), state.settings).history or {}; end;
 services.save = function() state.dirty = true; end;
 services.undo = function()
     finish_edit();
@@ -244,7 +304,12 @@ end;
 services.reset_section = function(section)
     return change(function(s)
         local fresh = defaults.make();
+        if section == 'dynamis' and s.dynamis.layout_active then dynamis_layout.switch(s, false); end
         if (fresh[section] ~= nil and section ~= 'window' and section ~= 'job_links') then s[section] = fresh[section]; end
+        if section == 'display' then
+            if s.dynamis.layout_active then defaults.apply_starter(s, 'Dynamis');
+            elseif s.modes.selected == 'merits' then defaults.apply_starter(s, 'Merits'); end
+        end
         if (section == 'tracking') then s.visibility, s.display.mode = fresh.visibility, fresh.display.mode; end
     end);
 end;
@@ -264,10 +329,17 @@ services.save_profile = function(name)
     if (not ok) then say(err); end
     return ok, err;
 end;
-services.load_profile = function(name)
+services.load_profile = function(name, keep_mode)
     return change(function(s)
+        local selected = s.modes.selected;
         local ok, problem = saved_profiles:load(name, s);
-        if ok then state.auto_layout = nil; end
+        if ok then
+            if keep_mode and selected ~= 'auto' then
+                tidy(s);
+                modes.select(s, selected);
+            end
+            state.auto_layout = nil;
+        end
         return ok, problem;
     end);
 end;
@@ -410,6 +482,7 @@ end
 
 local function sample(t)
     local snapshot = player.read();
+    dynamis:sample(snapshot, t, state.settings);
     state.award_ready = false;
     if snapshot.valid then
         local selected, _, ready = saved_sessions:select(snapshot, t, state.settings);
@@ -428,7 +501,7 @@ local function sample(t)
         if (state.last_job ~= snapshot.job) then
             state.last_job = snapshot.job;
             local linked = state.settings.job_links[tostring(snapshot.job)];
-            if (linked and not state.settings.shared) then services.load_profile(linked); end
+            if (linked and not state.settings.shared) then services.load_profile(linked, true); end
         end
         state.player_id = snapshot.id;
     end
@@ -447,11 +520,13 @@ end);
 ashita.events.register('packet_in', 'momentum_packets', function(event)
     if (not packets.valid(event, 4)) then return; end
     local t = now();
+    dynamis:packet(event, t, state.settings);
     local id = packets.zone_id(event);
     if (id) then
         tracker:discontinuity(t);
         phoenix:discontinuity();
         notifications:discontinuity();
+        dynamis_notifications:discontinuity();
         food:discontinuity();
         state.rings, state.rings_at, state.snapshot = nil, nil, nil;
         state.food_pending = nil;
@@ -535,7 +610,12 @@ local function render()
         state.shared_at = t;
     end
     local quiet = quiet_notifications() or (state.settings.alerts.quiet_paused ~= false and tracker.paused);
-    for _, event in ipairs(notifications:take(t, quiet)) do
+    for _, event in ipairs(dynamis:alerts(t, state.settings)) do
+        dynamis_notifications:dynamis(event, t, state.settings, quiet);
+    end
+    local notices = notifications:take(t, quiet);
+    for _, event in ipairs(dynamis_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
+    for _, event in ipairs(notices) do
         local row = state.settings.alerts.events[event.id];
         if row and row.sound and event.sound and event.file ~= '' and not quiet_notifications()
             and not (state.settings.alerts.quiet_paused ~= false and tracker.paused)
@@ -544,10 +624,13 @@ local function render()
         end
     end
     checkpoint(t, false);
+    dynamis:save(t, false);
+    update_dynamis_layout();
     update_auto_layout();
     if player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
     local typing = player.typing();
-    local hide_idle = state.settings.tracking.hide_idle and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0;
+    local hide_idle = state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
+        and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0;
     local hud_visible = ((not state.hidden and not hide_idle) or state.settings.preview.show)
         and not (state.settings.bar.hide_typing and typing);
     if not hud_visible and not state.settings.window.open then hud.cancel_layout_gesture(); finish_edit(); return; end
@@ -611,8 +694,8 @@ ashita.events.register('command', 'momentum_command', function(event)
     elseif (command == 'reset') then if services.session_reset() then say('Previous session saved. New session started.'); end
     elseif (command == 'undo') then services.undo();
     elseif (command == 'preview') then state.settings.preview.show = not state.settings.preview.show;
-    elseif (command == 'mode' and (args[3] == 'auto' or args[3] == 'exp' or args[3] == 'lp')) then
-        change(function(s) s.display.mode = args[3]; end);
+    elseif command == 'mode' then
+        services.bar_mode((args[3] or ''):lower());
     elseif (command == 'divider' and args[3] ~= nil) then change(function(s) s.display.divider = args[3]; end);
     elseif (command == 'order' and args[3] ~= nil) then
         local known, order, seen = {}, {}, {};
@@ -637,11 +720,16 @@ end);
 ashita.events.register('unload', 'momentum_unload', function()
     finish_edit();
     checkpoint(now(), true);
+    local saved, issue = dynamis:save(now(), true);
+    if not saved then dynamis:report(issue); end
     sound.close();
     job_icons.destroy();
 end);
 settings.register('settings', 'momentum_settings', function(loaded)
     if (loaded == nil) then return; end
+    dynamis:detach(now());
+    dynamis_notifications:discontinuity();
+    state.dynamis_edit = nil;
     window.close();
     local detached, session_problem = saved_sessions:detach(now());
     tracker = detached;
@@ -670,5 +758,5 @@ end);
 if (MOMENTUM_TEST_MODE) then
     MOMENTUM_TEST = { settings = function() return state.settings; end, tracker = function() return tracker; end,
         state = state, services = services, sample = sample, view = current_view,
-        sessions = saved_sessions, phoenix = phoenix, notifications = notifications };
+        sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis };
 end
