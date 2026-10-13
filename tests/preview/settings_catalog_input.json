@@ -2,7 +2,7 @@
   {"frame":2,"target":"Add readout","lua":"PREVIEW.order=table.concat(settings.display.order,','); assert(not PREVIEW.rows['05  Time to next level or merit'],'Default list contains unchosen readings')"},
   {"frame":3,"target":"Add readout","down":true},
   {"frame":4,"down":false},
-  {"frame":6,"target":"##Find readout to add","lua":"local n=0; for _,item in ipairs(require('ui.defaults').READOUTS) do assert(PREVIEW.rows[item.name..'##add_'..item.id],'Catalog omitted '..item.id); n=n+1 end; assert(n==42,'Catalog coverage changed')"},
+  {"frame":6,"target":"##Find readout to add","lua":"local n=0; for _,item in ipairs(require('ui.defaults').READOUTS) do assert(PREVIEW.rows[item.name..'##add_'..item.id],'Catalog omitted '..item.id); n=n+1 end; assert(n>=42 and PREVIEW.rows['Dynamis time left##add_dyna_time'],'Catalog lost existing or Dynamis readouts')"},
   {"frame":7,"target":"##Find readout to add","down":true},
   {"frame":8,"down":false},
   {"frame":9,"text":"food"},

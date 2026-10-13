@@ -77,6 +77,13 @@ function methods:message(id, text, now, settings, quiet, token)
     return self:_emit(id, text, now, settings, quiet, token)
 end
 
+local dynamis_events = { dyna_time = true, dyna_extension = true, dyna_wanted = true,
+    dyna_pool = true, dyna_clear = true, dyna_subjob = true }
+function methods:dynamis(event, now, settings, quiet)
+    if type(event) ~= 'table' or not dynamis_events[event.id] or type(event.message) ~= 'string' or not finite(now) then return false end
+    return self:_emit(event.id, event.message, now, settings, quiet)
+end
+
 function methods:confirmed(feed, now, settings, quiet)
     if not finite(now) or not self.before or not self.sampled or now < self.sampled or now - self.sampled > 2 then return end
     local old = self.server

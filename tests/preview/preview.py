@@ -58,7 +58,7 @@ def parse_args(argv):
     p.add_argument('--hud', action='store_true', help='show the bar without the settings window')
     p.add_argument('--icon-fixture', action='store_true', help='use a grey test texture to check job-picture layout; not game artwork')
     p.add_argument('--chat-fixture', action='store_true', help='draw the simulated chat rectangles behind the bar; not a game screenshot')
-    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Capped', 'No data', 'Paused'])
+    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused'])
     p.add_argument('--input-script', help='JSON mouse input and Lua assertions to replay')
     p.add_argument('--full', action='store_true',
                    help='run the whole addon: dofile momentum.lua, fire load, "/momentum", then d3d_present '
@@ -141,6 +141,13 @@ PREVIEW.services = {
     copy = function (value) PREVIEW.copied = value end,
     session_pause = function (value) PREVIEW.view.paused=value end,
     session_reset = function () PREVIEW.session_resets=(PREVIEW.session_resets or 0)+1; return true end,
+    dynamis_clear = function () PREVIEW.dynamis_clears=(PREVIEW.dynamis_clears or 0)+1; return true end,
+      bar_mode = function (mode) return require('ui.modes').select(PREVIEW.settings,mode) end,
+    dynamis_layout_active = function () return PREVIEW.settings.dynamis.layout_active end,
+    dynamis_layout = function (mode)
+        PREVIEW.settings.dynamis.layout_active = mode == 'dynamis'
+        if mode == 'dynamis' then require('ui.defaults').apply_starter(PREVIEW.settings, 'Dynamis') end
+    end,
     session_list = function () return PREVIEW.session_rows or {} end,
     session_current = function () return PREVIEW.session_rows and PREVIEW.session_rows[1] end,
     session_save = function (name) PREVIEW.session_saves=(PREVIEW.session_saves or 0)+1; PREVIEW.saved_session_name=name; return true end,

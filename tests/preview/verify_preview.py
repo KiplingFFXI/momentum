@@ -111,7 +111,17 @@ def main():
                                '--set', 'bar.x=45', '--set', 'bar.y=300',
                                '--input-script', str(HERE / 'free_input.json')] + free),
     ]
-    for tab in ('Display', 'Tracking', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles'):
+    cases.extend([
+        ('settings-manual-modes', ['--full', '--window', 'settings', '--tab', 'Display', '--window-size', '400', '660',
+                                   '--frames', '39', '--input-script', str(HERE / 'manual_modes_input.json')]),
+        ('dynamis-bar', ['--hud', '--window', 'momentum', '--scene', 'Dynamis', '--frames', '8',
+                         '--exec', "require('ui.defaults').apply_starter(settings,'Dynamis'); settings.dynamis.layout_active=true",
+                         '--input-script', str(HERE / 'dynamis_input.json')]),
+        ('dynamis-options', ['--window', 'settings', '--scene', 'Dynamis', '--tab', 'Dynamis']),
+        ('dynamis-wanted-narrow', ['--window', 'settings', '--scene', 'Dynamis', '--tab', 'Dynamis',
+                                  '--window-size', '420', '620', '--exec', heading_scroll('Wanted drops', 'Dynamis')]),
+    ])
+    for tab in ('Display', 'Tracking', 'Details', 'Dynamis', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles'):
         cases.append(('settings-' + tab.lower(), ['--window', 'settings', '--tab', tab]))
     for name in ('Phoenix', 'Classic FFXI', 'Minimal', 'High contrast', 'Ember', 'Mint', 'Lavender', 'Colorblind safe'):
         cases.append(('palette-' + name.lower().replace(' ', '-'), ['--window', 'settings', '--tab', 'Appearance',

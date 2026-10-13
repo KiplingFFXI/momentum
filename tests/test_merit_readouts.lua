@@ -71,7 +71,11 @@ local migrated = defaults.tidy({ display = { order = order, labels = { rate = 'M
 eq(migrated.display.order[1], 'rate', 'Migration keeps the saved first readout');
 eq(migrated.display.order[2], 'progress', 'Migration keeps the saved second readout');
 eq(migrated.display.labels.rate, 'My pace', 'Migration keeps the custom label');
-eq(migrated.display.order[#migrated.display.order], 'merit_eta', 'New fields append after existing order');
+local index = {};
+for position, id in ipairs(migrated.display.order) do index[id] = position; end
+eq(index.merits_session < index.merit_headroom and index.merit_headroom < index.lp_remaining and index.lp_remaining < index.merit_eta, true,
+    'Merit fields keep their existing relative order');
+eq(index.dyna_zone > index.merit_eta, true, 'Dynamis fields append after existing readouts');
 
 local words = {};
 local ui = {

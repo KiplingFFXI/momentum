@@ -36,6 +36,8 @@ For focused checks:
   tests/.venv/Scripts/python tests/run.py test_tracker.lua
   tests/.venv/Scripts/python tests/test_settings_client.py
   tests/.venv/Scripts/python tests/test_release.py
+  tests/.venv/Scripts/python tests/run.py test_dynamis.lua
+  tests/.venv/Scripts/python tests/run.py test_dynamis_ui.lua
   tests/.venv/Scripts/python tools/check_repository.py
 
 On Windows, tests/run_tests.bat creates its own .venv, installs requirements, and
@@ -67,6 +69,12 @@ The focused suites cover:
   sharing, saved folds, search, Undo, layout preservation, and Escape handling.
 - Bounded frame work, cache invalidation, counted alert-header measurements,
   hidden displays, readout fit, and readable colors across the existing skins.
+- Dynamis hourglass and packet parsing, extensions, pool deduplication, found and
+  received drops, observed objectives, partial runs, reloads, history, registration
+  timing, separate layouts, wanted drops, and optional alerts. EXP reset and pause
+  preserve Dynamis tracking; clearing Dynamis totals preserves the timer.
+- Manual EXP, Merits, and Dynamis selection, saved readout layouts, automatic
+  switching, reloads, profile changes, commands, and unchanged session timers.
 
 The archive suite checks the exact runtime manifest, reproducibility, normalized
 line endings, private-path rejection, links, missing or extra files, sound hashes,
@@ -78,7 +86,10 @@ The real UI preview uses Dear ImGui 1.92.3 to draw the actual Lua HUD and settin
 It covers narrow/default/wide bars, all settings pages, larger fonts, skins,
 actual mouse and keyboard replays, readout order and alignment, Shift-dragging,
 resizing, chat snapping, grouped alerts and counts, sound test controls, profiles,
-and session actions. Full-entry fixtures run the registered addon callbacks.
+and session actions. A Dynamis scene and dynamis_input.json replay cover the
+compact bar, changing countdown, extensions, drops, and unknown time. Full-entry
+fixtures run the registered addon callbacks. The manual_modes_input.json replay
+switches all three bar modes and returns to Automatic using the settings menu.
 Close and reopen cases include combat, Escape, the title-bar X, a dropdown, an
 active text edit, and pending confirmations.
 Synthetic game data and a marked icon fixture remain separate from live captures.
@@ -107,7 +118,15 @@ intentional change needs its own focused expectations.
 Source checks and releases
 --------------------------
 
-tools/README.txt explains the pinned Phoenix rules check and archive builder.
+tools/README.txt explains the pinned Phoenix rules checks and archive builder:
+
+  tests/.venv/Scripts/python tools/export_rules.py --source ../Phoenix --check
+  tests/.venv/Scripts/python tools/export_dynamis.py --source ../Phoenix --check
+
+Each exporter reads its pinned Git revision. The Dynamis export includes the
+enabled era and Phoenix overlays and needs PyYAML from tools/requirements.txt.
+These checks do not refresh either bundle or change the Phoenix checkout.
+
 docs/RELEASING.md describes the release checklist and manual draft workflow.
 The Verify workflow runs the headless checks on Windows on pull requests or by
 manual request. Ashita's settings library uses Windows paths. The draft workflow

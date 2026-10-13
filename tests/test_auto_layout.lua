@@ -113,7 +113,7 @@ frame();
 
 ui_change(function(s) s.display.auto_layout = true; end);
 frame();
-command('/momentum mode exp');
+ui_change(function(s) s.display.mode = 'exp'; end);
 frame();
 equal(shown(), merits, 'Forced EXP display does not change the real LP layout');
 local stable_apps = applications;
@@ -123,7 +123,7 @@ frame();
 equal(shown(), merits, 'Sample EXP preview does not change the real LP layout');
 equal(applications, stable_apps, 'Presentation overrides do not trigger automatic application');
 command('/momentum preview');
-command('/momentum mode auto');
+ui_change(function(s) s.display.mode = 'auto'; end);
 frame();
 player_mode('exp');
 saves, before_copies = MOCK.saved, root_copies;

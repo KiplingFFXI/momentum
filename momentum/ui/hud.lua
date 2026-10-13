@@ -151,13 +151,20 @@ local function paint(settings, view, rect, sample, mouse_x, mouse_y)
         if rail then
             list:AddRectFilled({ track_x, track_y }, { track_x + track_width, track_y + track_height }, theme.u32(colors.divider, 0.5), 1);
         end
-        if view.valid and view.percent then
-            local fraction = layout.clamp(view.percent, 0, 1);
+        local percent, merit_fill = view.valid and view.percent, view.mode == 'lp';
+        local dyna = view.dynamis;
+        if settings.dynamis and settings.dynamis.layout_active and dyna and dyna.active then
+            local duration = dyna.end_time and dyna.start_time and dyna.end_time - dyna.start_time;
+            percent = duration and duration > 0 and dyna.remaining and dyna.remaining / duration or nil;
+            merit_fill = false;
+        end
+        if percent then
+            local fraction = layout.clamp(percent, 0, 1);
             local left = style.fill_direction == 'left' and track_x + track_width * (1 - fraction) or track_x;
             local right = style.fill_direction == 'left' and track_x + track_width or track_x + track_width * fraction;
             if right > left then
                 list:AddRectFilled({ left, track_y }, { right, track_y + track_height },
-                    theme.u32(view.mode == 'lp' and colors.lp_fill or colors.fill, rail and 1 or 0.25), math.min(rail and 1 or corner, (right - left) / 2));
+                    theme.u32(merit_fill and colors.lp_fill or colors.fill, rail and 1 or 0.25), math.min(rail and 1 or corner, (right - left) / 2));
             end
         end
     end
@@ -247,7 +254,7 @@ local function tooltip(settings, view, id, info)
     elseif id == 'sample' then
         return 'Preview', 'Example values', 'These example values let you try the layout before using it for your session.';
     elseif id == 'paused' then
-        return 'Session paused', 'Paused', 'EXP chain, food, Dedication, and EXP ring recast timers keep running. Choose Resume session to start counting EXP, LP, merit points, and session time again.';
+        return 'Session paused', 'Paused', 'EXP chain, food, Dedication, and EXP ring recast timers keep running. Dynamis time and drops keep tracking too. Choose Resume session to count EXP, LP, and session time again.';
     end
     local definition = readouts.definition(id);
     if not definition then return nil; end
@@ -259,7 +266,7 @@ local function tooltip(settings, view, id, info)
         value = readouts.format_number(view.current, settings.display.short) .. ' / ' .. readouts.format_number(view.needed, settings.display.short);
     end
     local title, help = definition.name, definition.help;
-    if not view.valid then return title, value, 'Waiting for your character information. -- means this amount is not known yet.'; end
+    if not view.valid and id:sub(1, 5) ~= 'dyna_' then return title, value, 'Waiting for your character information. -- means this amount is not known yet.'; end
     if id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'merit_rate' then
         local unit = id == 'exp_rate' and 'EXP' or (id == 'lp_rate' or id == 'merit_rate') and 'LP' or view.mode == 'lp' and 'LP' or 'EXP';
         title = id == 'merit_rate' and 'Merit points per hour' or unit .. '/HR';

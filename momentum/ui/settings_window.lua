@@ -7,6 +7,7 @@ local theme = require('ui.theme');
 local fonts = require('ui.fonts');
 local hud = require('ui.hud');
 local details = require('ui.details');
+local dynamis = require('ui.dynamis');
 local settings_window = {};
 local selected = 'progress';
 local scroll_selected = false;
@@ -33,9 +34,10 @@ local window_colors;
 local dragged, drag_target;
 local readout_sizes = {};
 local section_labels = {};
-local pages = { 'Display', 'Tracking', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
+local help_marker;
+local pages = { 'Display', 'Tracking', 'Dynamis', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
 local jobs = { 'WAR', 'MNK', 'WHM', 'BLM', 'RDM', 'THF', 'PLD', 'DRK', 'BST', 'BRD', 'RNG', 'SAM', 'NIN', 'DRG', 'SMN', 'BLU', 'COR', 'PUP' };
-local page_section = { Display = 'display', Tracking = 'tracking', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions', Profiles = 'profiles' };
+local page_section = { Display = 'display', Tracking = 'tracking', Dynamis = 'dynamis', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions', Profiles = 'profiles' };
 local section_names = {
     ['Level sync'] = 'Level Sync', ['Advanced sync estimate'] = 'Level Sync estimate',
     ['Recent rewards'] = 'Recent EXP and LP', ['Owned EXP rings'] = 'EXP rings',
@@ -77,7 +79,7 @@ local tips = {
     ['Corner roundness'] = 'Round the ends of the bar, or use zero for square corners.',
     ['Progress style'] = 'Show your EXP or LP as a thin line or a fill behind the text.',
     ['Fill direction'] = 'Choose which way the EXP or LP bar fills. This does not change the readout order.',
-    ['Sample state'] = 'Try sample EXP and LP readings in the preview. Your session keeps tracking normally.',
+    ['Sample state'] = 'Try sample EXP, LP, or Dynamis readings in the preview. Your session keeps tracking normally.',
     ['Sound'] = 'Choose a sound from the list. To add your own .mp3 or .wav, put it in config/addons/momentum/sounds and press Refresh.',
     ['Sound volume'] = '0 is silent. 100 is full volume.',
     ['Profile'] = 'Choose a saved layout, then press Load profile to use it or Delete profile to remove it.',
@@ -110,7 +112,11 @@ end
 
 local function help(text)
     if not text then return; end
-    beside(imgui.CalcTextSize('(?)'));
+    local font, size = imgui.GetFont(), imgui.GetFontSize();
+    if not help_marker or help_marker.font ~= font or help_marker.size ~= size then
+        help_marker = { font = font, size = size, width = imgui.CalcTextSize('(?)') };
+    end
+    beside(help_marker.width);
     imgui.TextDisabled('(?)');
     tip(text);
 end
@@ -205,7 +211,8 @@ local function combo(title, current, choices, apply, width, explanation)
         for _, option in ipairs(choices) do
             local name = type(option) == 'table' and option.name or option;
             local value = type(option) == 'table' and option.value or option;
-            if imgui.Selectable(name, current == name or current == value) then apply(value); end
+            local visible = name:match('^(.-)##') or name;
+            if imgui.Selectable(name, current == visible or current == value) then apply(value); end
         end
         imgui.EndCombo();
     end
@@ -284,7 +291,7 @@ local function position(settings, services)
 end
 
 local function starter_name(settings)
-    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits' }) do
+    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits', 'Dynamis' }) do
         local chosen, matches, index = {}, true, 0;
         for _, id in ipairs(defaults.STARTER_LAYOUTS[name]) do chosen[id] = true; end
         for _, item in ipairs(defaults.READOUTS) do
@@ -314,6 +321,7 @@ local catalog_groups = {
     { 'Merit points and LP', 'merits merit_rate lp_progress lp_rate merits_session merit_headroom lp_remaining merit_eta' },
     { 'Session', 'last session net elapsed best_chain exp_session lp_session' },
     { 'Buffs', 'dedication food ring dedication_budget' },
+    { 'Dynamis', 'dyna_zone dyna_time dyna_extensions dyna_currency dyna_af2 dyna_currency_received dyna_currency_rate dyna_af2_received dyna_bynes dyna_bronze dyna_shells dyna_bynes_received dyna_bronze_received dyna_shells_received dyna_kills dyna_objectives dyna_pool dyna_subjob dyna_weakness dyna_next_entry' },
     { 'Detailed statistics', 'average average3 average10 average_n sample_count minimum maximum median' },
 };
 local catalog_category = {};
@@ -513,11 +521,14 @@ local function display_page(settings, services)
             { 'Remove all dividers', function()
                 for _, item in ipairs(defaults.READOUTS) do set_divider(settings, item.id, false); end
             end, 'Remove the dividers from every readout. Your chosen divider style stays saved.' } });
-        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits' }, function(value)
+        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits', 'Dynamis' }, function(value)
             if defaults.apply_starter(settings, value) then pending = true; end
         end);
-        checkbox(settings.display, 'auto_layout', 'Automatically switch EXP / Merits layouts',
-            'Use the Leveling layout when earning EXP and the Merits layout when earning LP. This also follows LP gained with a full EXP buffer at level 75. Your colors and position stay the same. Changes to readouts and their order stay until your mode changes again. This does not switch your mode in the game.');
+        imgui.BeginDisabled(settings.modes.selected ~= 'auto');
+        local automatic_display = settings.dynamis.layout_active and settings.dynamis.previous_display or settings.display;
+        checkbox(automatic_display, 'auto_layout', 'Automatically switch EXP / Merits layouts',
+            'When Bar mode is Automatic, use Leveling when earning EXP and Merits when earning LP. This also applies after you leave Dynamis. Manual modes stay selected. This does not switch your mode in the game.');
+        imgui.EndDisabled();
         checkbox(settings.display, 'groups_enabled', 'Use separate alignment groups',
             'Put readouts on the left, in the center, or on the right under Selected readout. Each group follows your list order. Turn this off to use one alignment for the whole bar.');
         checkbox(settings.display, 'priority_overflow', 'Keep priority readouts when space is short',
@@ -577,7 +588,9 @@ end
 
 local function tracking_page(settings, view, services)
     if section('EXP and merits', 'Choose whether the bar shows EXP or LP and how EXP/HR and LP/HR are calculated. Unknown values show --. Times to your next level, merit point, or goal are estimates.', true) then
+        imgui.BeginDisabled(settings.modes.selected ~= 'auto');
         pick(settings.display, 'mode', 'Show EXP or LP', { { name = 'Automatic', value = 'auto' }, { name = 'EXP', value = 'exp' }, { name = 'Limit points (LP)', value = 'lp' } });
+        imgui.EndDisabled();
         pick(settings.tracking, 'window', 'EXP/HR time period', { { name = 'Last 5 minutes', value = 300 }, { name = 'Last 15 minutes', value = 900 },
             { name = 'Last 30 minutes', value = 1800 }, { name = 'Whole session', value = 0 } });
         pick(settings.tracking, 'rate_basis', 'Rate calculation', { { name = 'EXP/LP received', value = 'earned' }, { name = 'EXP/LP kept', value = 'net' } });
@@ -664,7 +677,7 @@ local function fixed_preview(settings, view, services)
         beside(sample_width);
         imgui.SetNextItemWidth(math.min(sample_width, (imgui.GetContentRegionAvail())));
         if imgui.BeginCombo('##Sample state', settings.preview.scenario) then
-            for _, name in ipairs({ 'Leveling', 'Merits', 'Capped', 'No data', 'Paused' }) do
+            for _, name in ipairs({ 'Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused' }) do
                 if imgui.Selectable(name, name == settings.preview.scenario) then settings.preview.scenario = name; pending = true; end
             end
             imgui.EndCombo();
@@ -804,6 +817,13 @@ local search_sections = {
     { 'Tracking', 'EXP and merits', 'rate hour window exp limit points mode merits reward sample earned net' },
     { 'Tracking', 'Progress goal', 'goal target level session buffer merit' },
     { 'Tracking', 'Visibility', 'hide map event game ui visibility' },
+    { 'Dynamis', 'Dynamis options', 'dynamis automatic layout mode enabled tracking history retention' },
+    { 'Dynamis', 'Current Dynamis run', 'dynamis time hourglass currency relic armor af2 received found reset clear summary copy weakness support job clear' },
+    { 'Dynamis', 'Objectives and time extensions', 'dynamis te time extension boss weakening wave monsters unknown objectives' },
+    { 'Dynamis', 'Currency and drops', 'dynamis currency singles hundred bronze byne shells relic af2 received found loot' },
+    { 'Dynamis', 'Treasure pool', 'dynamis treasure pool lot pass expiration items waiting' },
+    { 'Dynamis', 'Wanted drops', 'dynamis wanted drops alert job relic armor af2 accessory weapon attestation fragment search' },
+    { 'Dynamis', 'Dynamis run history', 'dynamis saved run history summary copy' },
     { 'Details', 'Level sync', 'sync penalty level' },
     { 'Details', 'Advanced sync estimate', 'sync planner estimate population tier' },
     { 'Details', 'EXP and limit points', 'exp lp progress totals earned net lost recovered' },
@@ -817,6 +837,7 @@ local search_sections = {
     { 'Alerts', 'EXP rings', 'alert notification exp ring ready recast charges sound volume notice visual cooldown play refresh' },
     { 'Alerts', 'Levels and merit points', 'alert notification level gained merit point gained goal reached merit points almost full cap storage sound volume notice visual cooldown play refresh' },
     { 'Alerts', 'Level Sync and missed EXP', 'alert notification level sync changed penalty missed no exp reason distance range sound volume notice visual cooldown play refresh' },
+    { 'Alerts', 'Dynamis', 'dynamis alert warning time extension wanted drop pool expires clear support job sound notice' },
     { 'Alerts', 'Quiet conditions', 'quiet paused event cutscene suppress' },
     { 'Appearance', 'Skin and text', 'skin font text size compact tab navigation selector' },
     { 'Appearance', 'Bar and progress', 'opacity transparency corners round border fill shadow rail accent text visibility' },
@@ -887,13 +908,28 @@ local function search(settings)
     end
 end
 
+local bar_modes = { 'auto', 'exp', 'merits', 'dynamis' };
+local mode_names = require('ui.modes').names;
 local function toolbar(settings, view, services)
+    imgui.AlignTextToFramePadding();
+    imgui.TextUnformatted('Bar mode');
+    beside(210);
+    imgui.SetNextItemWidth(math.min(170, (imgui.GetContentRegionAvail())));
+    if imgui.BeginCombo('##Bar mode', mode_names[settings.modes.selected]) then
+        for _, mode in ipairs(bar_modes) do
+            if imgui.Selectable(mode_names[mode] .. '##bar_mode_' .. mode, settings.modes.selected == mode) and services.bar_mode then
+                services.bar_mode(mode);
+            end
+        end
+        imgui.EndCombo();
+    end
+    help('Pick EXP, Merits, or Dynamis to keep that bar selected. Each keeps its own layout. Automatic uses your automatic layout settings. This only changes the bar, not how you earn EXP or LP.');
     button_row({
         { view.paused and 'Resume session' or 'Pause session', function()
             if services.session_pause then services.session_pause(not view.paused); end
         end, (view.paused and 'Resume counting EXP, LP, merit points, and session time.'
             or 'Stop counting EXP, LP, merit points, and session time.')
-            .. ' EXP chain, food, Dedication, and EXP ring recast timers keep running.' },
+            .. ' EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis drops still count.' },
         { 'Reset session', function()
             local current = services.session_current and services.session_current();
             reset_layout = false;
@@ -909,7 +945,7 @@ local function toolbar(settings, view, services)
                     status = problem or 'The session could not be saved and reset. Wait for your EXP and LP to load, then try again.';
                 end
             end
-        end, 'Save this session and clear its totals, EXP/HR, LP/HR, and Next. EXP chain, food, Dedication, and EXP ring recast timers keep running.' },
+        end, 'Save this session and clear its totals, EXP/HR, LP/HR, and Next. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis totals stay as they are.' },
         { 'Undo', function() if services.undo then services.undo(); end end, 'Undo one of the last eight saved settings changes. This does not undo a session reset.' },
     });
     beside(108);
@@ -991,6 +1027,7 @@ function settings_window.draw(settings, view, services)
             if status then note(status); end
             if settings.window.tab == 'Display' then display_page(settings, services);
             elseif settings.window.tab == 'Tracking' then tracking_page(settings, view, services);
+            elseif settings.window.tab == 'Dynamis' then dynamis.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Details' then details.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Alerts' then details.alerts(settings, view, services, controls);
             elseif settings.window.tab == 'Appearance' then appearance_page(settings);
@@ -1017,6 +1054,7 @@ function settings_window.close()
     preview_options_requested, search_focus = false, false;
     reset_layout, profile_confirmation = false, nil;
     details.cancel_pending();
+    dynamis.cancel_pending();
     focus_on_open = true;
 end
 
