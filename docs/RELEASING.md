@@ -9,7 +9,7 @@ This checklist prepares a reviewable release. It does not publish one or establi
 3. Update installation examples and the [guide](GUIDE.md) when names or behavior change. Preserve saved settings, profiles, and session compatibility.
 4. For game-rule changes, review the pinned Phoenix revision and loaded modules, regenerate the rules deliberately, and run the source check. A release build does not refresh them.
 
-The initial public version is **1.0.0**.
+The current release target is **1.1.1**.
 
 ## Verify
 
@@ -19,11 +19,16 @@ From the project folder with Python 3.12 and the dependencies described in [test
 python tests/verify.py
 python tests/preview/verify_preview.py
 python tools/export_rules.py --source ../Phoenix --check
+python tools/export_dynamis.py --source ../Phoenix --check
 ```
 
-The first command runs the offline Lua suites, Python tests, and repository checks. The second draws the real Lua UI with simulated client data and replays input. The source check requires the pinned Phoenix revision in a local checkout.
+The first command runs the offline Lua suites, Python tests, and repository checks. The second draws the real Lua UI with simulated client data and replays input. Both source checks require their pinned Phoenix revision in a local checkout. The Dynamis exporter checks the enabled era and Phoenix overlays as well as the base data; it does not read uncommitted server changes.
 
 For a performance change, compare operation counts with a previous archive and review the affected behavior checks. Inspect relevant screenshots after a UI change. Record any client checks separately, including loading or reloading, chat placement, real EXP/LP gains, merit conversion, effect timers, and chosen alerts. Do not describe offline results as live testing.
+
+For Dynamis, check a readable Perpetual Hourglass, extensions, a reload and late join, zone changes, found drops versus personal awards, duplicate pool updates, and the separate clear-totals action. Check that EXP reset and pause preserve Dynamis timing and collection, the prior layout returns on exit, unseen objectives stay unknown, and chosen alerts stay quiet during initial loading. Verify the recorded registration countdown without describing it as confirmed account eligibility. Include partial-run and saved-history behavior in the results.
+
+For Bar mode, switch among EXP, Merits, and Dynamis from both settings and chat. Check that each keeps its readout edits through switching, closing settings, reloading, and zoning, with both automatic layout options enabled. Return to Automatic and check that the previous regular setup and configured switching resume. Selecting a bar must not change gameplay mode, reset a session or run, or stop timers or Dynamis collection. Check manual Dynamis outside the zone with unknown run readings.
 
 ## Build and inspect
 
@@ -33,9 +38,19 @@ python tools/build_release.py
 
 The archive goes to Downloads by default. Use `--out PATH` for another output folder. The builder prints its SHA-256. Inspect the ZIP contents and use the printed hash when recording the build.
 
-The runtime ZIP contains `momentum/` with the reviewed addon files and license. It must not include settings, profiles, sessions, test output, private paths, or developer files. See [tools/README.txt](../tools/README.txt) for the manifest checks and reproducibility rules.
+The runtime ZIP contains `momentum/` with the reviewed addon files and license. It must not include settings, profiles, sessions, Dynamis run records, test output, private paths, or developer files. See [tools/README.txt](../tools/README.txt) for the manifest checks and reproducibility rules.
 
-If an operator specifically needs the optional server package, build it separately with `--server` and review [its instructions](../server/README.txt). Packaging it is not deployment, and the client addon does not require it.
+Review the public source, release notes, archive contents, and image and sound metadata for personal information. Keep only the approved author name, email, and GitHub details. Use sample data in examples; do not include real character names or IDs, chat logs, machine or account names, private paths, credentials, or saved player files. The automated checks cover known markers and the archive manifest, so inspect the media and final files as well.
+
+Generate the release notes from the same version entry used by the draft workflow:
+
+```powershell
+python tools/release_notes.py --out tests/out/release-notes.md
+```
+
+Check the notes against the final changes and include the update steps that preserve `config/addons/momentum/`. Keep verification results separate from feature claims, and do not describe a local archive as published.
+
+If an operator specifically needs the optional server package, build it separately with `--server` and review [its instructions](../server/README.txt). Packaging it is not deployment, and the client addon does not require it. Dynamis uses the client hourglass and incoming state and needs no server companion.
 
 ## Create a draft
 
@@ -53,4 +68,4 @@ Review the draft's version, target commit, notes, archive, and checksum. Publish
 
 ## Update an installed copy
 
-If Momentum is running, enter `/addon unload momentum` before replacing `addons/momentum/` with the reviewed runtime folder. Keep `config/addons/momentum/`, which holds settings, profiles, shared layouts, sessions, and custom sounds. Enter `/addon load momentum` after replacing the files.
+If Momentum is running, enter `/addon unload momentum` before replacing `addons/momentum/` with the reviewed runtime folder. Keep `config/addons/momentum/`, which holds settings, profiles, shared layouts, sessions, Dynamis runs, and custom sounds. Enter `/addon load momentum` after replacing the files.

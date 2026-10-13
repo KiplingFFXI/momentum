@@ -2,7 +2,7 @@
 
 Enter `/momentum` to open or close settings. Press Escape to close the menu, including during combat, while editing a setting, or with a dropdown open. Your edits are kept, and pending reset or delete confirmations are canceled. The compact, rounded bar attaches to the chat window automatically.
 
-**Pause session** and **Reset session** stay at the top of settings on every page. Reset saves the current session and starts a fresh one with one click. **Reset...** contains separate actions for settings, so resetting a session does not change your layout.
+**Bar mode**, **Pause session**, and **Reset session** stay at the top of settings on every page. Reset saves the current session and starts a fresh one with one click. **Reset...** contains separate actions for settings, so resetting a session does not change your layout.
 
 Open or close settings sections by their headings. Their open state stays with your character. Searching can open sections temporarily without replacing your saved choices. Hover a **(?)** for an explanation. **Use a tab dropdown** under Appearance replaces the page buttons with a dropdown when you prefer a smaller header.
 
@@ -10,7 +10,19 @@ Open or close settings sections by their headings. Their open state stays with y
 
 If updating a running copy, enter `/addon unload momentum` first. Extract the `momentum` folder from the release ZIP into your Phoenix client's `addons` folder. Check that the result is `addons/momentum/momentum.lua`, then enter `/addon load momentum`.
 
-Keep `config/addons/momentum/` when updating. Settings, profiles, shared layouts, session history, and custom sounds live there, separate from the addon files. Copy that folder somewhere safe to back up your setup. Updating the addon does not require resetting settings or deleting old sessions.
+Keep `config/addons/momentum/` when updating. Settings, profiles, shared layouts, session and Dynamis history, and custom sounds live there, separate from the addon files. Copy that folder somewhere safe to back up your setup. Updating the addon does not require resetting settings or deleting old sessions.
+
+## Choose a bar mode
+
+Use **Bar mode** at the top of settings to choose **EXP**, **Merits**, or **Dynamis** whenever you want. Each keeps its own readouts, order, labels, and dividers. Use Display to arrange the selected mode. Your choice stays selected when you close settings, reload Momentum, or change zones, even if either automatic layout option is on.
+
+**EXP** shows EXP progress. **Merits** shows LP/HR, stored merit points, LP to the next merit, and the next-merit timer by default. **Dynamis** uses your Dynamis readouts and can be selected outside Dynamis; readings without a current run stay unknown.
+
+Choose **Automatic** to restore your regular setup and resume your configured **Automatically switch EXP / Merits layouts** and **Switch layouts in Dynamis** options. Automatic does not turn either option on for you.
+
+Bar mode only changes the display. It never changes your EXP/merit mode in the game or resets your session, Dynamis run, or timers. Dynamis tracking continues when you select EXP or Merits.
+
+You can also use `/momentum mode exp`, `/momentum mode merits`, `/momentum mode dynamis`, or `/momentum mode auto`. The older `lp` command still selects Merits.
 
 ## Arrange the readouts
 
@@ -22,13 +34,13 @@ Open **Display** and drag a readout's handle to another position, or select it a
 
 Independent alignment groups can place selected readouts on the left, center, or right of the same bar. **Keep visible first** and **Display priority** choose which fields stay visible when space is short, without rearranging the remaining fields. A very narrow bar can still run out of space. **Show when** can limit a readout to EXP, LP, a running EXP chain timer, a food effect, Dedication, Level Sync, or a known value. Hidden fields do not leave stray dividers.
 
-Each row in **Readouts and order** has Show and Divider checkboxes. The list starts with your chosen readouts. Use **Add readout** to browse Progress, Merit points and LP, Session, Buffs, or Detailed statistics, or switch to **All readouts**. Filtering does not change the bar's order or visibility. The divider follows its readout when you change the order. The first visible readout in each alignment group never starts with a divider. The selected readout puts its label, divider, and colors first, with conditions and overflow controls under **More options**. Clear a label to show only its value and any built-in EXP or LP unit. Selecting **EXP chain timer** also gives you the **Below 10 seconds** text color, which defaults to red.
+Each row in **Readouts and order** has Show and Divider checkboxes. The list starts with your chosen readouts. Use **Add readout** to browse Progress, Merit points and LP, Session, Buffs, Detailed statistics, or Dynamis, or switch to **All readouts**. Filtering does not change the bar's order or visibility. The divider follows its readout when you change the order. The first visible readout in each alignment group never starts with a divider. The selected readout puts its label, divider, and colors first, with conditions and overflow controls under **More options**. Clear a label to show only its value and any built-in EXP or LP unit. Selecting **EXP chain timer** also gives you the **Below 10 seconds** text color, which defaults to red.
 
 The **Divider style** choice sits beside the readout list. Choose a line, slash, dash, dot, asterisk, spaces, or no divider. **Add dividers to all** enables a divider between every visible readout; **Remove all dividers** turns them off. Adding a divider when the style is blank chooses a visible line. Hidden readouts never leave stray dividers. Under **Dividers and formatting**, enter custom text or change the gap and divider color; **Label separator** controls the separator inside a readout.
 
-Starter layouts provide Minimal, Leveling, and Merits arrangements. Merits shows a compact row of LP/HR, stored merit points, LP to the next merit, and the next-merit timer, in that order. These four readings follow LP regardless of the main display mode. Applying a starter changes the enabled readouts and order. The selector shows **Custom** when your chosen readouts or order differ from a starter layout. Save your preferred arrangement as a profile if you want to return to it later.
+Starter layouts provide Minimal, Leveling, Merits, and Dynamis arrangements. Merits shows a compact row of LP/HR, stored merit points, LP to the next merit, and the next-merit timer, in that order. These four readings follow LP regardless of the main display mode. Dynamis shows the zone, time left, time extensions, currency found, and relic armor found. Applying a starter changes the enabled readouts and order. The selector shows **Custom** when your chosen readouts or order differ from a starter layout. Save your preferred arrangement as a profile if you want to return to it later.
 
-**Automatically switch EXP / Merits layouts** is an optional checkbox beside Starter layout. It starts off. Turn it on to choose Leveling for the character's EXP mode and Merits for LP mode. It follows actual job level and the client's earning mode, including LP overflow at a full level-75 EXP buffer. A level-75 job still follows merit mode while level synced below 75. It waits for usable character data during loading and zoning.
+**Automatically switch EXP / Merits layouts** is an optional checkbox beside Starter layout. It starts off and applies when **Bar mode** is **Automatic**. Turn it on to choose Leveling for the character's EXP mode and Merits for LP mode. It follows actual job level and the client's earning mode, including LP overflow at a full level-75 EXP buffer. A level-75 job still follows merit mode while level synced below 75. It waits for usable character data during loading and zoning.
 
 Automatic switching changes the shown readouts and their order. It keeps labels, colors, dividers, alignment, placement, and session totals. Readout edits you make afterward remain until the next actual mode change; disabling the option keeps the current arrangement. Changing the sample preview or **Show EXP or LP** does not trigger a layout switch. The option never changes the character's earning mode. Each client switches locally, even when characters share an appearance.
 
@@ -81,7 +93,7 @@ The settings preview stays visible while you scroll. Its fit feedback uses the a
 
 ## EXP, LP, and rates
 
-Under **Show EXP or LP**, **Automatic** uses the client's EXP/LP mode. At the full level-75 EXP buffer it follows overflow into LP. You can choose EXP or Limit points (LP) without changing the character's gameplay mode.
+With **Bar mode** set to **Automatic**, **Show EXP or LP** controls the progress readings. Its **Automatic** choice uses the client's EXP/LP mode and follows overflow into LP at the full level-75 EXP buffer. Choose EXP or Limit points (LP) here to hold those readings without switching layouts. Manual EXP and Merits bar modes choose their matching readings for you. These choices never change the character's gameplay mode.
 
 Under **EXP/HR time period**, choose the last 5, 15, or 30 minutes, or the whole session. The session begins when progress or a reward is observed. Rates wait for one minute of session time before appearing. A break with no new rewards lowers the rate; pause the session if you want to exclude a break.
 
@@ -97,13 +109,37 @@ Chain bonuses follow Phoenix's rules: 20%, 25%, 30%, 40%, then 50% for chain 5 o
 
 Local timing needs no server installation. The single countdown is marked with `~` because it starts when the reward reaches your client. It shows `--` before an observed chain or when the estimate expires; that is not proof that the server chain ended. An ordinary reward without a chain number cannot start the timer because it may come from a monster that does not qualify. Zoning and other observation gaps discard old timing. If the optional companion provides a fresh native deadline, that takes precedence and can also show the initial window before chain 1.
 
+## Dynamis
+
+Open **Dynamis** for the current run, options, objectives, drops, treasure pool, wanted drops, and saved runs. **Track Dynamis runs** and **Switch layouts in Dynamis** start on. With **Bar mode** set to **Automatic**, entering any of Phoenix's ten Dynamis zones uses your Dynamis layout and leaving restores your regular layout. Manual modes stay selected across zone changes.
+
+Choose **Dynamis** from Bar mode, or **Use Dynamis bar** under Dynamis options, to arrange its readouts with the usual Display controls. Select EXP, Merits, or Automatic from Bar mode to switch back. Switching bars leaves the run and its timers alone.
+
+**Time left** comes from the end time on your Perpetual Hourglass. Time extensions update that end time automatically; they are not added twice. The hourglass can restore the timer and total extension minutes after a reload or late join, but it cannot tell Momentum which extension monsters were defeated. **Extensions seen** counts extension messages received while tracking. Without a readable hourglass for the current zone, the timer stays `--`. No server companion is needed for Dynamis.
+
+When server time is not available yet, Momentum uses your computer clock and marks the Dynamis countdown with `~`. It switches to server time when available.
+
+**Currency and drops** separates **Found**, which counts drops seen in the zone's treasure pool, from **Received**, which counts items awarded to you. Currency totals use singles: a hundred-piece counts as 100. You can also show each nation's currency, actual single and hundred-piece counts, personal currency and relic armor, and Currency/HR. Trading or moving items between bags does not count as a drop. Currency/HR uses observed currency over elapsed time since tracking started or the totals were cleared; offline gaps can lower the rate on a partial run.
+
+**Objectives and time extensions** lists the zone's goals and observed boss weakening. **Monsters defeated** counts deaths your client saw. It is not a count of monsters or waves remaining in the whole zone. Unseen deaths and unconfirmed objectives stay unknown. A late join, reload, or gap can leave the run marked **Partial run**: drops and deaths before tracking or while offline are missing. The totals still show what Momentum actually observed. Support job restriction and Weakness follow your current effects. **Zone clear** shows whether you own the clear key item, which may be from a previous run.
+
+**Treasure pool** lists items waiting to be lotted or passed. When the drop was observed, its remaining time is approximate. An item can leave sooner once players finish lotting and passing, and an old item loaded from the pool may have no known countdown. Momentum never lots or passes for you.
+
+Under **Wanted drops**, select jobs for relic armor, relic armor -1, and accessories, or search for individual drops by name, job, or item number. Selecting a wanted drop does not enable an alert by itself. Open **Alerts > Dynamis** and enable the notices or sounds you want. Time warnings offer 10, 5, and 1 minute choices; treasure pool warnings have their own threshold. Extension, wanted-drop, clear, and support job alerts are separate. All start off. A reload does not replay old drop alerts, and **When to mute alerts** still applies.
+
+**Pause session** and **Reset session** affect EXP and LP collection. Dynamis timing, drops, objectives, and totals keep running. **Clear run totals...** on Dynamis is a separate action with confirmation. It clears counted drops, kills, and the currency rate while preserving the hourglass, time extensions, objectives, status effects, and treasure pool. **Copy run summary** copies locally; it does not send chat.
+
+**Dynamis run history** keeps records for this character, with separate found and received totals and a partial-run label where needed. **Dynamis runs to keep** under Dynamis options ranges from 1 to 100 and starts at 30. Select a saved run to copy its summary. Records and the current run are saved every 30 seconds when changed, on zone changes, and on normal unload. An unexpected crash can lose the last unsaved interval.
+
+The optional **Next Dynamis entry** readout shows the 72-hour lockout remaining from a successful registration Momentum observed on this character. Phoenix applies that lockout to the whole account, but Momentum's saved records are per character. It cannot see another character's registration or confirm other entry requirements or GM changes. **Lockout ended** means this recorded timer ended, not that entry is guaranteed. Without an observed registration, it stays `--`.
+
 ## Sessions
 
 The **Session** page separates reported EXP and LP, net progress, EXP lost, recovery, and other adjustments. Recovery is tracked from observed death and revival; a gain that cannot be matched to a reward or recovery remains an adjustment.
 
 **Pause session** stops collecting session rewards, progress, and elapsed time until you resume. Current EXP, LP, and stored merit balances keep updating. **Reset session** is always available at the top of settings. One click saves the previous record and starts a new session. EXP/HR, LP/HR, and Next clear until the new session has enough data. Reset also switches sample previews back to live readings. Your current EXP, LP, stored merits, and layout stay the same. **Copy summary** on Session copies the displayed breakdown to the clipboard.
 
-Pause and reset leave active EXP chain, food, Dedication, and EXP ring recast timers running toward their original end times. They do not restart expired timers. The current chain can advance when another qualifying reward arrives, including while paused; the session's best chain starts over on reset and does not increase while paused. Warnings keep following their timers, subject to **When to mute alerts**. Pausing does not stop an effect from wearing off or a ring from becoming ready in the game. Death, zoning, missing data, and other real observation gaps can still clear or hide a timer when it is no longer reliable.
+Pause and reset leave active EXP chain, food, Dedication, and EXP ring recast timers running toward their original end times. They also leave Dynamis timing and totals alone. They do not restart expired timers. The current chain can advance when another qualifying reward arrives, including while paused; the session's best chain starts over on reset and does not increase while paused. Warnings keep following their timers, subject to **When to mute alerts**. Pausing does not stop an effect from wearing off or a ring from becoming ready in the game. Death, zoning, missing data, and other real observation gaps can still clear or hide a timer when it is no longer reliable.
 
 **Resume this character and job after a reload** is on by default. Reloading restores observed totals and recent samples, excludes offline time, and establishes a fresh progress baseline. It does not reconstruct rewards missed while Momentum was unloaded. Chain timing waits for a newly observed chain reward or an optional fresh server report instead of restoring an old countdown. Zoning and other gaps also clear the comparison baseline.
 
@@ -139,6 +175,7 @@ On the **Alerts** page, open the group you want:
 - **EXP rings:** a ring's recast finishing.
 - **Levels and merit points:** levels, merit points, goals, and nearly full merit points.
 - **Level Sync and missed EXP:** confirmed Level Sync penalty changes and reasons Phoenix gives for missed EXP.
+- **Dynamis:** time running low, time extensions, wanted drops, treasure pool timing, clear key items, and support job unlocks.
 
 These groups start closed and remember whether you leave them open or closed. Each heading shows how many alerts are on, such as **Food (2 on)**. An alert with both notice and sound counts once. Opening a group does not turn its alerts on. For each alert, check **Show notice**, **Play sound**, or both. Leave both unchecked to turn it off. A sound alert also needs a selected sound file. **Food effect wore off** has only **Play sound**. EXP chain warnings based on the local timer are labeled as estimated.
 
@@ -164,13 +201,15 @@ Phoenix uses burgundy panels, warm white text, and red accents. Bar colors and w
 
 Text sizes for the bar and settings window are separate. Background opacity, colors, border, corners, shadow, fill direction, and text/fill visibility can be changed independently. **Progress style** chooses **Thin line** or **Full background**. Bar text scales down when the bar is too short to fit it. Job pictures use artifact head item pictures from your installed game client; the addon does not distribute job artwork.
 
-The fixed preview has **Live** and **Sample** choices. Sample changes only the settings preview, with leveling, merits, capped, paused, and unknown states available. The expandable preview options include a narrow-width test. **Show sample on game bar** is a separate choice that replaces the visible game-bar numbers with a marked sample while live tracking continues in the background. Turn it off to return the game bar to your character.
+The fixed preview has **Live** and **Sample** choices. Sample changes only the settings preview, with leveling, merits, Dynamis, capped, paused, and unknown states available. The expandable preview options include a narrow-width test. **Show sample on game bar** is a separate choice that replaces the visible game-bar numbers with a marked sample while live tracking continues in the background. Turn it off to return the game bar to your character.
 
 ## Profiles and saving
 
 Changes save after the active edit finishes. **Undo** restores up to eight previous edits during the current addon run. Section and layout resets are available in settings.
 
 Save a profile to keep the bar layout, tracking choices, and appearance. Profiles keep all readout positions, labels, dividers, and colors. A profile does not contain session totals, character progress, the open settings page, or preview mode.
+
+Loading a profile also restores its saved Bar mode. Job profiles keep the manual Bar mode you selected.
 
 **Job profiles** applies a saved profile when the main job changes. **Use one layout for all characters** uses a common appearance file; job profiles are inactive while sharing is enabled. Session records stay separate. Turning sharing off copies the current shared appearance to the active character's own settings.
 
@@ -180,9 +219,10 @@ All persistent files are under `config/addons/momentum/`:
 - `profiles.json` holds named profiles.
 - `shared_layout.json` holds the shared layout and whether sharing is enabled.
 - `sessions-<character ID>.json` holds that character's session records.
+- `dynamis-<character ID>.json` holds that character's current Dynamis run, run history, and observed registration.
 - `sounds/` holds your own sound files.
 
-Corrupt profile or shared-layout files are left unchanged and an error is shown in chat. Session files also detect conflicting writes instead of silently replacing another client's changes. Back up the folder before editing these files by hand, and unload Momentum in every client that uses them first.
+Corrupt profile or shared-layout files are left unchanged and an error is shown in chat. Session and Dynamis files also detect conflicting writes instead of silently replacing another client's changes. Back up the folder before editing these files by hand, and unload Momentum in every client that uses them first.
 
 ## Commands
 
@@ -198,7 +238,7 @@ Corrupt profile or shared-layout files are left unchanged and an error is shown 
 | `/momentum reset` | Save the previous session and start a new one. |
 | `/momentum undo` | Undo the last saved layout edit. |
 | `/momentum preview` | Toggle sample numbers on the movable bar. |
-| `/momentum mode auto` / `exp` / `lp` | Choose the progress display. |
+| `/momentum mode auto` / `exp` / `merits` / `dynamis` | Choose the bar mode. `lp` also selects Merits. |
 | `/momentum divider " / "` | Set custom divider text. |
 | `/momentum order rate progress remaining` | Move the listed readouts to the front in that order. |
 | `/momentum profile save My Layout` | Save a named profile. |
