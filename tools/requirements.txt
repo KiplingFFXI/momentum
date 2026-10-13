@@ -1,2 +1,3 @@
 # Python 3.12; enough for the offline Lua, settings and release checks.
 lupa==2.8
+PyYAML==6.0.3

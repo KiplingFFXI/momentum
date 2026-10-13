@@ -1,8 +1,8 @@
 Momentum rules and release tools
 ===============================
 
-Run these commands from the project folder with Python 3.12. Packaging and source
-export use the Python standard library; the offline Lua checks also need lupa:
+Run these commands from the project folder with Python 3.12. Packaging uses the
+standard library. Dynamis source export needs PyYAML; offline Lua checks need lupa:
 
   python -m pip install -r tools/requirements.txt
 
@@ -32,7 +32,28 @@ Use --help for the available arguments. An intentional update can name a reviewe
 commit with --ref COMMIT and a comparison file with --output PATH. Check the diff,
 the relevant loaded modules, and the affected tests before replacing the bundle.
 
-Ordinary verification and packaging do not regenerate these rules. There is no
+Phoenix Dynamis
+---------------
+
+export_dynamis.py writes momentum/data/dynamis_rules.lua from one pinned Phoenix
+Git revision. It reads the active era and Phoenix overlays in module order, along
+with hourglass timing, extensions, objectives, boss weakening, currency, and drops.
+The output records the source revision and input hashes. Assertions reject source
+changes that need review. It does not edit, switch, or fetch the Phoenix checkout.
+
+Check the existing bundle:
+
+  python tools/export_dynamis.py --source ../Phoenix --check
+
+For an intentional refresh after reviewing the source and loaded modules:
+
+  python tools/export_dynamis.py --source ../Phoenix --ref COMMIT
+
+--source is required. The default revision is pinned in export_dynamis.py.
+Omitting --check writes the bundle in place, so inspect that diff and run the
+Dynamis tests before including it in a release. No running server is needed.
+
+Ordinary verification and packaging do not regenerate either rules bundle. There is no
 scheduled data-refresh workflow.
 
 Offline verification
@@ -72,7 +93,7 @@ Text line endings, ZIP timestamps, file modes, and entry order are normalized.
 Identical reviewed input produces the same archive in the same build environment.
 A temporary archive is verified before replacing an existing output.
 
-Job artwork, player settings, profiles, session files, tests, source notes, and
+Job artwork, player settings, profiles, session and Dynamis files, tests, source notes, and
 developer tools are not copied into the runtime archive.
 
 Optional server package
@@ -82,8 +103,8 @@ Optional server package
 
 This also builds momentum-phoenix-status-<version>.zip as a separate operator
 package. It does not install, build, enable, or deploy anything on Phoenix.
-The client addon and its local chain estimate work without it. Read server/README.txt
-before considering server work.
+The client addon, local chain estimate, and Dynamis tracking work without it.
+Read server/README.txt before considering server work.
 
 Release notes and GitHub
 -----------------------
