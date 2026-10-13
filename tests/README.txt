@@ -113,7 +113,9 @@ tracker views, rate-bucket visits, chat and inventory reads, profile reads,
 history sorting, and date formatting. It does not measure live FPS.
 
 Closed-chat fixtures cover Hide with chat, both keep-visible choices, and Free
-placement. Native reader tests separately count retained-position projections
+placement. The HUD holds its last rendered rectangle through failed chat reads;
+previews cannot replace it, and deliberate edits and reopened chat still work.
+Native reader tests separately count retained-position projections
 and verify that skipping an unused anchor does not skip validation or add reads.
 
 The release comparison sends the same EXP/LP trace through both versions and

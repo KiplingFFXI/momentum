@@ -83,12 +83,15 @@ For either chat anchor, **Starting point** sets the bar's left end in pixels fro
 
 Under **Tracking > Visibility**, **Bar visibility** controls what happens when chat closes:
 
-- **Follow placement** keeps the original behavior. An attached bar hides without chat bounds; Free placement stays up. Your other hide settings apply.
 - **Hide with chat** hides when your main chat log closes, even in Free placement. Your other hide settings apply.
 - **Keep visible when chat closes** keeps the bar up when chat closes. Your typing, map, cutscene, game UI, and idle hide settings still apply.
 - **Always visible** also keeps the bar up while typing, viewing the map, during cutscenes and NPC conversations, while the game UI is hidden, and before a session starts. Your other hide settings are saved for when you switch back.
 
-The last two choices keep an attached bar at its last verified chat position while chat is closed. If no usable position is available, the bar temporarily uses your saved Free placement position. It attaches again when chat returns without changing your saved anchor, size, or position. If you Shift drag or resize that temporary free bar, it switches to Free placement and keeps your edit. With readable chat bounds, the dock still needs enough space outside either chat border. **Hide with chat** uses the game's reported main chat window state; an unreadable state is not treated as a closed window.
+New or reset settings start with **Keep visible when chat closes**. Momentum also uses this default when no usable choice was saved. Your saved Hide with chat, Keep visible when chat closes, or Always visible choice is kept. The old placement-based setting still becomes Hide with chat for an attached bar, or Keep visible when chat closes for Free placement. Attaching or freely placing the bar afterward does not change your choice.
+
+The last two choices keep the bar at its last drawn position and size when chat closes or its position becomes unreadable. It does not jump to an old Free placement position. If the client window becomes smaller, the bar moves or shrinks only enough to stay on screen. It follows the current chat position again when chat returns, without changing your saved anchor. Shift dragging or resizing the held bar switches to Free placement and keeps your edit.
+
+Before a bar position is available, such as after loading or entering a new zone, the saved Free placement position is the fallback. A position is not carried into another zone or character. With readable chat bounds, the dock still needs enough space outside either chat border. **Hide with chat** uses the game's reported main chat window state; an unreadable state is not treated as a closed window.
 
 `/momentum hide` and `/momentum show` still work when Sample preview is off. Sample preview remains available, and closing chat does not close the settings menu. Tracking, alerts, and EXP chain, food, Dedication, EXP ring, and Dynamis timers keep running while the bar is hidden.
 

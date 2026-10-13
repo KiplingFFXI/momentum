@@ -38,10 +38,12 @@ For Bar mode, switch among EXP, Merits, and Dynamis from both settings and chat.
 
 Before releasing the visibility changes, record these live-client checks separately from the offline results:
 
-- Try each Bar visibility choice above chat, below chat, and in Free placement. Close and reopen the main chat log, then change the chat size and resolution. Confirm the native active flag follows the visible chat window.
-- With chat unavailable, check the temporary free position and Shift dragging and resizing. Close and reopen chat during a held resize; the last valid size should stay put until you release and begin a new drag. With readable chat but no room on the chosen side, check that the dock stays hidden and does not cover either chat window.
+- Try all three Bar visibility choices above chat, below chat, and in Free placement. Changing placement must keep the chosen visibility option. Close and reopen the main chat log, then change the chat size and resolution. Confirm the native active flag follows the visible chat window.
+- In Keep visible when chat closes and Always visible, check that the last drawn bar stays put when chat closes or its position becomes unreadable. Test both a confirmed inactive window and unknown bounds, including a failed read. A smaller client window should move or shrink the bar only enough to stay on screen; returning chat should restore its current anchor.
+- Check the saved Free placement fallback before any bar position is available, then Shift drag and resize a held bar. The edit should switch to Free placement. Close and reopen chat during a held resize; keep the last valid size until a new drag. With readable chat but no room on the chosen side, keep the dock hidden and clear of both chat windows.
 - Check typing, map, cutscene, hidden game UI, and idle behavior. Always visible should bypass those hide settings, while `/momentum hide` still works with Sample preview off. Escape must close settings during combat and an active edit.
 - Load profiles and check their saved visibility policy and placement. Switch bar modes, zone, and reload without changing that choice or carrying a stale chat rectangle into another character or zone.
+- Check fresh settings, resets, and missing or invalid visibility choices: all should use Keep visible when chat closes. Only the former placement choice should become Hide with chat for an attached bar or Keep visible when chat closes for Free placement. Preserve each explicit saved choice through loading, profiles, character changes, and reloads.
 - Hide and show the bar during an active session and Dynamis run. Confirm rates, drops, alerts, and EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep updating. Reset and Pause must still preserve their active timers.
 
 ## Build and inspect

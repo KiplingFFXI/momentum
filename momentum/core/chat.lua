@@ -182,18 +182,18 @@ function chat.project(snapshot, display_width, display_height)
                 width = (window.right - window.x) * scale_x, height = (window.bottom - window.y) * scale_y, index = index };
         end
     end
-    if not snapshot.windows[1] then return nil, 'The main chat window is not active.', true; end
+    if not snapshot.windows[1] then return nil, 'The main chat window is not active.', true, windows; end
     local main = windows[1];
-    return { x = main.x, y = main.y, width = main.width, height = main.height, windows = windows }, nil, true;
+    return { x = main.x, y = main.y, width = main.width, height = main.height, windows = windows }, nil, true, windows;
 end
 
 function reader:read(display_width, display_height, keep_anchor)
     local snapshot, reason, identity = self:snapshot();
     self.last = snapshot;
     self.last_display = { width = display_width, height = display_height };
-    local result, valid, retained;
+    local result, valid, retained, windows;
     self.visible = nil;
-    if snapshot then result, reason, valid = chat.project(snapshot, display_width, display_height); end
+    if snapshot then result, reason, valid, windows = chat.project(snapshot, display_width, display_height); end
     if valid then self.visible = snapshot.main_active; end
     if result and self.visible == true then
         self.retained = self.retained or {};
@@ -215,7 +215,7 @@ function reader:read(display_width, display_height, keep_anchor)
         self.retained = nil;
     end
     self.reason = reason;
-    return result, reason, self.visible, retained;
+    return result, reason, self.visible, retained, windows;
 end
 
 function reader:status()

@@ -93,17 +93,20 @@ class ClientSettingsTests(unittest.TestCase):
         load_entry(lua)
         lua.execute("MOCK.fire('load'); MOCK.frame(0.25)")
         self.assertFalse(lua.eval('MOMENTUM_TEST.state.broken'))
+        self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), 'keep')
         self.assertTrue(settings_file(self.folder).is_file())
         self.assert_current_root(lua)
         lua.execute("MOMENTUM_TEST.settings().display.divider = ' * '; MOMENTUM_TEST.state.dirty = true; MOCK.fire('unload')")
         saved = lua.execute("return assert(loadfile(...))()", settings_file(self.folder).as_posix())
         self.assertEqual(saved.display.divider, ' * ')
+        self.assertEqual(saved.visibility.mode, 'keep')
         self.assert_current_root(lua)
 
     def test_fixed_logged_out_load_uses_defaults_folder(self):
         lua = client_runtime(self.folder, login_status=0)
         load_entry(lua)
         self.assertTrue(settings_file(self.folder, 'defaults').is_file())
+        self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), 'keep')
         self.assert_current_root(lua)
 
     def test_fixed_existing_partial_file_detaches_nested_defaults(self):
@@ -143,8 +146,16 @@ class ClientSettingsTests(unittest.TestCase):
             assert(MOMENTUM_TEST.settings().display.divider == ' . ')
             MOCK.fire('command', {command='/momentum free'})
             assert(CLIENT_SETTINGS.cache.settings.defaults.bar.docked)
+            MOMENTUM_TEST.settings().visibility.mode='always'
             assert(CLIENT_SETTINGS.reset())
             assert(MOMENTUM_TEST.settings().bar.docked)
+            assert(MOMENTUM_TEST.settings().visibility.mode=='keep')
+            MOMENTUM_TEST.settings().visibility.mode='chat'
+            assert(MOMENTUM_TEST.services.reset_section('tracking'))
+            assert(MOMENTUM_TEST.settings().visibility.mode=='keep')
+            MOMENTUM_TEST.settings().visibility.mode='always'
+            assert(MOMENTUM_TEST.services.reset())
+            assert(MOMENTUM_TEST.settings().visibility.mode=='keep')
             assert(MOMENTUM_TEST.settings().display.divider == require('ui.defaults').make().display.divider)
             MOCK.fire('load')
             MOCK.frame(0.25)
@@ -157,6 +168,7 @@ class ClientSettingsTests(unittest.TestCase):
         load_entry(lua)
         lua.execute("""
             MOCK.fire('command', {command='/momentum divider *'})
+            MOMENTUM_TEST.settings().visibility.mode='always'
             local logout = MOCK.bytes(8)
             MOCK.put(logout,4,1,1)
             MOCK.fire('packet_in',MOCK.packet(0x00B,logout))
@@ -167,6 +179,7 @@ class ClientSettingsTests(unittest.TestCase):
             for i=1,#MOCK.player.name do login[0x84+i-1]=MOCK.player.name:byte(i) end
             MOCK.fire('packet_in',MOCK.packet(0x00A,login))
             assert(MOMENTUM_TEST.settings().display.divider == require('ui.defaults').make().display.divider)
+            assert(MOMENTUM_TEST.settings().visibility.mode=='keep')
             MOCK.fire('command',{command='/momentum divider /'})
             assert(CLIENT_SETTINGS.cache.settings.defaults.display.divider == require('ui.defaults').make().display.divider)
         """)
@@ -281,7 +294,7 @@ class ClientSettingsTests(unittest.TestCase):
             local s=MOMENTUM_TEST.settings()
             assert(s.bar.anchor=='top' and s.bar.start==135)
             assert(s.display.alignment=='right')
-            assert(s.visibility.mode=='placement')
+            assert(s.visibility.mode=='keep')
             s.visibility.mode='always'
             assert(MOMENTUM_TEST.services.placement('free'))
             assert(not s.bar.docked and not s.bar.snap and not s.bar.auto_width)
@@ -295,6 +308,71 @@ class ClientSettingsTests(unittest.TestCase):
             assert(s.visibility.mode=='always' and s.visibility.map and s.visibility.event and s.bar.hide_typing)
         """)
         self.assert_current_root(lua)
+
+    def test_legacy_visibility_uses_saved_placement_and_persists(self):
+        for docked in (True, False):
+            for visibility in ("visibility=T{map=false},", "visibility=T{mode='placement',map=false},", ''):
+                with self.subTest(docked=docked, visibility=visibility):
+                    source = "return T{appearance_version=2,style=T{palette_version=1},bar=T{docked=%s},%s}" % (str(docked).lower(), visibility)
+                    write_settings(self.folder, source)
+                    lua = client_runtime(self.folder)
+                    load_entry(lua)
+                    legacy = "mode='placement'" in visibility
+                    expected = 'chat' if docked and legacy else 'keep'
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), expected)
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.state.dirty'), legacy)
+                    self.assertEqual(lua.eval('CLIENT_SETTINGS.cache.settings.defaults.visibility.mode'), 'keep')
+                    lua.execute("MOCK.fire('load'); MOCK.frame(0.25)")
+                    saved = lua.execute("return assert(loadfile(...))()", settings_file(self.folder).as_posix())
+                    self.assertEqual(saved.visibility.mode, expected)
+                    self.assertEqual(saved.visibility.map, not bool(visibility))
+                    lua.execute("MOMENTUM_TEST.services.placement(...)", 'free' if docked else 'top')
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), expected)
+                    self.assertTrue(lua.eval('CLIENT_SETTINGS.reload()'))
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), expected)
+                    write_settings(self.folder, source)
+                    self.assertTrue(lua.eval('CLIENT_SETTINGS.reload()'))
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), expected)
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.state.dirty'), legacy)
+
+    def test_explicit_visibility_survives_library_merge_on_either_placement(self):
+        for docked in (True, False):
+            for mode in ('chat', 'keep', 'always'):
+                with self.subTest(docked=docked, mode=mode):
+                    write_settings(self.folder, "return T{bar=T{docked=%s},visibility=T{mode='%s',map=false,event=false}}" % (str(docked).lower(), mode))
+                    lua = client_runtime(self.folder)
+                    load_entry(lua)
+                    lua.execute("MOCK.fire('load'); MOCK.frame(0.25)")
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), mode)
+                    self.assertFalse(lua.eval('MOMENTUM_TEST.settings().visibility.map'))
+                    self.assertFalse(lua.eval('MOMENTUM_TEST.settings().visibility.event'))
+                    self.assertTrue(lua.eval('CLIENT_SETTINGS.reload()'))
+                    self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), mode)
+
+    def test_legacy_visibility_migrates_each_character_independently(self):
+        write_settings(self.folder, "return T{bar=T{docked=false}}")
+        write_settings(self.folder, "return T{bar=T{docked=true},visibility=T{mode='placement'}}", 'Second_1002')
+        lua = client_runtime(self.folder)
+        load_entry(lua)
+        lua.execute("""
+            MOCK.fire('load'); MOCK.frame(0.25)
+            assert(MOMENTUM_TEST.settings().visibility.mode=='keep')
+            local logout=MOCK.bytes(8)
+            MOCK.put(logout,4,1,1)
+            MOCK.fire('packet_in',MOCK.packet(0x00B,logout))
+            MOCK.player.name,MOCK.player.server_id='Second',1002
+            local login=MOCK.bytes(0xA0)
+            MOCK.put(login,4,4,1002)
+            for i=1,#MOCK.player.name do login[0x84+i-1]=MOCK.player.name:byte(i) end
+            MOCK.fire('packet_in',MOCK.packet(0x00A,login))
+            assert(MOMENTUM_TEST.settings().visibility.mode=='chat')
+            assert(CLIENT_SETTINGS.cache.settings.defaults.visibility.mode=='keep')
+            MOCK.frame(0.25)
+        """)
+        first = lua.execute("return assert(loadfile(...))()", settings_file(self.folder).as_posix())
+        second = lua.execute("return assert(loadfile(...))()", settings_file(self.folder, 'Second_1002').as_posix())
+        self.assertEqual(first.visibility.mode, 'keep')
+        self.assertEqual(second.visibility.mode, 'chat')
 
     def test_newer_profile_version_is_not_migrated_backwards(self):
         lua = client_runtime(self.folder)

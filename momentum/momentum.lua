@@ -48,8 +48,10 @@ end });
 local undo = history.new();
 local migration_pending = false;
 local function tidy(value)
+    local visibility = type(value.visibility) == 'table' and value.visibility.mode or nil;
     defaults.tidy(value);
     local changed = migrate.apply(value, defaults.make());
+    changed = value.visibility.mode ~= visibility or changed;
     migration_pending = migration_pending or changed;
     return changed;
 end
@@ -415,7 +417,8 @@ services.sound_problem = function() return sound.problem(state.settings.alerts.f
 services.dock_problem = function() return state.dock_problem; end;
 services.chat_fallback = function() return state.chat_fallback; end;
 services.chat_width = function() return state.chat_width; end;
-services.preview_context = function() return { chat = state.chat, chat_checked = true, now = now() }; end;
+services.preview_context = function() return { chat = state.chat, chat_visible = state.chat_visible,
+    chat_windows = state.chat_windows, chat_checked = true, now = now() }; end;
 services.rings_visible = function(open)
     state.rings_details = open == true;
     refresh_rings(state.snapshot, now());
@@ -424,7 +427,7 @@ end;
 local function read_chat_context(settings, context, display)
     local reason, retained;
     local keep_anchor = settings.bar.docked and (settings.visibility.mode == 'keep' or settings.visibility.mode == 'always');
-    context.chat, reason, context.chat_visible, retained = chat_window.read(display.x, display.y, keep_anchor);
+    context.chat, reason, context.chat_visible, retained, context.chat_windows = chat_window.read(display.x, display.y, keep_anchor);
     context.chat_checked = true;
     if not context.chat and keep_anchor then context.chat = retained; end
     return reason;
@@ -523,6 +526,7 @@ ashita.events.register('load', 'momentum_load', function()
     job_icons.prepare();
     player.load();
     chat_window.load();
+    hud.reset_chat_anchor();
     sound.refresh();
     refresh_shared();
     sample(now());
@@ -542,6 +546,9 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
         state.rings, state.rings_at, state.snapshot = nil, nil, nil;
         state.food_pending = nil;
         chat_window.reset();
+        hud.reset_chat_anchor();
+        state.chat, state.chat_visible, state.chat_width, state.chat_fallback, state.dock_problem = nil, nil, nil, nil, nil;
+        state.chat_windows = nil;
         player.on_zone(id);
         state.player_id, state.sampled = id, -1;
         return;
@@ -652,8 +659,10 @@ local function render()
     local display = imgui.GetIO().DisplaySize;
     local chat_problem = read_chat_context(state.settings, context, display);
     state.chat = context.chat;
+    state.chat_visible = context.chat_visible;
+    state.chat_windows = context.chat_windows;
     state.chat_width = context.chat and context.chat.width or nil;
-    state.chat_fallback = state.settings.bar.docked and context.chat == nil and (visibility == 'keep' or always);
+    state.chat_fallback = state.settings.bar.docked and context.chat_visible ~= true and (visibility == 'keep' or always);
     local dock = layout.dock(state.settings.bar, display.x, display.y, context.chat);
     state.dock_problem = dock.hidden and (chat_problem or dock.reason) or nil;
     if visibility == 'chat' and context.chat_visible == false and not context.preview then hud_visible = false; end
@@ -772,6 +781,9 @@ settings.register('settings', 'momentum_settings', function(loaded)
     state.before, state.edit_baseline, state.dirty, state.last_job, state.shared_data = nil, nil, migration_pending, nil, nil;
     state.player_id, state.sampled = nil, -1;
     chat_window.reset();
+    hud.reset_chat_anchor();
+    state.chat, state.chat_visible, state.chat_width, state.chat_fallback, state.dock_problem = nil, nil, nil, nil, nil;
+    state.chat_windows = nil;
     undo:clear();
     refresh_shared();
 end);

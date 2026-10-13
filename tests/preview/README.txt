@@ -92,6 +92,10 @@ text field, or readout catalog is active, then reopen to check saved edits and
 cleared popup focus. They do not change the game's combat state or inject gameplay
 commands. Separate Lua suites cover hidden-state gates and pending confirmations.
 width_input.json checks width resizing from free and attached positions.
+chat_hold_input.json checks that Keep visible and Always visible hold the actual bar
+position and size above and below chat, including failed or unknown chat reads and
+changed retained bounds. Reopening chat follows its current edges without changing
+saved placement. These cases inspect the real drawn window, not just a layout result.
 The constrained-width case starts with a saved height of 24 and a visible height of 14;
 horizontal resizing must keep the visible height. width_return_input.json moves the
 right edge away and back to the exact mouse origin, checking that its size is restored.

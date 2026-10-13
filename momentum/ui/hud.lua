@@ -22,6 +22,7 @@ end
 local render_cache = setmetatable({}, { __mode = 'k' });
 local last_context = setmetatable({}, { __mode = 'k' });
 local last_render = setmetatable({}, { __mode = 'k' });
+local last_drawn = setmetatable({}, { __mode = 'k' });
 local measurements, measurement_order = {}, {};
 
 local function measurer(settings, size)
@@ -118,15 +119,48 @@ local function content_width(settings, view, height, sample)
     return entry.width;
 end
 
+local function held_rectangle(rect, context)
+    if rect.hidden then return rect; end
+    rect.anchor, rect.frozen = nil, true;
+    local chat = context and context.chat;
+    for _, other in ipairs(context and context.chat_windows or chat and chat.windows or {}) do
+        if other.index == 2 and type(other.x) == 'number' and type(other.y) == 'number'
+            and type(other.width) == 'number' and type(other.height) == 'number'
+            and other.width > 0 and other.height > 0 and other.x < rect.x + rect.width and other.y < rect.y + rect.height
+            and other.x + other.width > rect.x and other.y + other.height > rect.y then
+            return { hidden = true, frozen = true, reason = 'Waiting for space outside your second chat window.' };
+        end
+    end
+    return rect;
+end
+
 function hud.bounds(settings, view, context)
     local display = imgui.GetIO().DisplaySize;
     local mode = settings.visibility.mode;
     local keep_visible = mode == 'keep' or mode == 'always';
+    local chat = context and context.chat;
+    local live_chat = chat and context.chat_visible ~= false and (not context.chat_checked or context.chat_visible == true);
+    local held = settings.bar.docked and keep_visible and not live_chat;
+    local previous = held and last_drawn[settings.bar];
+    if previous then
+        local width = math.min(previous.width, math.max(1, display.x));
+        local requested_height = settings.bar.height ~= previous.height_setting and settings.bar.height or previous.height;
+        local height = math.min(math.max(1, requested_height), math.max(1, display.y));
+        return held_rectangle({ x = layout.clamp(previous.x, 0, display.x - width), y = layout.clamp(previous.y, 0, display.y - height),
+            width = width, height = height }, context);
+    end
     local desired;
-    if (not settings.bar.docked or keep_visible and not (context and context.chat)) and settings.bar.auto_width then
+    if (not settings.bar.docked or keep_visible and not chat) and settings.bar.auto_width then
         desired = content_width(settings, view, math.min(settings.bar.height, display.y), context and context.preview);
     end
-    return layout.rect(settings.bar, display.x, display.y, context and context.chat, desired, keep_visible);
+    local rect = layout.rect(settings.bar, display.x, display.y, chat, desired, keep_visible);
+    return held and held_rectangle(rect, context) or rect;
+end
+
+function hud.reset_chat_anchor()
+    last_drawn = setmetatable({}, { __mode = 'k' });
+    last_context = setmetatable({}, { __mode = 'k' });
+    gesture = nil;
 end
 
 function hud.place(settings, view, context, mode)
@@ -383,7 +417,8 @@ function hud.draw_inline(settings, view, width, height, context)
     local sample_width = context.preview and tonumber(context.width);
     if context.chat == nil and not context.chat_checked then
         local previous = last_context[settings] or {};
-        context = { chat = previous.chat, now = context.now or previous.now, preview = context.preview };
+        context = { chat = previous.chat, chat_visible = previous.chat_visible, chat_checked = previous.chat_checked,
+            chat_windows = previous.chat_windows, now = context.now or previous.now, preview = context.preview };
     end
     local actual = hud.bounds(settings, view, context);
     local simulated_width = false;
@@ -469,7 +504,8 @@ end
 
 function hud.draw(settings, view, context)
     context = context or {};
-    last_context[settings] = { chat = context.chat, now = context.now, preview = context.preview };
+    last_context[settings] = { chat = context.chat, chat_visible = context.chat_visible, chat_checked = context.chat_checked,
+        chat_windows = context.chat_windows, now = context.now, preview = context.preview };
     local display = imgui.GetIO().DisplaySize;
     local width, height = display.x, display.y;
     if width <= 0 or height <= 0 then return false; end
@@ -506,6 +542,10 @@ function hud.draw(settings, view, context)
         local overflow;
         overflow, hovered, info = paint(settings, view, rect, context.preview, hovering and mx or nil, my);
         last_render[settings] = info;
+        local drawn = last_drawn[settings.bar] or {};
+        drawn.x, drawn.y, drawn.width, drawn.height = rect.x, rect.y, rect.width, rect.height;
+        drawn.height_setting = settings.bar.height;
+        last_drawn[settings.bar] = drawn;
         if movable then controls(settings, rect, width, height, context.chat); end
     end
     imgui.End();

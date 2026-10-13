@@ -2,16 +2,17 @@
 
 ## 1.2.0
 
-- Bar visibility options under Tracking: Follow placement, Hide with chat, Keep visible when chat closes, and Always visible. Follow placement keeps the existing behavior.
+- Three Bar visibility choices under Tracking: Hide with chat, Keep visible when chat closes, and Always visible. Your choice stays selected when you attach or freely place the bar.
+- Keep visible when chat closes is the default for new or reset settings and when no usable choice was saved. Saved choices are kept. The former placement-based setting still migrates to Hide with chat for an attached bar, or Keep visible when chat closes for Free placement.
 - Hide with chat also works in Free placement. Keep visible when chat closes respects your other hide settings; Always visible keeps the bar up while typing, viewing the map, during cutscenes, and with the game UI hidden. Manual hiding still works when Sample preview is off.
-- An attached bar can keep its last verified chat position while chat is closed, or use your saved Free placement position until chat returns. With readable chat bounds, a dock without enough room stays hidden. Tracking and timers continue while the bar is hidden.
-- Fixed Shift dragging and resizing while an attached bar temporarily uses its Free placement position. Moving or resizing it there switches to Free placement.
+- Keep visible when chat closes and Always visible keep the bar where it was drawn when chat closes or its position becomes unreadable. It follows the current chat position again when chat returns. The saved Free placement position is only a fallback before a bar position is available.
+- Fixed Shift dragging and resizing while the bar is kept in place without chat. Moving or resizing it switches to Free placement and keeps your edit. With readable chat bounds, a dock without enough room stays hidden. Tracking and timers continue while the bar is hidden.
 - A resize now stops safely if chat disappears, returns, or leaves no room for the bar partway through the drag. Your last valid size is kept.
 - Reduced work while chat is closed without slowing tracking or alerts.
 
 ### Updating
 
-Enter `/addon unload momentum` before replacing the addon files. Keep `config/addons/momentum/` for your settings, profiles, history, and custom sounds, then enter `/addon load momentum`. Open `/momentum` and choose **Tracking > Visibility > Bar visibility**. **Follow placement** keeps your existing behavior until you choose another option.
+Enter `/addon unload momentum` before replacing the addon files. Keep `config/addons/momentum/` for your settings, profiles, history, and custom sounds, then enter `/addon load momentum`. Open `/momentum` and choose **Tracking > Visibility > Bar visibility** to pick when the bar stays up.
 
 ## 1.1.1
 

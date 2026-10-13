@@ -3,6 +3,7 @@ local history = require('ui.history');
 local player = require('core.player');
 local hud = require('ui.hud');
 local window = require('ui.settings_window');
+local profiles = require('ui.profiles');
 local count = 0;
 local function equal(actual, expected, label)
     count = count + 1;
@@ -10,31 +11,62 @@ local function equal(actual, expected, label)
 end
 local function check(value, label) equal(not not value, true, label); end
 local function same(actual, expected, label) equal(history.equal(actual, expected), true, label); end
+local function same_rect(actual, expected, label)
+    for _, key in ipairs({ 'x', 'y', 'width', 'height' }) do equal(actual and actual[key], expected and expected[key], label .. ': ' .. key); end
+end
 local function close(actual, expected, label)
     count = count + 1;
     assert(type(actual) == 'number' and math.abs(actual - expected) < 0.000001,
         label .. ': expected ' .. tostring(expected) .. ', got ' .. tostring(actual));
 end
 
-equal(defaults.make().visibility.mode, 'placement', 'Existing placement behavior remains the default');
-for _, value in ipairs({ 'placement', 'chat', 'keep', 'always' }) do
-    local settings = defaults.make();
-    settings.visibility.mode = value;
-    defaults.tidy(settings);
-    equal(settings.visibility.mode, value, 'Supported visibility choice survives validation');
+equal(defaults.make().visibility.mode, 'keep', 'A new bar starts with Keep visible when chat closes');
+local migration_cases = {
+    { name = 'missing mode' }, { name = 'legacy placement', value = 'placement' },
+    { name = 'empty mode', value = '' }, { name = 'unknown mode', value = 'invalid' },
+    { name = 'number mode', value = 1 }, { name = 'boolean mode', value = false },
+    { name = 'table mode', value = {} }, { name = 'missing visibility', whole = true },
+};
+for _, docked in ipairs({ false, true }) do
+    for _, value in ipairs({ 'chat', 'keep', 'always' }) do
+        local settings = defaults.make();
+        settings.bar.docked, settings.visibility.mode = docked, value;
+        defaults.tidy(settings);
+        equal(settings.visibility.mode, value, 'An explicit visibility choice survives either placement');
+        settings.bar.docked = not docked;
+        defaults.tidy(settings);
+        equal(settings.visibility.mode, value, 'Changing placement never changes an explicit visibility choice');
+        local restored = defaults.make();
+        profiles.apply(restored, { bar = { docked = docked }, visibility = { mode = value } });
+        defaults.tidy(restored);
+        equal(restored.visibility.mode, value, 'Profiles preserve each explicit choice with either placement');
+        profiles.apply(restored, { style = { font_size = 15 } });
+        defaults.tidy(restored);
+        equal(restored.visibility.mode, value, 'A style-only profile preserves the current visibility choice');
+    end
+    for _, entry in ipairs(migration_cases) do
+        local inferred = entry.value == 'placement' and docked and 'chat' or 'keep';
+        local settings = defaults.make();
+        settings.bar.docked, settings.visibility.mode = docked, entry.value;
+        settings.visibility.map = false;
+        if entry.whole then settings.visibility = nil; end
+        defaults.tidy(settings);
+        equal(settings.visibility.mode, inferred, entry.name .. ' uses the current default or legacy placement');
+        if not entry.whole then equal(settings.visibility.map, false, 'Migration preserves other hide choices'); end
+        settings.bar.docked = not docked;
+        defaults.tidy(settings);
+        equal(settings.visibility.mode, inferred, 'Later validation never repeats ' .. entry.name .. ' migration');
+
+        local restored = defaults.make();
+        restored.visibility.mode = 'always';
+        local profile = { bar = { docked = docked }, visibility = { mode = entry.value, map = false } };
+        if entry.whole then profile.visibility = nil; end
+        profiles.apply(restored, profile);
+        defaults.tidy(restored);
+        equal(restored.visibility.mode, inferred, 'A profile with ' .. entry.name .. ' uses the current default or legacy placement');
+        if not entry.whole then equal(restored.visibility.map, false, 'Profile migration preserves its other hide choices'); end
+    end
 end
-for _, value in ipairs({ '', 'invalid', 1, false, {} }) do
-    local settings = defaults.make();
-    settings.visibility.mode = value;
-    defaults.tidy(settings);
-    equal(settings.visibility.mode, 'placement', 'Invalid visibility choice preserves the old behavior');
-end
-local old_settings = defaults.make();
-old_settings.visibility.mode = nil;
-old_settings.visibility.map = false;
-defaults.tidy(old_settings);
-equal(old_settings.visibility.mode, 'placement', 'Older settings gain the existing placement behavior');
-equal(old_settings.visibility.map, false, 'Older hide choices are retained');
 
 local utc, effect_deadline, ring_deadline = 1800000000, 600, 500;
 os.time = function() return utc + math.floor(MOCK.now); end;
@@ -101,7 +133,7 @@ end
 local function command(text) MOCK.fire('command', { command = '/momentum' .. (text and ' ' .. text or '') }); end
 
 -- A failed chat read is different from a confirmed hidden chat window.
-for _, mode in ipairs({ 'placement', 'chat', 'keep', 'always' }) do
+for _, mode in ipairs({ 'chat', 'keep', 'always' }) do
     for _, docked in ipairs({ false, true }) do
         app.settings().visibility.mode, app.settings().bar.docked = mode, docked;
         local saved_bar = history.copy(app.settings().bar);
@@ -111,8 +143,7 @@ for _, mode in ipairs({ 'placement', 'chat', 'keep', 'always' }) do
             elseif state == 'closed' then MOCK.chat_visible = false;
             else MOCK.chat_visible = nil; end
             MOCK.chat_retained = chat;
-            local visible = mode == 'keep' or mode == 'always' or state == 'open'
-                or not docked and (mode == 'placement' or state == 'unknown');
+            local visible = mode == 'keep' or mode == 'always' or state == 'open' or not docked and state == 'unknown';
             frame(visible, mode .. ', ' .. (docked and 'docked' or 'free') .. ', chat ' .. state);
             same(app.settings().bar, saved_bar, 'Visibility changes never rewrite the saved placement');
         end
@@ -127,20 +158,115 @@ for _, mode in ipairs({ 'keep', 'always' }) do
         local live = history.copy(frame(true, mode .. ' opens ' .. anchor .. ' anchor'));
         local saved_bar = history.copy(bar);
         MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, false, chat;
-        same(frame(true, mode .. ' retains ' .. anchor .. ' anchor'), live, 'Closed chat keeps the last checked anchor');
+        same_rect(frame(true, mode .. ' retains ' .. anchor .. ' anchor'), live, 'Closed chat keeps the last drawn rectangle');
         MOCK.chat_retained = nil;
-        local fallback = frame(true, mode .. ' has no previous chat bounds');
-        equal(fallback.x, saved_bar.x, 'Unknown anchor uses the saved free X position');
-        equal(fallback.y, saved_bar.y, 'Unknown anchor uses the saved free Y position');
-        equal(fallback.width, saved_bar.width, 'Unknown anchor uses the saved free width');
-        same(bar, saved_bar, 'Temporary free display preserves the selected chat anchor');
+        same_rect(frame(true, mode .. ' loses native retained bounds'), live, 'Losing native bounds never moves an already drawn bar');
+        MOCK.chat_visible = nil;
+        same_rect(frame(true, mode .. ' cannot read chat'), live, 'Unknown chat keeps the last drawn rectangle');
+        MOCK.chat_visible, MOCK.chat_retained = false, { x = 200, y = 200, width = 400, height = 200, windows = {} };
+        same_rect(frame(true, mode .. ' receives changed retained bounds'), live, 'Changed retained chat bounds cannot relocate a held bar');
+        local preview = hud.draw_inline(app.settings(), app.view(MOCK.now), 280);
+        equal(preview.bar_width, live.width, 'An inline preview preserves held-chat metadata from its last draw');
+        same(bar, saved_bar, 'Holding the drawn rectangle preserves saved placement');
         MOCK.chat, MOCK.chat_visible = { x = 40, y = 450, width = 750, height = 380, windows = {} }, true;
         local restored = frame(true, mode .. ' follows reopened chat');
         equal(restored.x, 40, 'Reopened chat restores current horizontal alignment');
         equal(restored.width, 750, 'Reopened chat restores current width');
         equal(restored.y, anchor == 'top' and 430 or 832, 'Reopened chat restores the selected edge');
         same(bar, saved_bar, 'Reopening chat does not overwrite saved free placement');
+        MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, false, nil;
+        same_rect(frame(true, mode .. ' closes again after reopening'), restored, 'The next close keeps the newly drawn position');
     end
+end
+
+for _, mode in ipairs({ 'keep', 'always' }) do
+    local saved_bar = history.copy(app.settings().bar);
+    app.settings().visibility.mode = mode;
+    app.settings().bar = history.copy(saved_bar);
+    local bar = app.settings().bar;
+    bar.docked, bar.anchor = true, 'bottom';
+    MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, nil, nil;
+    local preview_context = { chat = chat, chat_visible = true, chat_checked = true, preview = true, width = 280 };
+    hud.bounds(app.settings(), app.view(MOCK.now), preview_context);
+    hud.draw_inline(app.settings(), require('ui.readouts').sample(), 280, 18, preview_context);
+    local cold = frame(true, mode .. ' has never drawn a chat anchor');
+    equal(cold.x, bar.x, 'A cold start may use saved free X');
+    equal(cold.y, bar.y, 'A cold start may use saved free Y');
+    equal(cold.width, bar.width, 'A cold start may use saved free width');
+    MOCK.chat, MOCK.chat_visible = chat, true;
+    local live = history.copy(frame(true, mode .. ' observes a real chat anchor'));
+    local unchanged = history.copy(bar);
+    local other_chat = { x = 100, y = 200, width = 400, height = 200, windows = {} };
+    local context = { chat = other_chat, chat_visible = true, chat_checked = true, preview = true, width = 280 };
+    hud.bounds(app.settings(), app.view(MOCK.now), context);
+    hud.draw_inline(app.settings(), require('ui.readouts').sample(), 280, 18, context);
+    MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, nil, nil;
+    same_rect(frame(true, mode .. ' closes after preview measurements'), live, 'Bounds and inline previews cannot replace the real bar rectangle');
+    same(bar, unchanged, 'Preview measurements leave saved placement unchanged');
+    bar.height = bar.height + 10;
+    local taller = frame(true, mode .. ' changes height while chat is closed');
+    equal(taller.x, live.x, 'The height slider keeps held X');
+    equal(taller.y, live.y, 'The height slider keeps held Y');
+    equal(taller.height, live.height + 10, 'The height slider still changes held height');
+    frame(true, mode .. ' holds the changed height');
+    MOCK.chat_retained = { x = chat.x, y = chat.y, width = chat.width, height = chat.height,
+        windows = { { index = 2, x = live.x, y = live.y, width = live.width, height = live.height } } };
+    MOCK.chat_visible = false;
+    frame(false, mode .. ' avoids a newly opened second chat window');
+    MOCK.chat_retained = nil;
+    same_rect(frame(true, mode .. ' second chat no longer blocks the held position'), taller, 'A second chat window never relocates the held bar');
+    MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, nil, nil;
+    MOCK.chat_windows = { { index = 2, x = taller.x, y = taller.y, width = taller.width, height = taller.height } };
+    frame(false, mode .. ' has an unreadable main window beside an overlapping second chat');
+    local blocked_preview = hud.draw_inline(app.settings(), app.view(MOCK.now), 280);
+    equal(blocked_preview.unavailable, true, 'An inline preview retains known secondary exclusions when main chat is unreadable');
+    MOCK.chat_windows = nil;
+    same_rect(frame(true, mode .. ' loses the secondary exclusion'), taller, 'Removing a separately reported exclusion restores the exact held rectangle');
+    local saved_placement = history.copy(bar);
+    MOCK.screen = { 800, 700 };
+    local smaller = history.copy(frame(true, mode .. ' viewport shrinks while chat is closed'));
+    equal(smaller.width, 800, 'A held rectangle shrinks only enough to fit the viewport');
+    equal(smaller.x, 0, 'A held rectangle stays inside the smaller viewport horizontally');
+    equal(smaller.y, 700 - taller.height, 'A held rectangle stays inside the smaller viewport vertically');
+    same(bar, saved_placement, 'Viewport clamping never changes saved placement');
+    MOCK.screen = nil;
+    same_rect(frame(true, mode .. ' viewport expands again'), smaller, 'Expanding the viewport keeps the last drawn rectangle');
+    hud.reset_chat_anchor();
+    local reset = frame(true, mode .. ' resets the runtime anchor');
+    equal(reset.x, bar.x, 'Reset clears the prior chat X');
+    equal(reset.y, bar.y, 'Reset clears the prior chat Y');
+    MOCK.chat, MOCK.chat_visible = chat, true;
+    frame(true, mode .. ' redraws chat after runtime reset');
+    app.settings().bar = history.copy(saved_bar);
+    bar = app.settings().bar;
+    bar.x, bar.y, bar.width, bar.docked = 70, 240, 430, true;
+    MOCK.chat, MOCK.chat_visible = nil, nil;
+    local replaced = frame(true, mode .. ' replaces the saved bar');
+    equal(replaced.x, 70, 'A replaced bar cannot inherit an old layout X');
+    equal(replaced.y, 240, 'A replaced bar cannot inherit an old layout Y');
+    equal(replaced.width, 430, 'A replaced bar cannot inherit an old layout width');
+    command('free');
+    local free = frame(true, mode .. ' explicitly selects Free placement');
+    equal(bar.docked, false, 'Free placement clears the saved docking choice');
+    same_rect(free, replaced, 'Free placement starts at the currently visible rectangle');
+    bar.x, bar.y, bar.width = 100, 210, 480;
+    free = frame(true, mode .. ' changes its free position and width');
+    equal(free.x, 100, 'Free X stays editable without chat');
+    equal(free.y, 210, 'Free Y stays editable without chat');
+    equal(free.width, 480, 'Free width stays editable without chat');
+    MOCK.chat, MOCK.chat_visible = chat, true;
+    same_rect(frame(true, mode .. ' reopens chat beside a free bar'), free, 'Reopening chat cannot pull a free bar back to the held anchor');
+
+    app.settings().bar = history.copy(saved_bar);
+    bar = app.settings().bar;
+    bar.docked, bar.anchor, bar.height = true, 'bottom', 120;
+    local constrained = history.copy(frame(true, mode .. ' constrains a tall bar below chat'));
+    check(constrained.height < 120 and constrained.height >= 12, 'Live chat limits the height to available space');
+    MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, nil, nil;
+    same_rect(frame(true, mode .. ' holds the constrained height'), constrained, 'Closing chat preserves the actually drawn height');
+    bar.height = 12;
+    equal(frame(true, mode .. ' selects minimum height while held').height, 12, 'The height slider sets its exact value after a constrained dock');
+    app.settings().bar = saved_bar;
 end
 
 -- Resizing a temporary free bar uses its visible bottom edge, even with Above chat saved.
@@ -258,7 +384,7 @@ app.settings().bar = placement;
 
 MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = chat, true, nil;
 app.settings().bar.docked = false;
-for _, mode in ipairs({ 'placement', 'chat', 'keep', 'always' }) do
+for _, mode in ipairs({ 'chat', 'keep', 'always' }) do
     app.settings().visibility.mode = mode;
     for _, cause in ipairs({ 'typing', 'map', 'event', 'game_ui', 'idle' }) do
         MOCK.typing = cause == 'typing';
@@ -318,7 +444,7 @@ equal(app.view(MOCK.now).session_exp, after.session_exp, 'Showing the bar preser
 
 app.settings().visibility.mode = 'keep';
 check(app.services.save_profile('Chat visibility'), 'Visibility preference can be saved in a profile');
-app.settings().visibility.mode = 'placement';
+app.settings().visibility.mode = 'chat';
 check(app.services.load_profile('Chat visibility'), 'Visibility profile can be restored');
 equal(app.settings().visibility.mode, 'keep', 'Profile restores its visibility choice');
 app.services.save();
@@ -332,5 +458,38 @@ app = MOMENTUM_TEST;
 equal(app.settings().visibility.mode, 'keep', 'Reload retains the saved preference');
 MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = nil, false, nil;
 frame(true, 'Reloaded keep-visible bar needs no previously seen chat');
+
+local store = require('core.file_store');
+local shared_file = MOCK_INSTALL_PATH .. '/config/addons/momentum/shared_layout.json';
+MOCK.chat, MOCK.chat_visible, MOCK.chat_retained = chat, true, nil;
+for _, docked in ipairs({ false, true }) do
+    for _, entry in ipairs(migration_cases) do
+        check(app.services.shared(false), 'Shared migration starts from character settings');
+        app.settings().visibility.mode = 'always';
+        local shared = { bar = { docked = docked }, visibility = { mode = entry.value, map = false } };
+        if entry.whole then shared.visibility = nil; end
+        check(store.write(shared_file, { enabled = true, layout = shared }), 'Legacy shared layout is written to the test folder');
+        frame(true, 'Shared layout refreshes with ' .. entry.name, 2.1);
+        equal(app.settings().shared, true, 'The refreshed shared layout is active');
+        equal(app.settings().visibility.mode, entry.value == 'placement' and docked and 'chat' or 'keep',
+            'Shared ' .. entry.name .. ' uses the current default or legacy placement');
+        if not entry.whole then equal(app.settings().visibility.map, false, 'Shared migration preserves its other hide choices'); end
+    end
+    for _, value in ipairs({ 'chat', 'keep', 'always' }) do
+        check(app.services.shared(false), 'Explicit shared visibility starts from character settings');
+        local shared = { bar = { docked = docked }, visibility = { mode = value } };
+        check(store.write(shared_file, { enabled = true, layout = shared }), 'Explicit shared layout is written to the test folder');
+        frame(true, 'Shared layout refreshes with explicit ' .. value, 2.1);
+        equal(app.settings().visibility.mode, value, 'Shared layouts preserve each explicit choice with either placement');
+    end
+end
+for _, value in ipairs({ 'chat', 'keep', 'always' }) do
+    check(app.services.shared(false), 'Partial shared layout starts from character settings');
+    app.settings().visibility.mode = value;
+    check(store.write(shared_file, { enabled = true, layout = { style = { font_size = 15 } } }), 'Style-only shared layout is written');
+    frame(true, 'Shared layout changes style only', 2.1);
+    equal(app.settings().visibility.mode, value, 'A shared style-only layout preserves the character visibility choice');
+end
+check(app.services.shared(false), 'The shared migration checks restore character settings');
 equal(#MOCK.commands, 0, 'Visibility controls send no gameplay commands');
 return { count = count };

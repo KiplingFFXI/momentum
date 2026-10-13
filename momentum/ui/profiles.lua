@@ -25,6 +25,9 @@ function profiles.apply(settings, profile)
             settings[key] = history.copy(value);
         end
     end
+    if type(profile.bar) == 'table' and type(profile.visibility) ~= 'table' then
+        settings.visibility.mode = nil;
+    end
 end
 
 function profiles.new(folder)

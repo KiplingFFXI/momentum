@@ -98,7 +98,7 @@ def main():
                                      '--exec', 'PREVIEW.expected_x=792; PREVIEW.expected_width=120; PREVIEW.expected_y=866'] + chat),
         ('native-chat-short-strip', ['--hud', '--window', 'momentum', '--chat-fixture', '--no-crop', '--set', 'bar.height=24',
                                      '--exec', 'MOCK.chat.height=364; PREVIEW.expected_y=886; PREVIEW.expected_height=14'] + chat),
-        ('native-chat-missing', ['--full', '--window', 'settings', '--exec', 'MOCK.chat=nil',
+        ('native-chat-missing', ['--full', '--window', 'settings', '--set', 'visibility.mode=chat', '--exec', 'MOCK.chat=nil',
                                  '--input-script', str(HERE / 'hidden_input.json')]),
         ('native-chat-no-space', ['--full', '--window', 'settings', '--exec', 'MOCK.chat.y=0; MOCK.chat.height=900',
                                   '--input-script', str(HERE / 'hidden_input.json')]),
@@ -113,7 +113,7 @@ def main():
     ]
     cases.extend([
         ('settings-chat-visibility', ['--full', '--window', 'settings', '--tab', 'Tracking', '--window-size', '420', '660',
-                                      '--exec', heading_scroll('Visibility', 'Tracking'), '--frames', '27',
+                                      '--exec', heading_scroll('Visibility', 'Tracking'), '--frames', '32',
                                       '--input-script', str(HERE / 'chat_visibility_input.json')]),
         ('settings-manual-modes', ['--full', '--window', 'settings', '--tab', 'Display', '--window-size', '400', '660',
                                    '--frames', '39', '--input-script', str(HERE / 'manual_modes_input.json')]),
@@ -287,6 +287,12 @@ def main():
                                  '--exec', "dofile('tests/preview/auto_layout_fixture.lua')",
                                  '--input-script', str(HERE / 'auto_layout_input.json')]),
     ])
+    for mode in ('keep', 'always'):
+        for anchor in ('top', 'bottom'):
+            cases.append(('chat-hold-%s-%s' % (mode, anchor), [
+                '--full', '--hud', '--window', 'momentum_bar', '--frames', '18', '--no-crop',
+                '--set', 'visibility.mode=' + mode, '--set', 'bar.anchor=' + anchor,
+                '--exec', 'settings.preview.show=false', '--input-script', str(HERE / 'chat_hold_input.json')]))
     if len(sys.argv) > 1:
         selected = set(sys.argv[1:])
         missing = selected - {name for name, _ in cases}

@@ -126,7 +126,7 @@ function defaults.make()
         style = { preset = 'Phoenix', palette_version = 0, font = 'Segoe UI', font_size = 13, opacity = 0.96, rounding = 5, fill_style = 'rail',
             fill_direction = 'right', border = false, text_shadow = false,
             colors = theme.colors('Phoenix'), window_colors = theme.window_colors('Phoenix') },
-        visibility = { mode = 'placement', map = true, event = true, game_ui = true },
+        visibility = { mode = 'keep', map = true, event = true, game_ui = true },
         window = { open = false, width = 920, height = 660, x = 80, y = 60, tab = 'Display', font_size = 18,
             sections = {}, compact_navigation = false },
         preview = { show = false, scenario = 'Leveling' }, shared = false, job_links = {},
@@ -204,6 +204,7 @@ end
 
 function defaults.tidy(settings)
     if type(settings) ~= 'table' then return defaults.make(); end
+    local visibility = type(settings.visibility) == 'table' and settings.visibility.mode or nil;
     local fresh = defaults.make();
     local order = type(settings.display) == 'table' and settings.display.order or nil;
     local saved_order = type(order) == 'table' and copy(order) or {};
@@ -242,7 +243,8 @@ function defaults.tidy(settings)
     bar.bottom = number(bar.bottom, 2, 2000, fresh.bar.bottom);
     bar.anchor = choice(bar.anchor, { 'bottom', 'top' }, 'bottom');
     bar.start = math.floor(number(bar.start, 0, 16384, 0));
-    settings.visibility.mode = choice(settings.visibility.mode, { 'placement', 'chat', 'keep', 'always' }, 'placement');
+    if visibility == 'placement' then visibility = bar.docked and 'chat' or 'keep'; end
+    settings.visibility.mode = choice(visibility, { 'chat', 'keep', 'always' }, fresh.visibility.mode);
     settings.display.spacing = number(settings.display.spacing, 0, 24, 8);
     settings.display.divider = plain(settings.display.divider, 16);
     settings.display.label_divider = plain(settings.display.label_divider, 8);

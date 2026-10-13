@@ -287,7 +287,7 @@ local function position(settings, services)
         slider(settings.bar, 'bottom', 'Gap from chat', 2, 40);
         local problem = services.dock_problem and services.dock_problem();
         if services.chat_fallback and services.chat_fallback() then
-            note('Using your saved Free placement position until chat returns. Your chat anchor is still saved.');
+            note('Chat is closed or unavailable. Your chat anchor is still saved.');
         elseif problem then note(problem .. ' Choose Free placement to move the bar anywhere.'); end
     else
         checkbox(settings.bar, 'auto_width', 'Fit width to readouts', 'Uses only the space your readouts need, up to the maximum width below.');
@@ -630,7 +630,6 @@ local function tracking_page(settings, view, services)
     end
     if section('Visibility', 'Choose when the bar stays up. Tracking and timers keep running while it is hidden.', false) then
         pick(settings.visibility, 'mode', 'Bar visibility', {
-            { name = 'Follow placement', value = 'placement' },
             { name = 'Hide with chat', value = 'chat' },
             { name = 'Keep visible when chat closes', value = 'keep' },
             { name = 'Always visible', value = 'always' },
@@ -640,10 +639,8 @@ local function tracking_page(settings, view, services)
         else
             if settings.visibility.mode == 'chat' then
                 note('Hide when your main chat log closes, including in Free placement.');
-            elseif settings.visibility.mode == 'keep' then
-                note('Keep the bar up when chat closes. Your other hide settings still apply.');
             else
-                note('An attached bar hides when chat closes. A freely placed bar stays up.');
+                note('Keep the bar up when chat closes. Your other hide settings still apply.');
             end
             checkbox(settings.tracking, 'hide_idle', 'Hide until the session starts', 'Keep the bar hidden until your session timer starts. Sample previews still appear.');
             checkbox(settings.visibility, 'map', 'Hide while the map is open', 'Hide the bar while viewing the in-game map.');
@@ -651,7 +648,7 @@ local function tracking_page(settings, view, services)
             checkbox(settings.visibility, 'game_ui', 'Hide with the game UI', 'Hide the bar when the game interface is hidden.');
         end
         if settings.visibility.mode == 'keep' or settings.visibility.mode == 'always' then
-            note('When chat closes, an attached bar keeps its last chat position. If that position is unavailable, it uses your saved Free placement position until chat returns.');
+            note('The bar stays in the same place when chat closes. It follows your chat log again when chat reopens.');
         end
     end
 end
@@ -748,7 +745,8 @@ local function fixed_preview(settings, view, services)
         if open then
             local narrow = math.min(280, (imgui.GetContentRegionAvail()));
             hud.draw_inline(settings, readouts.sample(settings.preview.scenario), narrow, nil, { preview = true, width = narrow,
-                chat = context.chat, chat_checked = context.chat_checked, now = context.now });
+                chat = context.chat, chat_visible = context.chat_visible, chat_windows = context.chat_windows,
+                chat_checked = context.chat_checked, now = context.now });
             note('This sample uses a 280-pixel bar, or less if space is short. It does not resize your bar.');
         end
         imgui.EndPopup();

@@ -292,6 +292,36 @@ for _, failure in ipairs({ 'dimensions', 'pointer', 'unreadable' }) do
     result, reason, visible, retained = r:read(1920, 1080, true);
     check(visible == false and retained == nil, 'A later anchor request cannot revive invalidated bounds: ' .. failure);
 end
+
+r, s = fixture(); r:load();
+local current_windows;
+result, reason, visible, retained, current_windows = r:read(1920, 1080, true);
+check(current_windows == result.windows, 'Current exclusion bounds reuse the already projected window list.');
+s:write(s.chat_table, 0, 4);
+s:window(s.secondary, 14, 1052, 994, 1070, 1);
+local secondary_reads = s.reads;
+result, reason, visible, retained, current_windows = r:read(1920, 1080, true);
+check(result == nil and visible == nil and retained == nil,
+    'A missing main pointer stays unknown and does not publish retained main bounds.');
+check(#current_windows == 1 and current_windows[1].index == 2 and current_windows[1].x == 14
+    and current_windows[1].y == 1052 and current_windows[1].width == 980 and current_windows[1].height == 18,
+    'A readable active second window remains an exclusion when the main pointer is missing.');
+check(s.reads - secondary_reads == reads_per_snapshot - 1 and s.finds == 4,
+    'Secondary-only exclusions add no reads or scans and skip the null main pointer.');
+result, reason, visible, retained, current_windows = r:read(960, 540, true);
+check(current_windows[1].x == 7 and current_windows[1].y == 526 and current_windows[1].width == 490,
+    'Secondary-only exclusions use the current display scale.');
+s:window(s.secondary, 14, 1052, 994, 1081, 1);
+result, reason, visible, retained, current_windows = r:read(1920, 1080, true);
+check(current_windows == nil, 'Invalid secondary geometry cannot publish exclusion bounds.');
+s:window(s.secondary, 14, 1052, 994, 1070, 1);
+s.throw_read = true;
+result, reason, visible, retained, current_windows = r:read(1920, 1080, true);
+check(current_windows == nil, 'Unreadable native state cannot reuse prior secondary bounds.');
+s.throw_read = false;
+s:write(s.secondary + 0x4D, 0, 1);
+result, reason, visible, retained, current_windows = r:read(1920, 1080, true);
+check(#current_windows == 0, 'Confirmed inactive windows leave no exclusion bounds behind.');
 r, s = fixture(); r:load(); s:write(s.scale_slot, 0, 4);
 check(r:read(1920, 1080) == nil, 'A disappearing scaling object is handled.');
 r, s = fixture(); r:load(); s:write(s.scale_object + 0x16, 0, 2);

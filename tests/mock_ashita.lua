@@ -145,7 +145,7 @@ package.preload['core.chat'] = function ()
             MOCK.chat_reads = (MOCK.chat_reads or 0) + 1;
             local visible = MOCK.chat_visible;
             if visible == nil and MOCK.chat then visible = true; end
-            return MOCK.chat, MOCK.chat == nil and 'Chat fixture unavailable.' or nil, visible, MOCK.chat_retained;
+            return MOCK.chat, MOCK.chat == nil and 'Chat fixture unavailable.' or nil, visible, MOCK.chat_retained, MOCK.chat_windows;
         end,
     };
 end

@@ -121,8 +121,10 @@ info = hud.draw_inline(settings, view, 200, nil, { preview = false, width = 120 
 check(info.bar_width == 900 and info.simulated_width == false, 'A live preview never treats a sample width as an applied simulation.');
 info = hud.draw_inline(settings, view, 200, nil, { preview = true, width = -1 });
 check(info.bar_width == 900 and info.simulated_width == false, 'An invalid sample width does not report an applied simulation.');
+settings.visibility.mode = 'chat';
 info = hud.draw_inline(settings, view, 200, nil, { chat_checked = true });
 check(info.unavailable, 'Explicit missing native chat does not reuse stale bounds.');
+settings.visibility.mode = 'keep';
 settings.bar.docked, settings.bar.width = false, 200;
 settings.display.order = { 'job', 'progress', 'remaining', 'rate', 'chain_time' };
 settings.display.priority_overflow, settings.display.pinned = true, { chain_time = true };
