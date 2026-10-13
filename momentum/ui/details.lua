@@ -188,6 +188,12 @@ local alert_help = {
     sync_change = 'Notify when Phoenix reports a change to your Level Sync penalty. Changing the Level Sync estimate does not trigger this alert.',
     no_exp = 'Notify when Phoenix says why you missed EXP, such as being too far from the monster. Simply gaining no EXP does not trigger an alert.',
     chain_soon = 'Warn when the EXP chain timer reaches the time below. Estimated timing uses Phoenix rules; timing sent by Phoenix is used when available. Your next kill still has to qualify for an EXP chain.',
+    dyna_time = 'Warn when your Dynamis hourglass reaches one of the times below. Time extensions update the warnings. Unknown time stays quiet.',
+    dyna_extension = 'Notify when your Dynamis run gains a time extension. Loading or rejoining a run stays quiet.',
+    dyna_wanted = 'Notify when a wanted item enters the treasure pool. Choose jobs and items under Dynamis > Wanted drops.',
+    dyna_pool = 'Warn when an item has been waiting in the treasure pool this long before its usual expiry. The time is estimated; an item can leave sooner when everyone lots or passes.',
+    dyna_clear = 'Notify when you obtain the clear key item for the current Dynamis zone. Owning it from an earlier run does not trigger an alert.',
+    dyna_subjob = 'Notify when your support job restriction is removed during a Dynamis run.',
 };
 
 local alert_groups = {
@@ -197,6 +203,7 @@ local alert_groups = {
     { 'EXP rings', 'An EXP ring with charges is ready to use.', { 'ring_ready' } },
     { 'Levels and merit points', 'Levels, merit points, nearly full merits, and your tracking goal.', { 'level', 'merit', 'cap', 'goal' } },
     { 'Level Sync and missed EXP', 'Level Sync penalty changes and reasons Phoenix gives for missed EXP.', { 'sync_change', 'no_exp' } },
+    { 'Dynamis', 'Time, time extensions, wanted drops, the treasure pool, clears, and support job unlocks.', { 'dyna_time', 'dyna_extension', 'dyna_wanted', 'dyna_pool', 'dyna_clear', 'dyna_subjob' } },
 };
 local alert_names = { food_end = 'Food effect wore off' };
 for _, event in ipairs(defaults.ALERTS) do alert_names[event[1]] = event[2]; end
@@ -253,11 +260,22 @@ local function event_alert(settings, id, services, ui, sound_files)
     elseif id == 'cap' then
         ui.slider(settings.alerts, 'cap_headroom', 'Merit points from full', 0, 30, nil,
             'Warn when you can hold this many more merit points. Zero warns when your merit points are full.');
+    elseif id == 'dyna_time' then
+        local chosen = {};
+        for _, minutes in ipairs(settings.dynamis.warning_minutes) do chosen[minutes] = true; end
+        for _, minutes in ipairs({ 10, 5, 1 }) do
+            ui.checkbox(chosen, minutes, minutes .. (minutes == 1 and ' minute left' or ' minutes left'), 'Warn when your hourglass reaches this time.');
+        end
+        settings.dynamis.warning_minutes = {};
+        for _, minutes in ipairs({ 10, 5, 1 }) do if chosen[minutes] then settings.dynamis.warning_minutes[#settings.dynamis.warning_minutes + 1] = minutes; end end
+    elseif id == 'dyna_pool' then
+        ui.slider(settings.dynamis, 'pool_warning_seconds', 'Pool warning time', 10, 240, '%.0f seconds',
+            'Warn with about this much time left before an item leaves the treasure pool. The item may leave earlier when everyone lots or passes.');
     end
     ui.slider(event, 'cooldown', 'Time between alerts', 0, 3600, '%.0f seconds',
         'Wait at least this long before repeating this alert. Other alerts have their own wait times.');
     if imgui.Button('Test notification') and services.notification_test then services.notification_test(id); end
-    ui.tip('Try this alert with the choices above. Your EXP and session totals stay the same.');
+    ui.tip('Try this alert with the choices above. Your EXP and run totals stay the same.');
     local problem = services.notification_problem and services.notification_problem(id);
     if problem then ui.note(problem); end
 end

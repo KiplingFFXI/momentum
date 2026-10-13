@@ -23,8 +23,56 @@ function readouts.format_time(seconds)
     return string.format('%d:%02d', math.floor(seconds / 60), seconds % 60);
 end
 
+function readouts.countdown(seconds)
+    if type(seconds) ~= 'number' or seconds ~= seconds or seconds < 0 or seconds == math.huge then return '--'; end
+    seconds = math.ceil(seconds);
+    if seconds >= 3600 then return string.format('%d:%02d:%02d', math.floor(seconds / 3600), math.floor(seconds % 3600 / 60), seconds % 60); end
+    return string.format('%d:%02d', math.floor(seconds / 60), seconds % 60);
+end
+
+local currency_family = {
+    dyna_bynes = { 'byne', 'found' }, dyna_bronze = { 'bronze', 'found' }, dyna_shells = { 'shell', 'found' },
+    dyna_bynes_received = { 'byne', 'received' }, dyna_bronze_received = { 'bronze', 'received' }, dyna_shells_received = { 'shell', 'received' },
+};
+
+local function objective_count(objectives)
+    local complete, total = 0, 0;
+    for _, objective in ipairs(objectives or {}) do
+        total = total + 1;
+        if objective.status == 'complete' then complete = complete + 1; end
+    end
+    return complete, total;
+end
+
+local function dynamis_value(id, view, short)
+    local dyna = view.dynamis or {};
+    local function number(value) return readouts.format_number(value, short); end
+    if id == 'dyna_next_entry' then return dyna.next_entry_seconds == 0 and 'Lockout ended' or readouts.format_time(dyna.next_entry_seconds); end
+    if not dyna.active then return '--'; end
+    if id == 'dyna_zone' then return dyna.short_name or dyna.name or 'Dynamis';
+    elseif id == 'dyna_time' then return (dyna.clock_estimated and dyna.remaining and '~' or '') .. readouts.countdown(dyna.remaining);
+    elseif id == 'dyna_extensions' then return type(dyna.extension_minutes) == 'number' and '+' .. number(dyna.extension_minutes) .. 'm' or '--';
+    elseif id == 'dyna_currency' then return number(dyna.currency_found);
+    elseif id == 'dyna_currency_received' then return number(dyna.currency_received);
+    elseif id == 'dyna_currency_rate' then return number(dyna.currency_rate);
+    elseif id == 'dyna_af2' then return number(dyna.af2);
+    elseif id == 'dyna_af2_received' then return number(dyna.af2_received);
+    elseif id == 'dyna_kills' then return number(dyna.kills);
+    elseif id == 'dyna_pool' then return number(dyna.pool_count) .. ' / 10';
+    elseif id == 'dyna_subjob' then return dyna.subjob_locked == nil and '--' or dyna.subjob_locked and 'Locked' or 'Unlocked';
+    elseif id == 'dyna_weakness' then return dyna.weakness_seconds == 0 and 'None' or readouts.countdown(dyna.weakness_seconds);
+    elseif id == 'dyna_objectives' then
+        local complete, total = objective_count(dyna.objectives);
+        return total == 0 and '--' or tostring(complete) .. ' / ' .. tostring(total);
+    end
+    local family = currency_family[id];
+    if family then return number(dyna.currency and dyna.currency[family[1]] and dyna.currency[family[1]][family[2]]); end
+    return '--';
+end
+
 local function value_for(id, view, settings)
     if not definitions[id] then return nil; end
+    if id:sub(1, 5) == 'dyna_' then return dynamis_value(id, view, settings.display.short); end
     if not view.valid and id ~= 'status' then return '--'; end
     local lp = view.mode == 'lp';
     local function number(value) return readouts.format_number(value, settings.display.short); end
@@ -151,7 +199,15 @@ local dependencies = {
     exp_session = 'session_exp', lp_session = 'session_lp', average3 = 'recent3.average', average10 = 'recent10.average', average_n = 'recent.average',
     sample_count = 'recent.count recent.requested', minimum = 'recent.min', maximum = 'recent.max', median = 'recent.median',
     food = 'food food_name food_seconds', dedication_budget = 'dedication_pool', ring = 'rings',
+    dyna_zone = 'dynamis.active dynamis.name dynamis.short_name', dyna_time = 'dynamis.active dynamis.remaining dynamis.clock_estimated',
+    dyna_extensions = 'dynamis.active dynamis.extension_minutes', dyna_currency = 'dynamis.active dynamis.currency_found',
+    dyna_currency_received = 'dynamis.active dynamis.currency_received', dyna_currency_rate = 'dynamis.active dynamis.currency_rate',
+    dyna_af2 = 'dynamis.active dynamis.af2', dyna_af2_received = 'dynamis.active dynamis.af2_received',
+    dyna_kills = 'dynamis.active dynamis.kills', dyna_pool = 'dynamis.active dynamis.pool_count',
+    dyna_objectives = 'dynamis.active dynamis.objectives', dyna_subjob = 'dynamis.active dynamis.subjob_locked',
+    dyna_weakness = 'dynamis.active dynamis.weakness_seconds', dyna_next_entry = 'dynamis.next_entry_seconds',
 };
+for id, family in pairs(currency_family) do dependencies[id] = 'dynamis.active dynamis.currency.' .. family[1] .. '.' .. family[2]; end
 for id, fields in pairs(dependencies) do
     local names = {}; for name in fields:gmatch('%S+') do names[#names + 1] = name; end
     dependencies[id] = names;
@@ -159,6 +215,8 @@ end
 local condition_fields = { synced = { 'sync_active', 'level', 'effective_level' },
     chain = { 'chain_source', 'chain_active', 'chain_left' }, dedication = { 'dedication' }, food = { 'food' } };
 local timer_fields = { chain_left = true, eta = true, ['lp.eta'] = true, goal_eta = true, elapsed = true, dedication_seconds = true, food_seconds = true, recast = true };
+local countdown_fields = { ['dynamis.remaining'] = true, ['dynamis.weakness_seconds'] = true };
+timer_fields['dynamis.next_entry_seconds'] = true;
 local cached = setmetatable({}, { __mode = 'k' });
 
 local function field_value(view, field)
@@ -175,6 +233,8 @@ local function append_key(parts, value, field)
         parts[#parts + 1] = '{';
         for key, inner in pairs(value) do append_key(parts, key); append_key(parts, inner, key); end
         parts[#parts + 1] = '}';
+    elseif type(value) == 'number' and countdown_fields[field] and value >= 0 and value < math.huge then
+        parts[#parts + 1] = 'countdown' .. tostring(math.ceil(value));
     elseif type(value) == 'number' and timer_fields[field] and value >= 0 and value < math.huge then
         parts[#parts + 1] = (value > 0 and 't+' or 't0') .. tostring(math.floor(value + 0.5));
     else
@@ -204,7 +264,10 @@ end
 
 local function append_dependency(parts, view, id, field, short)
     local value = field_value(view, field);
-    if id == 'rate' or id == 'exp_rate' or id == 'lp_rate' then
+    if id == 'dyna_objectives' and field == 'dynamis.objectives' then
+        local complete, total = objective_count(value);
+        value = tostring(complete) .. '/' .. tostring(total);
+    elseif id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
         value = number_key(value, short);
     elseif id == 'merit_rate' then
         value = value and string.format('%.2f', value / rules.lp_per_merit) or '--';
@@ -306,6 +369,23 @@ function readouts.sample(scenario)
     sample.sync_active, sample.sync_source, sample.sync_gap = false, 'unknown', 0;
     sample.food, sample.food_seconds = true, 840;
     sample.rings = { available = false, entries = {} };
+    if scenario == 'Dynamis' then
+        sample.dynamis = {
+            active = true, zone = 185, name = 'Dynamis - San d\'Oria', short_name = 'San d\'Oria',
+            remaining = 3832, extension_minutes = 55, extension_count = 3, currency_found = 247, currency_received = 12,
+            currency_rate = 294, af2 = 4, af2_received = 1, kills = 83, partial = false, pool_count = 2,
+            subjob_locked = false, clear_owned = true, next_entry_seconds = 254232, start_time = 1780000000,
+            currency = { bronze = { found = 247, received = 12, singles_found = 147, hundreds_found = 1 },
+                byne = { found = 0, received = 0, singles_found = 0, hundreds_found = 0 },
+                shell = { found = 0, received = 0, singles_found = 0, hundreds_found = 0 } },
+            objectives = { { id = 'boss', name = 'Overlord\'s Tombstone', status = 'unknown', help = 'Defeat the zone boss.' },
+                { id = 'extension', name = 'Time extension statue', status = 'complete', help = 'This statue was defeated during the observed run.' } },
+            weakening = {}, extensions = { { minutes = 15, time = 1780000300 }, { minutes = 15, time = 1780000720 }, { minutes = 25, time = 1780001100 } },
+            loot = { { item_id = 15132, name = 'Warrior\'s Calligae', kind = 'af2', job = 'WAR', found = 1, received = 1, lost = 0, awarded = 1, pending = 0 } },
+            pool = { { name = 'Ordelle Bronzepiece', item_id = 1452, remaining = 185 }, { name = 'Warrior\'s Calligae', item_id = 15132, remaining = 92 } },
+            history = {},
+        };
+    end
     return sample;
 end
 

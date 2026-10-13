@@ -44,6 +44,26 @@ defaults.READOUTS = {
     { id = 'merit_headroom', name = 'Merit points before cap', label = 'Merit slots', enabled = false, help = 'Shows how many more merit points you can hold. For example, 3 out of 10 leaves room for 7. At zero, spend a merit point before earning another.' },
     { id = 'lp_remaining', name = 'LP to next merit point', label = 'LP needed', enabled = false, help = 'Shows the LP needed for your next merit point, even while the main bar shows EXP. Spend merits means you must spend a merit point before earning another.' },
     { id = 'merit_eta', name = 'Time to next merit point', label = 'Next merit', enabled = false, help = 'Estimates when you will earn your next merit point at your current LP/HR. -- means Momentum does not know your LP/HR or how many merit points you can hold yet. Spend merits means your merit points are full.' },
+    { id = 'dyna_zone', name = 'Dynamis zone', label = '', enabled = false, help = 'Shows the Dynamis zone for this run.' },
+    { id = 'dyna_time', name = 'Dynamis time left', label = 'Time', enabled = false, help = 'Time left on your Perpetual Hourglass. Time extensions update it automatically. Resetting or pausing your EXP session does not stop it. -- means unknown; ~ means your computer clock is being used until server time is available.' },
+    { id = 'dyna_extensions', name = 'Dynamis time extensions', label = 'TE', enabled = false, help = 'Shows the total minutes added to this run. Open Dynamis for the extensions seen so far. Joining late can recover the minutes from your hourglass without knowing which monsters were defeated.' },
+    { id = 'dyna_currency', name = 'Dynamis currency found', label = 'Currency', enabled = false, help = 'Adds up currency seen in the treasure pool. A hundred-piece counts as 100. This is the run total seen by Momentum, not just what you received.' },
+    { id = 'dyna_af2', name = 'Relic armor found', label = 'AF2', enabled = false, help = 'Counts relic armor drops seen in the treasure pool. Open Dynamis for item names and jobs.' },
+    { id = 'dyna_currency_received', name = 'Dynamis currency received', label = 'Mine', enabled = false, help = 'Currency awarded to you during this run, counted in singles. Trading or moving currency between bags does not add to it.' },
+    { id = 'dyna_currency_rate', name = 'Dynamis currency per hour', label = 'Currency/HR', enabled = false, help = 'Currency found per hour since tracking started or totals were cleared. Partial runs can include offline time and missing drops. Hundred-pieces count as 100.' },
+    { id = 'dyna_af2_received', name = 'Relic armor received', label = 'My AF2', enabled = false, help = 'Counts relic armor awarded to you during this run.' },
+    { id = 'dyna_bynes', name = 'Byne bills found', label = 'Bynes', enabled = false, help = 'Byne bills seen in the treasure pool, counted in singles. One 100 Byne Bill counts as 100.' },
+    { id = 'dyna_bronze', name = 'Bronzepieces found', label = 'Bronze', enabled = false, help = 'San d\'Orian currency seen in the treasure pool, counted in singles. One M. Silverpiece counts as 100.' },
+    { id = 'dyna_shells', name = 'Whiteshells found', label = 'Shells', enabled = false, help = 'Windurstian currency seen in the treasure pool, counted in singles. One L. Jadeshell counts as 100.' },
+    { id = 'dyna_bynes_received', name = 'Byne bills received', label = 'My bynes', enabled = false, help = 'Byne bills awarded to you, counted in singles.' },
+    { id = 'dyna_bronze_received', name = 'Bronzepieces received', label = 'My bronze', enabled = false, help = 'San d\'Orian currency awarded to you, counted in singles.' },
+    { id = 'dyna_shells_received', name = 'Whiteshells received', label = 'My shells', enabled = false, help = 'Windurstian currency awarded to you, counted in singles.' },
+    { id = 'dyna_kills', name = 'Dynamis monsters defeated', label = 'Defeated', enabled = false, help = 'Counts monster deaths seen by Momentum. Monsters outside your range may be missed. This is not the number left in the zone.' },
+    { id = 'dyna_objectives', name = 'Dynamis objectives', label = 'Objectives', enabled = false, help = 'Shows confirmed objectives completed out of the listed objectives for this zone. Unseen objectives stay unknown. Open Dynamis for the full list.' },
+    { id = 'dyna_pool', name = 'Dynamis treasure pool', label = 'Pool', enabled = false, help = 'Shows how many items are waiting in the treasure pool. Open Dynamis to see them.' },
+    { id = 'dyna_subjob', name = 'Dynamis support job', label = 'Support job', enabled = false, help = 'Shows whether your support job is restricted. This follows your actual status effect.' },
+    { id = 'dyna_weakness', name = 'Dynamis Weakness timer', label = 'Weakness', enabled = false, help = 'Shows your current Weakness timer. Re-entering an active Phoenix Dynamis run applies 10 minutes of Weakness.' },
+    { id = 'dyna_next_entry', name = 'Next Dynamis entry', label = 'Next entry', enabled = false, help = 'Time left from this character\'s observed registration. Phoenix uses a 72-hour account lockout. Other characters\' registrations and entry requirements are not checked. -- means no registration was observed.' },
 };
 
 defaults.ALERTS = {
@@ -51,12 +71,16 @@ defaults.ALERTS = {
     { 'food_soon', 'Food effect ending soon' }, { 'dedication_end', 'Dedication wore off' },
     { 'dedication_low', 'Dedication bonus EXP low' }, { 'ring_ready', 'EXP ring ready' },
     { 'sync_change', 'Level Sync changed' }, { 'no_exp', 'No EXP reason' }, { 'chain_soon', 'EXP chain timer low' },
+    { 'dyna_time', 'Dynamis time running low' }, { 'dyna_extension', 'Dynamis time extended' },
+    { 'dyna_wanted', 'Wanted Dynamis drop' }, { 'dyna_pool', 'Treasure pool item expiring' },
+    { 'dyna_clear', 'Dynamis clear obtained' }, { 'dyna_subjob', 'Support job unlocked' },
 };
 
 defaults.STARTER_LAYOUTS = {
     Minimal = { 'progress', 'remaining', 'rate' },
     Leveling = { 'job', 'progress', 'remaining', 'rate', 'chain' },
     Merits = { 'lp_rate', 'merits', 'lp_remaining', 'merit_eta' },
+    Dynamis = { 'dyna_zone', 'dyna_time', 'dyna_extensions', 'dyna_currency', 'dyna_af2' },
 };
 
 function defaults.apply_starter(settings, name)
@@ -92,6 +116,9 @@ function defaults.make()
         tracking = { window = 900, rate_basis = 'earned', goal_merits = 5, hide_idle = false, average_count = 10,
             goal_type = 'stored_merits', goal_level = 75, goal_exp = 10000, goal_session_merits = 1, goal_buffer = 10000 },
         sessions = { resume = true, retention = 30 },
+        modes = { selected = 'auto', exp = {}, merits = {}, previous_display = {} },
+        dynamis = { enabled = true, auto_layout = true, layout_active = false, wanted_jobs = {}, wanted_items = {}, retention = 30,
+            warning_minutes = { 10, 5, 1 }, pool_warning_seconds = 60 },
         planner = { level = 50, population = 0 },
         alerts = { food_enabled = false, food_sound = 'FF VII Save.mp3', food_volume = 100, events = {},
             food_soon_seconds = 60, dedication_low_points = 100, chain_soon_seconds = 10, cap_headroom = 1,
@@ -117,6 +144,9 @@ function defaults.make()
         settings.display.pinned[item.id] = false;
         settings.display.conditions[item.id] = 'always';
     end
+    settings.dynamis.layout = copy(settings.display);
+    defaults.apply_starter({ display = settings.dynamis.layout }, 'Dynamis');
+    settings.dynamis.layout.divider = ' | ';
     return settings;
 end
 
@@ -145,14 +175,50 @@ local function choice(value, choices, fallback)
     return fallback;
 end
 
+local function tidy_saved_display(display, fresh, known)
+    local order = type(display.order) == 'table' and copy(display.order) or {};
+    merge(display, fresh);
+    display.order = {};
+    local seen = {};
+    for _, id in ipairs(order) do
+        if known[id] and not seen[id] then display.order[#display.order + 1] = id; seen[id] = true; end
+    end
+    for _, item in ipairs(defaults.READOUTS) do
+        local id = item.id;
+        if not seen[id] then display.order[#display.order + 1] = id; end
+        display.labels[id] = plain(display.labels[id], 32);
+        display.groups[id] = choice(display.groups[id], { 'left', 'center', 'right' }, 'left');
+        display.priorities[id] = math.floor(number(display.priorities[id], 0, 100, 50));
+        display.conditions[id] = choice(display.conditions[id], { 'always', 'known', 'exp', 'lp', 'synced', 'chain', 'dedication', 'food' }, 'always');
+    end
+    display.spacing = number(display.spacing, 0, 24, 8);
+    display.divider, display.label_divider = plain(display.divider, 16), plain(display.label_divider, 8);
+    display.mode = choice(display.mode, { 'auto', 'exp', 'lp' }, 'auto');
+    display.alignment = choice(display.alignment, { 'left', 'right' }, 'left');
+    display.label_position = choice(display.label_position, { 'before', 'after' }, 'before');
+    for id, color in pairs(display.colors) do
+        if not known[id] or type(color) ~= 'table' then display.colors[id] = nil;
+        else for i = 1, 4 do color[i] = number(color[i], 0, 1, 1); end end
+    end
+end
+
 function defaults.tidy(settings)
     if type(settings) ~= 'table' then return defaults.make(); end
     local fresh = defaults.make();
     local order = type(settings.display) == 'table' and settings.display.order or nil;
     local saved_order = type(order) == 'table' and copy(order) or {};
+    local dynamis = type(settings.dynamis) == 'table' and settings.dynamis or {};
+    local dyna_order = type(dynamis.layout) == 'table' and dynamis.layout.order or nil;
+    dyna_order = type(dyna_order) == 'table' and copy(dyna_order) or copy(fresh.dynamis.layout.order);
+    local warnings = type(dynamis.warning_minutes) == 'table' and copy(dynamis.warning_minutes) or copy(fresh.dynamis.warning_minutes);
     merge(settings, fresh);
     local known, seen = {}, {};
     for _, item in ipairs(defaults.READOUTS) do known[item.id] = true; end
+    settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis' }, 'auto');
+    for _, key in ipairs({ 'exp', 'merits', 'previous_display' }) do
+        if next(settings.modes[key]) then tidy_saved_display(settings.modes[key], fresh.display, known); end
+    end
+    if type(settings.dynamis.previous_display) == 'table' then tidy_saved_display(settings.dynamis.previous_display, fresh.display, known); end
     settings.display.order = {};
     for _, id in ipairs(saved_order) do
         if known[id] and not seen[id] then
@@ -180,6 +246,10 @@ function defaults.tidy(settings)
     settings.display.divider = plain(settings.display.divider, 16);
     settings.display.label_divider = plain(settings.display.label_divider, 8);
     settings.display.mode = choice(settings.display.mode, { 'auto', 'exp', 'lp' }, 'auto');
+    if not settings.dynamis.layout_active then
+        if settings.modes.selected == 'exp' then settings.display.mode = 'exp';
+        elseif settings.modes.selected == 'merits' then settings.display.mode = 'lp'; end
+    end
     settings.display.alignment = choice(settings.display.alignment, { 'left', 'right' }, 'left');
     settings.display.label_position = choice(settings.display.label_position, { 'before', 'after' }, 'before');
     settings.style.font = plain(settings.style.font, 64);
@@ -198,6 +268,48 @@ function defaults.tidy(settings)
     settings.tracking.goal_session_merits = math.floor(number(settings.tracking.goal_session_merits, 1, 999, 1));
     settings.tracking.goal_buffer = math.floor(number(settings.tracking.goal_buffer, 1, 100000, 10000));
     settings.sessions.retention = math.floor(number(settings.sessions.retention, 1, 100, 30));
+    settings.dynamis.retention = math.floor(number(settings.dynamis.retention, 1, 100, 30));
+    if type(settings.dynamis.previous_display) ~= 'table' then settings.dynamis.previous_display = nil; end
+    settings.dynamis.pool_warning_seconds = math.floor(number(settings.dynamis.pool_warning_seconds, 10, 240, 60));
+    settings.dynamis.warning_minutes = {};
+    local warning_seen = {};
+    for _, minutes in ipairs(warnings) do
+        if (minutes == 10 or minutes == 5 or minutes == 1) and not warning_seen[minutes] then
+            settings.dynamis.warning_minutes[#settings.dynamis.warning_minutes + 1] = minutes;
+            warning_seen[minutes] = true;
+        end
+    end
+    table.sort(settings.dynamis.warning_minutes, function(left, right) return left > right; end);
+    local jobs = { WAR = true, MNK = true, WHM = true, BLM = true, RDM = true, THF = true, PLD = true, DRK = true, BST = true,
+        BRD = true, RNG = true, SAM = true, NIN = true, DRG = true, SMN = true, BLU = true, COR = true, PUP = true };
+    for job, enabled in pairs(settings.dynamis.wanted_jobs) do
+        if not jobs[job] or enabled ~= true then settings.dynamis.wanted_jobs[job] = nil; end
+    end
+    local items = {};
+    for id, enabled in pairs(settings.dynamis.wanted_items) do
+        local item = tonumber(id);
+        if enabled == true and item and item % 1 == 0 and item > 0 and item <= 65535 then items[tostring(item)] = true; end
+    end
+    settings.dynamis.wanted_items = items;
+    local dyna = settings.dynamis.layout;
+    local dyna_seen = {};
+    dyna.order = {};
+    for _, id in ipairs(dyna_order) do
+        if known[id] and not dyna_seen[id] then dyna.order[#dyna.order + 1] = id; dyna_seen[id] = true; end
+    end
+    for _, item in ipairs(defaults.READOUTS) do
+        local id = item.id;
+        if not dyna_seen[id] then dyna.order[#dyna.order + 1] = id; end
+        dyna.labels[id] = plain(dyna.labels[id], 32);
+        dyna.groups[id] = choice(dyna.groups[id], { 'left', 'center', 'right' }, 'left');
+        dyna.priorities[id] = math.floor(number(dyna.priorities[id], 0, 100, 50));
+        dyna.conditions[id] = choice(dyna.conditions[id], { 'always', 'known', 'exp', 'lp', 'synced', 'chain', 'dedication', 'food' }, 'always');
+    end
+    dyna.spacing = number(dyna.spacing, 0, 24, 8);
+    dyna.divider, dyna.label_divider = plain(dyna.divider, 16), plain(dyna.label_divider, 8);
+    dyna.mode = choice(dyna.mode, { 'auto', 'exp', 'lp' }, 'auto');
+    dyna.alignment = choice(dyna.alignment, { 'left', 'right' }, 'left');
+    dyna.label_position = choice(dyna.label_position, { 'before', 'after' }, 'before');
     settings.planner.level = math.floor(number(settings.planner.level, 10, 75, 50));
     settings.planner.population = math.floor(number(settings.planner.population, 0, 100000, 0));
     settings.alerts.food_volume = math.floor(number(settings.alerts.food_volume, 0, 100, 100) + 0.5);
@@ -219,8 +331,8 @@ function defaults.tidy(settings)
     settings.window.x = number(settings.window.x, -100000, 100000, 80);
     settings.window.y = number(settings.window.y, -100000, 100000, 60);
     settings.window.font_size = number(settings.window.font_size, 12, 28, 18);
-    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
-    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Capped', 'No data', 'Paused' }, 'Leveling');
+    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Dynamis', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
+    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused' }, 'Leveling');
     for key, color in pairs(settings.style.colors) do
         if fresh.style.colors[key] then
             for i = 1, 4 do color[i] = number(color[i], 0, 1, fresh.style.colors[key][i]); end
@@ -231,11 +343,10 @@ function defaults.tidy(settings)
             for i = 1, 4 do color[i] = number(color[i], 0, 1, fresh.style.window_colors[key][i]); end
         end
     end
-    for id, color in pairs(settings.display.colors) do
-        if not known[id] or type(color) ~= 'table' then
-            settings.display.colors[id] = nil;
-        else
-            for i = 1, 4 do color[i] = number(color[i], 0, 1, 1); end
+    for _, display in ipairs({ settings.display, settings.dynamis.layout }) do
+        for id, color in pairs(display.colors) do
+            if not known[id] or type(color) ~= 'table' then display.colors[id] = nil;
+            else for i = 1, 4 do color[i] = number(color[i], 0, 1, 1); end end
         end
     end
     return settings;
