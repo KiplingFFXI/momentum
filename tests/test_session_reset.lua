@@ -41,7 +41,7 @@ hud.draw_inline = function(current, view, width, height, context)
     inline = { view = history.copy(view), preview = context and context.preview };
     return draw_inline(current, view, width, height, context);
 end;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame(seconds)

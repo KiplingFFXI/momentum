@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0
+
+Track gil alongside EXP, merits, and Dynamis, keep your saved readouts in Automatic, and use the Linux sound fix without losing any sounds or settings.
+
+- Added optional Current gil, Gil gained, Gil spent, Gil change, and Gil/HR readouts to every bar mode. Gil/HR subtracts spending and starts after one minute of tracking from the first observed gil change. Reset clears gil totals and the rate; pause leaves changes out of totals while current gil keeps updating.
+- Gil totals save with your EXP/LP session. Loading your inventory sets a new balance without counting it as a gain or loss. Unloaded time and inventory gaps do not count toward Gil/HR.
+- Automatic and manual EXP / Merits selection now use the same saved layouts. Added readouts, labels, dividers, and order stay with each mode across switches and reloads, including a reload inside Dynamis. Job changes no longer reapply starter layouts. Renamed the option to Switch saved EXP / Merits layouts.
+- Momentum waits until your character has been in-game for three seconds before loading its settings, tracking, fonts, sounds and display. This applies to launcher startup and manual loads. Zoning or changing characters during the wait restarts the delay.
+- Commands entered during the startup wait run once Momentum is ready. Free placement waits for an active UI frame before measuring the bar, including when entered during startup. Commands keep their order, and unloading cancels queued commands. Font setup waits until the UI is between frames and runs once.
+- Sound support loads when an alert or sound test needs it. All sounds, alerts and saved settings are kept.
+- Changed how Momentum finds sound files to avoid the native directory helper's shared locale setup. Bundled and custom sounds, sorting and saved choices are kept.
+- The affected Linux player confirmed that the sound-scan test build resolves the reported freezes involving tTimers and Minimap on their setup, with no other issues reported.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the `momentum` folder in your Phoenix `addons` folder, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, and custom sounds. The bar appears about three seconds after your character is ready.
+
+Open **Display > Add readout > Gil** to add the optional gil readings. To follow the EXP and Merits layouts you have saved, choose **Automatic** and enable **Switch saved EXP / Merits layouts**. Pausing keeps your current gil live while leaving those purchases and sales out of session totals and Gil/HR.
+
 ## 1.2.0
 
 - Three Bar visibility choices under Tracking: Hide with chat, Keep visible when chat closes, and Always visible. Your choice stays selected when you attach or freely place the bar.

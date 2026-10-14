@@ -38,22 +38,23 @@ local function plays()
     return count
 end
 local function load()
-    dofile(ADDON_DIR .. '/momentum.lua')
+    MOCK.load_addon()
     MOCK.fire('load')
     return MOMENTUM_TEST
 end
 local app = load()
+local started_at = MOCK.now
 equal(app.state.award_ready, true, 'Initial coherent client state accepts rewards')
-MOCK.now = 1
+MOCK.now = started_at + 1
 local received = reward(200)
 MOCK.fire('packet_in', received)
 MOCK.fire('packet_in', received)
-equal(app.view(1).session_exp, 200, 'Duplicate receive buffer counted once')
-equal(app.view(1).exp.recent3.count, 1, 'Recent samples exclude duplicate packet')
+equal(app.view(started_at + 1).session_exp, 200, 'Duplicate receive buffer counted once')
+equal(app.view(started_at + 1).exp.recent3.count, 1, 'Recent samples exclude duplicate packet')
 MOCK.player.exp = MOCK.player.exp + 200
-MOCK.now = 2
-app.sample(2)
-equal(app.view(2).net_exp, 200, 'Reported award paired with retained progress')
+MOCK.now = started_at + 2
+app.sample(started_at + 2)
+equal(app.view(started_at + 2).net_exp, 200, 'Reported award paired with retained progress')
 equal(app.services.session_save('Evening session'), true, 'Named active session saved')
 local initial_id = app.services.session_current().id
 local path = MOCK_INSTALL_PATH .. '/config/addons/momentum/sessions-1001.json'
@@ -61,12 +62,13 @@ local file = assert(io.open(path, 'rb'))
 equal(file:read('*a'):find('Evening session', 1, true) ~= nil, true, 'Per-character session file contains name')
 file:close()
 
-MOCK.now = 31
+MOCK.now = started_at + 31
 MOCK.fire('unload')
 MOCK.settings_file = copy(app.settings())
 MOCK.player.exp = MOCK.player.exp + 1000
-MOCK.now = 10000
+MOCK.now = started_at + 10000
 app = load()
+started_at = MOCK.now - 10000
 equal(app.services.session_current().id, initial_id, 'Reload resumes same saved session')
 equal(app.services.session_current().resumed, true, 'Resume status exposed')
 equal(app.view(MOCK.now).elapsed, 30, 'Reload excludes offline elapsed time')
@@ -83,14 +85,14 @@ app.sample(MOCK.now)
 MOCK.player.main_job = 2
 MOCK.player.main_level = 51
 MOCK.player.exp_needed = rules.tnl[50]
-MOCK.now = 10000.1
+MOCK.now = started_at + 10000.1
 MOCK.fire('packet_in', reward(500))
 equal(app.state.award_ready, false, 'Mixed job and EXP memory rejects reward assignment')
 equal(app.view(MOCK.now).session_exp, 275, 'Mixed snapshot does not alter former job rewards')
 equal(app.services.session_current().job, 1, 'Mixed snapshot retains former job session')
 MOCK.player.exp_needed = rules.tnl[51]
 MOCK.player.exp = 100
-MOCK.now = 10000.2
+MOCK.now = started_at + 10000.2
 MOCK.fire('packet_in', reward(100))
 equal(app.state.award_ready, true, 'Coherent new job accepts reward')
 equal(app.services.session_current().job, 2, 'New reward follows current coherent job')
@@ -98,14 +100,14 @@ equal(app.view(MOCK.now).session_exp, 100, 'New job excludes ambiguous transitio
 equal(#app.notifications:take(MOCK.now), 0, 'Job transition does not create a level-up notification')
 MOCK.player.main_job, MOCK.player.main_level = 1, 50
 MOCK.player.exp_needed, MOCK.player.exp = rules.tnl[50], 7000
-MOCK.now = 10001
+MOCK.now = started_at + 10001
 app.sample(MOCK.now)
 equal(app.view(MOCK.now).session_exp, 275, 'Returning job restores its own saved totals')
 equal(app.view(MOCK.now).net_exp, 200, 'Returning job establishes a fresh EXP baseline')
 equal(#app.services.session_list(), 2, 'History includes both jobs')
 
 MOCK.file_replace_error = true
-MOCK.now = 10002
+MOCK.now = started_at + 10002
 equal(app.services.session_save('Cannot save'), false, 'Session save failure reaches entry service')
 equal(app.services.session_current().name, 'Evening session', 'Failed rename preserves current name')
 equal(app.services.session_problem() ~= nil, true, 'Session page can show save failure')
@@ -116,14 +118,14 @@ local retried, retry_problem = app.services.session_save()
 equal(retried, true, 'Explicit retry succeeds: ' .. tostring(retry_problem))
 equal(app.services.session_problem(), nil, 'Successful retry clears error')
 
-MOCK.now = 10003
+MOCK.now = started_at + 10003
 MOCK.settings.switch_character(defaults.make())
 equal(app.view(MOCK.now).valid, false, 'Character callback clears old progress immediately')
 equal(app.services.session_current(), nil, 'Character callback detaches old session')
 MOCK.player.server_id = 2002
 MOCK.player.main_job, MOCK.player.main_level = 2, 30
 MOCK.player.exp_needed, MOCK.player.exp = rules.tnl[30], 500
-MOCK.now = 20000
+MOCK.now = started_at + 20000
 app.sample(MOCK.now)
 equal(app.view(MOCK.now).session_exp, 0, 'Another character starts independent totals')
 equal(#app.services.session_list(), 1, 'History shows current character only')
@@ -132,7 +134,7 @@ MOCK.settings.switch_character(defaults.make())
 MOCK.player.server_id = 1001
 MOCK.player.main_job, MOCK.player.main_level = 1, 50
 MOCK.player.exp_needed, MOCK.player.exp = rules.tnl[50], 7000
-MOCK.now = 30000
+MOCK.now = started_at + 30000
 app.sample(MOCK.now)
 equal(app.view(MOCK.now).session_exp, 275, 'First character resumes its own job')
 
@@ -147,7 +149,7 @@ for _, id in ipairs({ 'sync_change', 'dedication_low' }) do
     app.settings().alerts.events[id].visual = true
     app.settings().alerts.events[id].cooldown = 0
 end
-MOCK.now = 30001
+MOCK.now = started_at + 30001
 app.sample(MOCK.now)
 local first = feed(11, 37, 200)
 MOCK.fire('packet_in', first)
@@ -155,12 +157,12 @@ equal(first.blocked, true, 'Accepted server status stays out of player chat')
 equal(app.view(MOCK.now).sync_penalty, 37, 'Accepted status appears in combined view')
 equal(app.view(MOCK.now).dedication_pool, 200, 'Server-only budget appears when confirmed')
 app.notifications:take(MOCK.now)
-MOCK.now = 30001.1
+MOCK.now = started_at + 30001.1
 local second = feed(12, 50, 90)
 MOCK.fire('packet_in', second)
 local notices = app.notifications:take(MOCK.now)
 equal(#notices, 2, 'Confirmed changes produce one notice each')
-MOCK.now = 30001.3
+MOCK.now = started_at + 30001.3
 app.sample(MOCK.now)
 equal(#app.notifications:take(MOCK.now), 0, 'Next sample does not duplicate confirmed changes with zero cooldown')
 local duplicate = feed(12, 50, 90)
@@ -176,7 +178,7 @@ app.settings().alerts.events.no_exp.visual = true
 app.settings().alerts.events.no_exp.file = 'FF VII Save.mp3'
 app.settings().alerts.events.no_exp.cooldown = 0
 MOCK.player.buffs = { 269, 249, 251 }
-MOCK.now = 31000
+MOCK.now = started_at + 31000
 app.sample(MOCK.now)
 MOCK.fire('packet_in', effect(251, 206))
 MOCK.fire('packet_in', effect(0, 37))
@@ -184,22 +186,22 @@ local played = plays()
 MOCK.fire('d3d_present')
 equal(plays() - played, 1, 'Food and event sounds share one automatic playback budget')
 MOCK.player.buffs = { 269, 249 }
-MOCK.now = 31001
+MOCK.now = started_at + 31001
 app.sample(MOCK.now)
 MOCK.player.buffs = { 269, 249, 251 }
-MOCK.now = 31001.1
+MOCK.now = started_at + 31001.1
 app.sample(MOCK.now)
-MOCK.now = 31002
+MOCK.now = started_at + 31002
 MOCK.fire('packet_in', effect(0, 37))
 played = plays()
 MOCK.fire('d3d_present')
 equal(plays() - played, 1, 'New event can play after the shared interval')
-MOCK.now = 31002.2
+MOCK.now = started_at + 31002.2
 MOCK.fire('packet_in', effect(251, 206))
 played = plays()
 MOCK.fire('d3d_present')
 equal(plays() - played, 0, 'Food cannot interrupt an event inside the shared interval')
-MOCK.now = 31004
+MOCK.now = started_at + 31004
 app.sample(MOCK.now)
 MOCK.fire('packet_in', effect(0, 37))
 app.services.session_pause(true)
@@ -208,7 +210,7 @@ MOCK.fire('d3d_present')
 equal(plays() - played, 0, 'Quiet pause suppresses a sound queued just before pausing')
 equal(app.view(MOCK.now).notice, nil, 'Quiet pause consumes the queued visual notice too')
 app.services.session_pause(false)
-MOCK.now = 31006
+MOCK.now = started_at + 31006
 app.sample(MOCK.now)
 MOCK.fire('packet_in', effect(0, 37))
 MOCK.player.status = 4
@@ -217,7 +219,7 @@ MOCK.fire('d3d_present')
 equal(plays() - played, 0, 'Entering an event suppresses a queued sound')
 equal(app.view(MOCK.now).notice, nil, 'Entering an event consumes a queued visual notice')
 MOCK.player.status = 0
-MOCK.now = 31006.2
+MOCK.now = started_at + 31006.2
 MOCK.fire('d3d_present')
 equal(app.view(MOCK.now).notice, nil, 'Quiet notice is not replayed when the event ends')
 app.services.session_pause(true)

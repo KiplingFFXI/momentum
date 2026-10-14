@@ -5,7 +5,7 @@ local function equal(actual, expected, label)
     assert(actual == expected, label .. ': expected ' .. tostring(expected) .. ', got ' .. tostring(actual));
 end
 require('ui.hud').draw = function() return false; end;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame()
@@ -13,9 +13,9 @@ local function frame()
     equal(app.state.broken, false, 'Settings remain drawable');
 end
 local function toggle()
-    MOCK.clicks['Automatically switch EXP / Merits layouts'] = true;
+    MOCK.clicks['Switch saved EXP / Merits layouts'] = true;
     frame();
-    equal(MOCK.clicks['Automatically switch EXP / Merits layouts'], nil, 'Settings checkbox receives the click');
+    equal(MOCK.clicks['Switch saved EXP / Merits layouts'], nil, 'Settings checkbox receives the click');
 end
 app.settings().window.open = true;
 app.settings().window.tab = 'Display';
@@ -41,7 +41,7 @@ toggle();
 equal(app.settings().dynamis.previous_display.auto_layout, false, 'The regular option can also be disabled in Dynamis');
 MOCK.fire('unload');
 MOCK.settings_file = history.copy(MOCK.settings.last_saved);
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 app = MOMENTUM_TEST;
 frame();

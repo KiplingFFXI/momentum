@@ -179,8 +179,7 @@ end
 '''
 
 LUA_FULL = r'''
-dofile(PREVIEW.addon_dir .. '/momentum.lua')
-MOCK.fire('load')
+MOCK.load_addon(function() dofile(PREVIEW.addon_dir .. '/momentum.lua') end)
 PREVIEW.settings = MOMENTUM_TEST and MOMENTUM_TEST.settings() or MOCK.settings.current
 PREVIEW.hud = require('ui.hud')
 PREVIEW.window = require('ui.settings_window')

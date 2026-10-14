@@ -80,7 +80,7 @@ local function draw(click)
     return window.draw(settings, readouts.sample('Leveling'), {});
 end
 local order = table.concat(settings.display.order, ',');
-draw('Automatically switch EXP / Merits layouts');
+draw('Switch saved EXP / Merits layouts');
 eq(settings.display.auto_layout, true, 'UI checkbox enables the saved option');
 eq(table.concat(settings.display.order, ','), order, 'Checkbox delegates actual switching to the entry point');
 eq(calls, 0, 'Checkbox does not guess the character earning mode');
@@ -89,7 +89,7 @@ eq(calls, 1, 'Manual starter selection uses the shared helper');
 eq(settings.display.order[1], 'lp_rate', 'Manual Merits preset uses the fixed LP rate');
 eq(settings.display.order[4], 'merit_eta', 'Manual Merits preset includes its timer');
 order = table.concat(settings.display.order, ',');
-draw('Automatically switch EXP / Merits layouts');
+draw('Switch saved EXP / Merits layouts');
 eq(settings.display.auto_layout, false, 'UI checkbox can disable automatic switching');
 eq(table.concat(settings.display.order, ','), order, 'Turning switching off keeps the current arrangement');
 defaults.apply_starter = original;

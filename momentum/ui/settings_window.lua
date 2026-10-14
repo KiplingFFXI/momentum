@@ -327,6 +327,7 @@ local catalog_groups = {
     { 'Progress', 'job progress remaining rate eta chain chain_time percent goal buffer status sync no_exp exp_progress exp_rate' },
     { 'Merit points and LP', 'merits merit_rate lp_progress lp_rate merits_session merit_headroom lp_remaining merit_eta' },
     { 'Session', 'last session net elapsed best_chain exp_session lp_session' },
+    { 'Gil', 'gil gil_gained gil_spent gil_net gil_rate' },
     { 'Buffs', 'dedication food ring dedication_budget' },
     { 'Dynamis', 'dyna_zone dyna_time dyna_extensions dyna_currency dyna_af2 dyna_currency_received dyna_currency_rate dyna_af2_received dyna_bynes dyna_bronze dyna_shells dyna_bynes_received dyna_bronze_received dyna_shells_received dyna_kills dyna_objectives dyna_pool dyna_subjob dyna_weakness dyna_next_entry' },
     { 'Detailed statistics', 'average average3 average10 average_n sample_count minimum maximum median' },
@@ -533,8 +534,8 @@ local function display_page(settings, services)
         end);
         imgui.BeginDisabled(settings.modes.selected ~= 'auto');
         local automatic_display = settings.dynamis.layout_active and settings.dynamis.previous_display or settings.display;
-        checkbox(automatic_display, 'auto_layout', 'Automatically switch EXP / Merits layouts',
-            'When Bar mode is Automatic, use Leveling when earning EXP and Merits when earning LP. This also applies after you leave Dynamis. Manual modes stay selected. This does not switch your mode in the game.');
+        checkbox(automatic_display, 'auto_layout', 'Switch saved EXP / Merits layouts',
+            'When Bar mode is Automatic, use your saved EXP layout when earning EXP and your saved Merits layout when earning LP. Added readouts and their order stay saved, including after Dynamis. Manual modes stay selected. This does not change how you earn EXP or LP.');
         imgui.EndDisabled();
         checkbox(settings.display, 'groups_enabled', 'Use separate alignment groups',
             'Put readouts on the left, in the center, or on the right under Selected readout. Each group follows your list order. Turn this off to use one alignment for the whole bar.');
@@ -948,12 +949,12 @@ local function toolbar(settings, view, services)
         end
         imgui.EndCombo();
     end
-    help('Pick EXP, Merits, or Dynamis to keep that bar selected. Each keeps its own layout. Automatic uses your automatic layout settings. This only changes the bar, not how you earn EXP or LP.');
+    help('Pick EXP, Merits, or Dynamis to keep that bar selected. Automatic uses the same saved layouts, including your added readouts. Turn on automatic EXP / Merits switching under Display to follow the points you earn. This only changes the bar, not how you earn EXP or LP.');
     button_row({
         { view.paused and 'Resume session' or 'Pause session', function()
             if services.session_pause then services.session_pause(not view.paused); end
-        end, (view.paused and 'Resume counting EXP, LP, merit points, and session time.'
-            or 'Stop counting EXP, LP, merit points, and session time.')
+        end, (view.paused and 'Resume counting EXP, LP, merit points, gil changes, and session time.'
+            or 'Stop counting EXP, LP, merit points, gil changes, and session time. Current gil keeps updating.')
             .. ' EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis drops still count.' },
         { 'Reset session', function()
             local current = services.session_current and services.session_current();
@@ -970,7 +971,7 @@ local function toolbar(settings, view, services)
                     status = problem or 'The session could not be saved and reset. Wait for your EXP and LP to load, then try again.';
                 end
             end
-        end, 'Save this session and clear its totals, EXP/HR, LP/HR, and Next. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis totals stay as they are.' },
+        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil stays the same. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis totals stay as they are.' },
         { 'Undo', function() if services.undo then services.undo(); end end, 'Undo one of the last eight saved settings changes. This does not undo a session reset.' },
     });
     beside(108);

@@ -34,6 +34,7 @@ local currency_family = {
     dyna_bynes = { 'byne', 'found' }, dyna_bronze = { 'bronze', 'found' }, dyna_shells = { 'shell', 'found' },
     dyna_bynes_received = { 'byne', 'received' }, dyna_bronze_received = { 'bronze', 'received' }, dyna_shells_received = { 'shell', 'received' },
 };
+local gil_fields = { gil = 'current', gil_gained = 'gained', gil_spent = 'spent', gil_net = 'net', gil_rate = 'rate' };
 
 local function objective_count(objectives)
     local complete, total = 0, 0;
@@ -73,6 +74,7 @@ end
 local function value_for(id, view, settings)
     if not definitions[id] then return nil; end
     if id:sub(1, 5) == 'dyna_' then return dynamis_value(id, view, settings.display.short); end
+    if gil_fields[id] then return readouts.format_number(view.gil and view.gil[gil_fields[id]], settings.display.short); end
     if not view.valid and id ~= 'status' then return '--'; end
     local lp = view.mode == 'lp';
     local function number(value) return readouts.format_number(value, settings.display.short); end
@@ -199,6 +201,7 @@ local dependencies = {
     exp_session = 'session_exp', lp_session = 'session_lp', average3 = 'recent3.average', average10 = 'recent10.average', average_n = 'recent.average',
     sample_count = 'recent.count recent.requested', minimum = 'recent.min', maximum = 'recent.max', median = 'recent.median',
     food = 'food food_name food_seconds', dedication_budget = 'dedication_pool', ring = 'rings',
+    gil = 'gil.current', gil_gained = 'gil.gained', gil_spent = 'gil.spent', gil_net = 'gil.net', gil_rate = 'gil.rate',
     dyna_zone = 'dynamis.active dynamis.name dynamis.short_name', dyna_time = 'dynamis.active dynamis.remaining dynamis.clock_estimated',
     dyna_extensions = 'dynamis.active dynamis.extension_minutes', dyna_currency = 'dynamis.active dynamis.currency_found',
     dyna_currency_received = 'dynamis.active dynamis.currency_received', dyna_currency_rate = 'dynamis.active dynamis.currency_rate',
@@ -267,7 +270,7 @@ local function append_dependency(parts, view, id, field, short)
     if id == 'dyna_objectives' and field == 'dynamis.objectives' then
         local complete, total = objective_count(value);
         value = tostring(complete) .. '/' .. tostring(total);
-    elseif id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
+    elseif gil_fields[id] or id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
         value = number_key(value, short);
     elseif id == 'merit_rate' then
         value = value and string.format('%.2f', value / rules.lp_per_merit) or '--';
@@ -341,6 +344,7 @@ function readouts.sample(scenario)
         chain = 4, chain_bonus = 40, chain_left = 38, chain_window = 60, chain_source = 'server', chain_active = true,
         best_chain = 5, paused = false, collecting = false, capped = false, dedication = true,
         dedication_seconds = 1830, buffer_current = 12450, buffer_needed = 20000, goal_remaining = nil, goal_eta = nil,
+        gil = { current = 125400, gained = 15800, spent = 5800, net = 10000, rate = 13333 },
     };
     if scenario == 'Merits' or scenario == 'Capped' then
         sample.level, sample.effective_level, sample.mode = 75, 75, 'lp';

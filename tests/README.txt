@@ -59,11 +59,17 @@ The focused suites cover:
 - EXP and LP gains, caps, losses, recovery, rates, goals, duplicate rewards, and
   unknown client data.
 - Merit rollover, spending, capacity, session earnings, full storage, actual
-  EXP/LP mode, level sync, and optional starter-layout switching.
+  EXP/LP mode, level sync, and optional saved-layout switching.
+- Optional gil readouts in every bar mode, unknown and zero balances, negative
+  changes and rates, short numbers, custom labels, and visible-value caching.
+- Gil packet bursts, duplicate balances, inventory readiness, job data gaps,
+  separate rate timing, pause/reset, old saves, and gil-only session checkpoints.
 - Reset and pause behavior, including preserved chain, food, Dedication, and
   EXP ring recast deadlines and the chosen paused-alert setting.
 - Notification arming, explicit food-end messages, quiet conditions, immediate
   pause/resume edges, sound throttling, failures, and retries.
+- Sound-folder scans, bundled/custom ordering, duplicate names, bounded native
+  filename reads, and search-handle cleanup when enumeration fails.
 - Optional Phoenix reports, freshness, identity, packet bounds, and ring data.
 - Character/job session recovery, save failures, file conflicts, profiles,
   sharing, saved folds, search, Undo, layout preservation, and Escape handling.
@@ -92,6 +98,8 @@ and session actions. A Dynamis scene and dynamis_input.json replay cover the
 compact bar, changing countdown, extensions, drops, and unknown time. Full-entry
 fixtures run the registered addon callbacks. The manual_modes_input.json replay
 switches all three bar modes and returns to Automatic using the settings menu.
+gil_readouts_input.json checks the compact gil bar, negative changes and rates,
+and an unready rate using the actual Lua renderer.
 Close and reopen cases include combat, Escape, the title-bar X, a dropdown, an
 active text edit, and pending confirmations.
 Synthetic game data and a marked icon fixture remain separate from live captures.
@@ -111,6 +119,12 @@ The benchmark counts repeated work in fixed HUD, countdown, settings, packet,
 hidden-display, mature-session, and ring-demand fixtures. It counts layout work,
 tracker views, rate-bucket visits, chat and inventory reads, profile reads,
 history sorting, and date formatting. It does not measure live FPS.
+
+Gil fixtures use a stable mock inventory manager before the player reader loads.
+They count actual slot reads and cover idle/active rates plus 100-packet bursts
+while tracking or paused. Unrelated inventory updates must not cause player or
+inventory sampling. Automatic's idle fixture checks that no layouts are copied
+or reapplied once the matching saved layout is active.
 
 Closed-chat fixtures cover Hide with chat, both keep-visible choices, and Free
 placement. The HUD holds its last rendered rectangle through failed chat reads;

@@ -1,7 +1,9 @@
 -- Optional local playback. The bundled Square Enix sounds are not covered by the GPL.
 local ffi = require('ffi');
+local bit = require('bit');
 pcall(ffi.cdef, 'unsigned long __stdcall mciSendStringA(const char *command, char *answer, unsigned int size, void *window);');
-local loaded, winmm = pcall(ffi.load, 'winmm');
+local loaded, winmm;
+local directory_library;
 local sound = {};
 sound.BUILT_IN = addon.path:gsub('[\\/]+$', '') .. '\\sounds\\';
 sound.FOLDER = AshitaCore:GetInstallPath() .. '\\config\\addons\\momentum\\sounds\\';
@@ -9,6 +11,7 @@ local alias = 'momentum_food_sound';
 local files, opened, level, failed, problem = {}, nil, nil, nil, nil;
 
 local function mci(command)
+    if loaded == nil then loaded, winmm = pcall(ffi.load, 'winmm'); end
     if (not loaded) then return false; end
     local ok, result = pcall(winmm.mciSendStringA, command, nil, 0, nil);
     return ok and result == 0;
@@ -24,6 +27,46 @@ function sound.make_folder()
     if (not ashita.fs.exists(sound.FOLDER)) then ashita.fs.create_dir(sound.FOLDER); end
 end
 
+local function directory_files(folder)
+    if directory_library == nil then
+        pcall(ffi.cdef, [[
+            typedef struct {
+                uint32_t dwFileAttributes;
+                uint32_t ftCreationTime[2];
+                uint32_t ftLastAccessTime[2];
+                uint32_t ftLastWriteTime[2];
+                uint32_t nFileSizeHigh;
+                uint32_t nFileSizeLow;
+                uint32_t dwReserved0;
+                uint32_t dwReserved1;
+                char cFileName[260];
+                char cAlternateFileName[14];
+            } momentum_find_data_a;
+            void* __stdcall momentum_find_first_file_a(const char*, momentum_find_data_a*) __asm__("FindFirstFileA");
+            int __stdcall momentum_find_next_file_a(void*, momentum_find_data_a*) __asm__("FindNextFileA");
+            int __stdcall momentum_find_close(void*) __asm__("FindClose");
+        ]]);
+        local ok, library = pcall(ffi.load, 'kernel32');
+        directory_library = ok and library or false;
+    end
+    if not directory_library then return {}; end
+    local names, handle = {}, nil;
+    -- Keep directory scans out of Ashita's regex and locale handling.
+    pcall(function()
+        local data = ffi.new('momentum_find_data_a[1]');
+        handle = directory_library.momentum_find_first_file_a(folder .. '*', data);
+        if handle == nil or handle == ffi.cast('void*', -1) then handle = nil; return; end
+        repeat
+            if bit.band(tonumber(data[0].dwFileAttributes), 0x10) == 0 then
+                local name = ffi.string(data[0].cFileName, 260):match('^([^%z]*)%z');
+                if name then names[#names + 1] = name; end
+            end
+        until directory_library.momentum_find_next_file_a(handle, data) == 0;
+    end);
+    if handle ~= nil then pcall(function() directory_library.momentum_find_close(handle); end); end
+    return names;
+end
+
 function sound.refresh()
     sound.make_folder();
     files = {};
@@ -31,7 +74,7 @@ function sound.refresh()
     for _, folder in ipairs({ sound.BUILT_IN, sound.FOLDER }) do
         local found = {};
         if (ashita.fs.exists(folder)) then
-            for _, name in ipairs(ashita.fs.get_directory(folder, '.*', false) or {}) do
+            for _, name in ipairs(directory_files(folder)) do
                 if (valid(name) and not taken[name:lower()]) then found[#found + 1] = name; taken[name:lower()] = true; end
             end
         end

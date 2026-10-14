@@ -1,5 +1,6 @@
 local packets = {};
 local reward_messages = { [8] = 'exp', [253] = 'exp', [371] = 'lp', [372] = 'lp' };
+local inventory_lengths = { [0x01E] = 10, [0x01F] = 12, [0x020] = 16 };
 
 local function uint(data, offset, count)
     local result = 0;
@@ -27,6 +28,31 @@ end
 
 function packets.zone_id(event)
     if (event.id == 0x00A and packets.valid(event, 8)) then return uint(event.data, 4, 4); end
+end
+
+function packets.inventory(event)
+    local id = event.id;
+    if id == 0x01D and packets.valid(event, 12) then
+        local state, flags = uint(event.data, 4, 1), uint(event.data, 8, 4);
+        if state > 1 then return nil; end
+        return { ready = state == 1 or flags % 2 == 1 };
+    end
+    local minimum = inventory_lengths[id];
+    if not minimum or not packets.valid(event, minimum) then return nil; end
+    local bag, slot;
+    if id == 0x01E then
+        bag, slot = uint(event.data, 8, 1), uint(event.data, 9, 1);
+    elseif id == 0x01F then
+        if uint(event.data, 8, 2) ~= 65535 then return nil; end
+        bag, slot = uint(event.data, 10, 1), uint(event.data, 11, 1);
+    else
+        if uint(event.data, 12, 2) ~= 65535 then return nil; end
+        bag, slot = uint(event.data, 14, 1), uint(event.data, 15, 1);
+    end
+    if bag ~= 0 or slot ~= 0 then return nil; end
+    local balance = uint(event.data, 4, 4);
+    if balance > 999999999 then return nil; end
+    return { balance = balance, baseline = id == 0x020 };
 end
 
 function packets.reward_candidate(event, player_id)

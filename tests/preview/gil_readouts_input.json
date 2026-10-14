@@ -1,0 +1,5 @@
+[
+  {"frame":2,"lua":"local text=PREVIEW_PY.drawn_text(); for _,value in ipairs({'Gil 125,400','Gained 15,800','Spent 5,800','Net gil 10,000','Gil/HR 13,333'}) do assert(text:find(value,1,true),'Missing gil readout: '..value) end; PREVIEW.view.gil.net=-7500; PREVIEW.view.gil.rate=-10000; PREVIEW.view.mode='lp'"},
+  {"frame":4,"lua":"local text=PREVIEW_PY.drawn_text(); assert(text:find('Net gil -7,500',1,true),'Negative gil change is missing'); assert(text:find('Gil/HR -10,000',1,true),'Spending must reduce Gil/HR'); PREVIEW.view.gil.rate=nil"},
+  {"frame":6,"lua":"assert(PREVIEW_PY.drawn_text():find('Gil/HR --',1,true),'An unready gil rate must stay unknown')"}
+]

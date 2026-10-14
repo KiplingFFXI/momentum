@@ -8,13 +8,13 @@ function profiles.capture(settings)
     for key, value in pairs(settings) do
         if (not excluded[key]) then result[key] = history.copy(value); end
     end
-    return require('ui.dynamis_layout').capture(result);
+    return require('ui.modes').capture(result);
 end
 
 function profiles.apply(settings, profile)
     if profile.modes == nil and type(profile.display) == 'table' and settings.modes then
         if settings.modes.selected ~= 'auto' then require('ui.modes').select(settings, 'auto'); end
-        settings.modes = { selected = 'auto', exp = {}, merits = {}, previous_display = {} };
+        settings.modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, previous_display = {} };
     end
     if settings.dynamis and settings.dynamis.layout_active then
         require('ui.dynamis_layout').switch(settings, false);

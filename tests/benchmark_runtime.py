@@ -12,6 +12,17 @@ COUNTERS = r'''
 local metrics = { readout_builds = 0, text_measurements = 0, layout_arrangements = 0, player_reads = 0,
     tracker_views = 0, rate_calls = 0, bucket_scans = 0, bucket_visits = 0, ring_scans = 0, inventory_slot_reads = 0,
     chat_reads = 0, sorts = 0, directory_checks = 0, table_copies = 0, file_reads = 0, date_formats = 0 }
+local memory = AshitaCore:GetMemoryManager()
+local inventory = {
+    GetContainerCountMax = function() return 80 end,
+    GetContainerItem = function(_, bag, slot)
+        metrics.inventory_slot_reads = metrics.inventory_slot_reads + 1
+        if bag == 0 and slot == 0 then return { Id = 65535, Count = 100000 } end
+        return { Id = 0, Count = 0 }
+    end,
+}
+memory.GetInventory = function() return inventory end
+AshitaCore.GetMemoryManager = function() return memory end
 local imgui = require('imgui')
 local readouts = require('ui.readouts')
 local player = require('core.player')
@@ -86,21 +97,23 @@ return metrics
 '''
 
 ENTRY = r'''
-if CASE == 'entry-rings-unused' or CASE == 'entry-ring-alert' then
-    local memory = AshitaCore.GetMemoryManager
-    local inventory = {
-        GetContainerCountMax = function() return 80 end,
-        GetContainerItem = function() metrics.inventory_slot_reads = metrics.inventory_slot_reads + 1; return { Id = 0, Count = 0 } end
-    }
-    AshitaCore.GetMemoryManager = function(...)
-        local manager = memory(...)
-        manager.GetInventory = function() return inventory end
-        return manager
-    end
-end
-dofile(ADDON_DIR .. '/momentum.lua')
+MOCK.load_addon()
 MOCK.fire('load')
 local settings = MOMENTUM_TEST.settings()
+local gil_case = CASE:find('entry-gil-', 1, true) == 1
+if gil_case and not MOMENTUM_TEST.tracker().gil then return { unsupported = 1 } end
+if gil_case then
+    settings.display.order = { 'gil', 'gil_gained', 'gil_spent', 'gil_net', 'gil_rate' }
+    for _, id in ipairs(settings.display.order) do settings.display.enabled[id] = true end
+end
+if CASE == 'entry-gil-active' then
+    local bytes = MOCK.bytes(12)
+    MOCK.put(bytes, 4, 4, 101000)
+    MOCK.fire('packet_in', MOCK.packet(0x01E, bytes))
+    MOCK.now = MOCK.now + 600
+end
+if CASE == 'entry-gil-paused' then MOCK.fire('command', { command = '/momentum pause' }) end
+if CASE == 'entry-auto-layout-idle' then settings.display.auto_layout = true end
 if CASE == 'entry-settings-idle' then settings.window.open = true end
 if CASE == 'entry-profiles-idle' then settings.window.open, settings.window.tab = true, 'Profiles' end
 if CASE == 'entry-history-idle' then settings.window.open, settings.window.tab = true, 'Session' end
@@ -124,7 +137,22 @@ if CASE == 'entry-history-idle' then
     MOCK.frame(1 / 60)
 end
 reset()
-if CASE == 'unrelated-combat' then
+if CASE == 'entry-gil-packets' or CASE == 'entry-gil-paused' or CASE == 'unrelated-inventory' then
+    local bytes = MOCK.bytes(12)
+    if CASE == 'unrelated-inventory' then MOCK.put(bytes, 9, 1, 1) end
+    for index = 1, 100 do
+        MOCK.put(bytes, 4, 4, 100000 + index)
+        MOCK.fire('packet_in', MOCK.packet(0x01E, bytes))
+    end
+    metrics.packets = 100
+    assert(metrics.player_reads == 0 and metrics.inventory_slot_reads == 0, 'Inventory packets triggered extra sampling')
+    assert(metrics.table_copies == 0 and metrics.directory_checks == 0, 'Inventory packets copied settings or scanned folders')
+    if gil_case then
+        local wallet = MOMENTUM_TEST.tracker().gil:view(MOCK.now)
+        assert(wallet.current == 100100, 'Latest packet balance was lost')
+        assert(wallet.gained == (CASE == 'entry-gil-paused' and 0 or 100), 'Packet gain accounting changed')
+    end
+elseif CASE == 'unrelated-combat' then
     local bytes = MOCK.bytes(40)
     local function bits(offset, length, value)
         for index = 0, length - 1 do
@@ -143,6 +171,10 @@ else
         MOCK.frame(1 / 60)
     end
     metrics.frames = 120
+    if gil_case or CASE == 'entry-auto-layout-idle' then
+        assert(metrics.inventory_slot_reads == 0, 'Known gil balance was polled again')
+        assert(metrics.table_copies == 0 and metrics.directory_checks == 0, 'Idle tracking repeated setup work')
+    end
 end
 for _, line in ipairs(MOCK.printed) do assert(not line:find('The bar stopped drawing', 1, true), line) end
 assert(#MOCK.commands == 0, 'Benchmark sent a gameplay command')
@@ -159,11 +191,12 @@ def measure(addon):
                      'entry-idle', 'entry-settings-idle', 'entry-profiles-idle', 'entry-history-idle',
                      'entry-mature', 'entry-hidden', 'entry-event-hidden',
                      'entry-chat-hidden', 'entry-chat-kept', 'entry-chat-always', 'entry-chat-free',
-                     'entry-rings-unused', 'entry-ring-alert', 'unrelated-combat'):
+                     'entry-rings-unused', 'entry-ring-alert', 'unrelated-combat', 'unrelated-inventory',
+                     'entry-gil-idle', 'entry-gil-active', 'entry-gil-paused', 'entry-gil-packets', 'entry-auto-layout-idle'):
             with tempfile.TemporaryDirectory(prefix='momentum_benchmark_') as folder:
                 lua = run.runtime(folder)
                 lua.globals().CASE = case
-                fixture = ENTRY if case.startswith('entry-') or case == 'unrelated-combat' else HUD
+                fixture = ENTRY if case.startswith(('entry-', 'unrelated-')) else HUD
                 rows[case] = dict(lua.execute(COUNTERS + fixture).items())
     finally:
         run.ADDON = original

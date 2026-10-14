@@ -37,7 +37,7 @@ require('ui.settings_window').draw = function(settings, view, services)
     return false
 end
 AshitaCore.GetResourceManager = function() return { GetItemById = function() return { Name = { 'Test food' } } end } end
-dofile(ADDON_DIR .. '/momentum.lua')
+MOCK.load_addon()
 MOCK.fire('load')
 local app = MOMENTUM_TEST
 reads, directories = 0, 0
@@ -88,7 +88,7 @@ for _ = 1, 120 do MOCK.frame(1 / 60) end
 equal(dispatched, 1, 'Stable frames dispatch checkpoint once to establish the schedule')
 equal(directories, 0, 'Stable frames do not check session directories')
 equal(app.state.broken, false, 'Optimized idle entry remains drawable')
-MOCK.now = 30
+MOCK.now = app.sessions.checkpoint_at
 MOCK.frame(0)
 equal(dispatched, 2, 'Due frame dispatches the scheduled checkpoint')
 equal(directories > 0, true, 'Actual session writes still ensure the directory exists')

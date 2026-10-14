@@ -6,8 +6,53 @@ local jobs = { 'WAR', 'MNK', 'WHM', 'BLM', 'RDM', 'THF', 'PLD', 'DRK', 'BST', 'B
     'SAM', 'NIN', 'DRG', 'SMN', 'BLU', 'COR', 'PUP', 'DNC', 'SCH', 'GEO', 'RUN' };
 local event_flag, interface, focus_slot, time_struct = 0, 0, 0, 0;
 local waiting, expected_id = false, nil;
+local gil_balance, gil_owner, gil_ready, gil_invalid = nil, nil, true, false;
 
 local function truth(value) return value == true or value == 1; end
+
+local function reset_gil()
+    gil_balance, gil_owner, gil_ready = nil, nil, false;
+end
+
+local function invalid(unsupported, inventory_gap)
+    if inventory_gap then
+        if not gil_invalid then reset_gil(); end
+        gil_invalid = true;
+    end
+    return { valid = false, unsupported_job = unsupported };
+end
+
+function player.inventory(update)
+    if update.ready ~= nil then
+        gil_ready = update.ready;
+        if not gil_ready then gil_balance = nil; end
+    elseif update.balance ~= nil then
+        gil_balance = update.balance;
+    end
+    return gil_ready, gil_ready and gil_balance or nil;
+end
+
+function player.gil_identity()
+    if waiting or stats:GetLoginStatus() ~= 2 or truth(stats:GetIsZoning()) or GetPlayerEntity() == nil then return nil; end
+    local id = party:GetMemberServerId(0);
+    if id == 0 or (expected_id and expected_id ~= id) then return nil; end
+    return id, stats:GetMainJob();
+end
+
+local function current_gil(id)
+    if gil_owner and gil_owner ~= id then reset_gil(); end
+    gil_owner, gil_invalid = id, false;
+    if not gil_ready then return nil; end
+    if gil_balance == nil then
+        -- Read slot zero once. Packets keep it current after that.
+        local ok, item = pcall(function() return memory:GetInventory():GetContainerItem(0, 0); end);
+        if ok and item and item.Id == 65535 and type(item.Count) == 'number'
+            and item.Count >= 0 and item.Count <= 999999999 and item.Count == math.floor(item.Count) then
+            gil_balance = item.Count;
+        end
+    end
+    return gil_balance;
+end
 
 local function pointer(pattern, offset, extra)
     local match = ashita.memory.find('FFXiMain.dll', 0, pattern, offset or 0, 0);
@@ -26,6 +71,8 @@ end
 
 function player.on_zone(id)
     waiting, expected_id = true, id;
+    reset_gil();
+    gil_invalid = true;
 end
 
 function player.on_status()
@@ -71,12 +118,14 @@ local function effect_seconds(raw, utc)
 end
 
 function player.read()
+    if stats:GetLoginStatus() ~= 2 or truth(stats:GetIsZoning()) then return invalid(nil, true); end
     local entity = GetPlayerEntity();
+    if entity == nil then return invalid(); end
     local id, job = party:GetMemberServerId(0), stats:GetMainJob();
-    if (type(job) == 'number' and job > #jobs) then return { valid = false, unsupported_job = true }; end
+    if (type(job) == 'number' and job > #jobs) then return invalid(true); end
     local needed, level = stats:GetExpNeeded(), stats:GetJobLevel(job);
-    if (entity == nil or waiting or truth(stats:GetIsZoning()) or id == 0 or job == 0 or needed == 0
-        or not level or level == 0 or (expected_id ~= nil and id ~= expected_id)) then return { valid = false }; end
+    if (waiting or id == 0 or job == 0 or needed == 0
+        or not level or level == 0 or (expected_id ~= nil and id ~= expected_id)) then return invalid(); end
     expected_id = nil;
     local status = entity.StatusServer;
     local merit_cap = stats:GetMeritPointsMax();
@@ -89,7 +138,7 @@ function player.read()
         merits = merit_cap and stats:GetMeritPoints() or nil, merit_cap = merit_cap,
         limit_mode = truth(stats:GetIsLimitModeEnabled()), limit_breaker = truth(stats:GetIsLimitBreaker()),
         exp_locked = truth(stats:GetIsExperiencePointsLocked()), dead = status == 2 or status == 3, dedication = false,
-        food = false, food_known = false, sync_active = nil, utc = player.utc() };
+        food = false, food_known = false, sync_active = nil, utc = player.utc(), gil_current = current_gil(id) };
     local icons, timers = stats:GetStatusIcons(), stats:GetStatusTimers();
     if (icons ~= nil) then
         snapshot.food_known = true;

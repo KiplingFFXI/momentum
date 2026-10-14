@@ -10,7 +10,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 ADDON = ROOT / 'momentum'
 LICENSE = ROOT / 'LICENSE'
-CORE = 'chains chat dynamis dynamis_client dynamis_runtime file_store food goals notifications packets phoenix_status player rings sessions sound tracker'.split()
+CORE = 'chains chat dynamis dynamis_client dynamis_runtime file_store food gil goals notifications packets phoenix_status player rings sessions sound tracker'.split()
 UI = 'defaults details dynamis dynamis_layout fonts history hud job_icons layout migrate modes profiles readouts settings_window theme'.split()
 FILES = {'momentum.lua', 'data/phoenix_rules.lua', 'data/dynamis_rules.lua', 'sounds/README.txt'} | {'core/%s.lua' % name for name in CORE} | {'ui/%s.lua' % name for name in UI}
 SOUNDS = {

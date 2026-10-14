@@ -79,7 +79,7 @@ close_and_reopen('Delete record now');
 eq(session_deletes, 0, 'Closing never deletes a saved session');
 
 window.close();
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame(click)

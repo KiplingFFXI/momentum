@@ -68,6 +68,8 @@ proxy_mt.__index = function (self, key)
             __index = function (_, comp) return PY.vec_get(obj, key, comp); end,
             __newindex = function (_, comp, v) PY.vec_set(obj, key, comp, v); end,
         });
+    elseif (kind == 'proxy') then
+        return setmetatable({ __obj = value }, proxy_mt);
     end
     return value;
 end;

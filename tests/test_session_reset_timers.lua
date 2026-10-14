@@ -42,7 +42,7 @@ hud.draw = function(current, view, context)
     for _, part in ipairs(readouts.cached(current, view)) do drawn.parts[part.id] = part.value; end
     return changed;
 end;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame(seconds)

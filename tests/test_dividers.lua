@@ -7,7 +7,7 @@ local function equal(actual, expected, label)
     count = count + 1;
     assert(actual == expected, label .. ': ' .. tostring(actual) .. ' ~= ' .. tostring(expected));
 end
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 app.settings().window.open = true;

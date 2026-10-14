@@ -44,6 +44,11 @@ defaults.READOUTS = {
     { id = 'merit_headroom', name = 'Merit points before cap', label = 'Merit slots', enabled = false, help = 'Shows how many more merit points you can hold. For example, 3 out of 10 leaves room for 7. At zero, spend a merit point before earning another.' },
     { id = 'lp_remaining', name = 'LP to next merit point', label = 'LP needed', enabled = false, help = 'Shows the LP needed for your next merit point, even while the main bar shows EXP. Spend merits means you must spend a merit point before earning another.' },
     { id = 'merit_eta', name = 'Time to next merit point', label = 'Next merit', enabled = false, help = 'Estimates when you will earn your next merit point at your current LP/HR. -- means Momentum does not know your LP/HR or how many merit points you can hold yet. Spend merits means your merit points are full.' },
+    { id = 'gil', name = 'Current gil', label = 'Gil', enabled = false, help = 'Shows the gil you are carrying. This keeps updating while the session is paused. -- means your current gil is not known yet.' },
+    { id = 'gil_gained', name = 'Gil gained this session', label = 'Gained', enabled = false, help = 'Adds up increases in your gil while the session is running, including trades, deliveries, and sales. It does not estimate the value of items.' },
+    { id = 'gil_spent', name = 'Gil spent this session', label = 'Spent', enabled = false, help = 'Adds up decreases in your gil while the session is running, including purchases, trades, deliveries, and fees.' },
+    { id = 'gil_net', name = 'Gil change this session', label = 'Net gil', enabled = false, help = 'Shows gil gained minus gil spent during this session. A negative number means you spent more than you gained.' },
+    { id = 'gil_rate', name = 'Gil/HR', label = 'Gil/HR', enabled = false, help = 'Shows gil gained minus gil spent per hour. It needs one minute of tracking after your first gil change. Paused time and time while your gil is unknown do not count.' },
     { id = 'dyna_zone', name = 'Dynamis zone', label = '', enabled = false, help = 'Shows the Dynamis zone for this run.' },
     { id = 'dyna_time', name = 'Dynamis time left', label = 'Time', enabled = false, help = 'Time left on your Perpetual Hourglass. Time extensions update it automatically. Resetting or pausing your EXP session does not stop it. -- means unknown; ~ means your computer clock is being used until server time is available.' },
     { id = 'dyna_extensions', name = 'Dynamis time extensions', label = 'TE', enabled = false, help = 'Shows the total minutes added to this run. Open Dynamis for the extensions seen so far. Joining late can recover the minutes from your hourglass without knowing which monsters were defeated.' },
@@ -116,7 +121,7 @@ function defaults.make()
         tracking = { window = 900, rate_basis = 'earned', goal_merits = 5, hide_idle = false, average_count = 10,
             goal_type = 'stored_merits', goal_level = 75, goal_exp = 10000, goal_session_merits = 1, goal_buffer = 10000 },
         sessions = { resume = true, retention = 30 },
-        modes = { selected = 'auto', exp = {}, merits = {}, previous_display = {} },
+        modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, previous_display = {} },
         dynamis = { enabled = true, auto_layout = true, layout_active = false, wanted_jobs = {}, wanted_items = {}, retention = 30,
             warning_minutes = { 10, 5, 1 }, pool_warning_seconds = 60 },
         planner = { level = 50, population = 0 },
@@ -216,9 +221,14 @@ function defaults.tidy(settings)
     local known, seen = {}, {};
     for _, item in ipairs(defaults.READOUTS) do known[item.id] = true; end
     settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis' }, 'auto');
+    settings.modes.active = choice(settings.modes.active, { 'exp', 'merits' }, 'exp');
+    settings.modes.layout_version = settings.modes.layout_version == 1 and 1 or 0;
+    settings.modes.auto.mode = choice(settings.modes.auto.mode, { 'auto', 'exp', 'lp' }, 'auto');
+    settings.modes.auto.auto_layout = settings.modes.auto.auto_layout == true;
     for _, key in ipairs({ 'exp', 'merits', 'previous_display' }) do
         if next(settings.modes[key]) then tidy_saved_display(settings.modes[key], fresh.display, known); end
     end
+    if type(settings.modes.legacy_auto_display) == 'table' then tidy_saved_display(settings.modes.legacy_auto_display, fresh.display, known); end
     if type(settings.dynamis.previous_display) == 'table' then tidy_saved_display(settings.dynamis.previous_display, fresh.display, known); end
     settings.display.order = {};
     for _, id in ipairs(saved_order) do
@@ -352,6 +362,7 @@ function defaults.tidy(settings)
             else for i = 1, 4 do color[i] = number(color[i], 0, 1, 1); end end
         end
     end
+    require('ui.modes').prepare(settings);
     return settings;
 end
 

@@ -28,7 +28,7 @@ local hud_draw, config_draw = hud.draw, window.draw;
 local hud_draws, config_draws = 0, 0;
 hud.draw = function(...) hud_draws = hud_draws + 1; return hud_draw(...); end;
 window.draw = function(...) config_draws = config_draws + 1; return config_draw(...); end;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame(seconds)

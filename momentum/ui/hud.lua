@@ -167,7 +167,8 @@ function hud.place(settings, view, context, mode)
     if mode ~= 'free' and mode ~= 'top' and mode ~= 'bottom' then return false; end
     gesture = nil;
     if mode == 'free' then
-        layout.detach(settings.bar, hud.bounds(settings, view, context));
+        -- Before the first draw, keep the saved position without measuring fonts or icons.
+        if not (context and context.before_startup) then layout.detach(settings.bar, hud.bounds(settings, view, context)); end
         settings.bar.docked, settings.bar.snap, settings.bar.auto_width, settings.bar.locked = false, false, false, false;
     else
         settings.bar.docked, settings.bar.snap, settings.bar.anchor = true, true, mode;

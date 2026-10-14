@@ -1,7 +1,10 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.2.0';
-addon.desc = 'A movable EXP, merit and Dynamis tracking bar for Phoenix.';
+addon.version = '1.3.0';
+addon.desc = 'A movable EXP, merit, gil and Dynamis tracking bar for Phoenix.';
+
+local flush_commands;
+local function start_runtime(startup_zone)
 
 require('common');
 local ffi = require('ffi');
@@ -203,16 +206,16 @@ local function update_auto_layout()
     local mode = tracker_module.earning_mode(snapshot);
     if not mode then return; end
     local previous = state.auto_layout;
-    if previous and previous.settings == s and previous.id == snapshot.id and previous.job == snapshot.job and previous.mode == mode then return; end
+    if previous and previous.settings == s and previous.id == snapshot.id and previous.job == snapshot.job and previous.mode == mode
+        and s.modes.active == (mode == 'lp' and 'merits' or 'exp') then return; end
     if imgui.IsMouseDown(ImGuiMouseButton_Left) or imgui.IsAnyItemActive() then return; end
     if state.before or state.dirty then
         finish_edit();
         if state.dirty then return; end
     end
-    local name = mode == 'lp' and 'Merits' or 'Leveling';
-    defaults.apply_starter(s, name);
+    modes.automatic(s, mode);
     -- Rebase an idle editor so this automatic switch is not a saved edit.
-    if state.edit_baseline then defaults.apply_starter(state.edit_baseline, name); end
+    if state.edit_baseline then modes.automatic(state.edit_baseline, mode); end
     state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job, mode = mode };
 end
 
@@ -435,6 +438,7 @@ end
 
 services.placement = function(mode)
     return change(function(s)
+        if not state.resources_ready then return hud.place(s, nil, { before_startup = true }, mode); end
         local display = imgui.GetIO().DisplaySize;
         local context = { preview = s.preview.show };
         read_chat_context(s, context, display);
@@ -484,6 +488,7 @@ services.notification_problem = function(id)
 end;
 
 local function apply_alerts()
+    if not state.resources_ready then return; end
     local alerts = state.settings.alerts;
     if (state.food_enabled ~= alerts.food_enabled or state.food_sound ~= alerts.food_sound) then
         sound.close();
@@ -521,15 +526,59 @@ local function sample(t)
     end
 end
 
-ashita.events.register('load', 'momentum_load', function()
-    fonts.load();
-    job_icons.prepare();
-    player.load();
-    chat_window.load();
-    hud.reset_chat_anchor();
-    sound.refresh();
+local function prepare_resources()
+    if state.resources_ready then return true; end
+    if state.startup_failed then return false; end
+    local t = now();
+    if state.startup_check_at and t >= state.startup_check_at and t - state.startup_check_at < 0.25 then return false; end
+    state.startup_check_at = t;
+    local ok, ready = pcall(function()
+        local memory = AshitaCore:GetMemoryManager();
+        local stats, party = memory:GetPlayer(), memory:GetParty();
+        if stats:GetLoginStatus() ~= 2 then return false; end
+        local zoning = stats:GetIsZoning();
+        if zoning == true or zoning == 1 then return false; end
+        local entity = GetPlayerEntity();
+        local id = party:GetMemberServerId(0);
+        if entity == nil or not id or id == 0 or entity.ServerId ~= id then return false; end
+        if not fonts.load() then return false; end
+        job_icons.prepare();
+        player.load();
+        chat_window.load();
+        hud.reset_chat_anchor();
+        sound.refresh();
+        state.resources_ready = true;
+        sample(t);
+        return true;
+    end);
+    if not ok then
+        state.resources_ready, state.startup_failed = false, true;
+        say('Startup could not finish: ' .. tostring(ready) .. '. Type /momentum to try again.');
+        return false;
+    end
+    return ready;
+end
+
+local initialized = false;
+local function initialize_resources()
+    if initialized then return; end
+    initialized = true;
     refresh_shared();
-    sample(now());
+    if startup_zone then
+        local party = AshitaCore:GetMemoryManager():GetParty();
+        if party:GetMemberServerId(0) == startup_zone.player_id and party:GetMemberZone(0) == startup_zone.zone_id then
+            dynamis:packet(startup_zone, startup_zone.received_at, state.settings);
+        end
+        startup_zone = nil;
+    end
+    prepare_resources();
+end
+ashita.events.register('load', 'momentum_load', initialize_resources);
+
+-- Wait for the character, then load fonts before the next UI frame starts.
+ashita.events.register('d3d_beginscene', 'momentum_startup', function(rendering_back_buffer)
+    if state.resources_ready or rendering_back_buffer ~= true then return; end
+    prepare_resources();
 end);
 
 ashita.events.register('packet_in', 'momentum_packets', function(event)
@@ -555,6 +604,21 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
     end
     if (event.id == 0x061 and packets.valid(event, 96)) then player.on_status(); state.sampled = -1; end
     if (event.id == 0x063) then state.sampled = -1; end
+    if event.id >= 0x01D and event.id <= 0x020 then
+        local update = packets.inventory(event);
+        if update then
+            local ready, balance = player.inventory(update);
+            if not ready then
+                tracker.gil:discontinuity(t);
+            elseif balance ~= nil then
+                local character, job = player.gil_identity();
+                local snapshot = state.snapshot;
+                if state.award_ready and snapshot and snapshot.valid and snapshot.id == character and snapshot.job == job then
+                    tracker:observe_gil(balance, t, update.ready == true or update.baseline);
+                end
+            end
+        end
+    end
     if (event.id == 0x017) then
         local feed = packets.status(event, state.player_id or player.id());
         if feed then
@@ -606,6 +670,7 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
 end);
 
 local function render()
+    if not flush_commands() then return; end
     if state.settings.window.open and bit.band(ffi.C.GetAsyncKeyState(0x1B), 0x8000) ~= 0 then
         close_window();
     end
@@ -694,6 +759,7 @@ local function render()
 end
 
 ashita.events.register('d3d_present', 'momentum_present', function()
+    if not state.resources_ready then return; end
     local ok, err = pcall(render);
     if (not ok) then
         state.broken = true;
@@ -701,7 +767,7 @@ ashita.events.register('d3d_present', 'momentum_present', function()
     end
 end);
 
-ashita.events.register('command', 'momentum_command', function(event)
+local function handle_command(event)
     local args = event.command:args();
     if (args[1] == nil or args[1]:lower() ~= '/momentum') then return; end
     event.blocked = true;
@@ -710,6 +776,7 @@ ashita.events.register('command', 'momentum_command', function(event)
         if state.settings.window.open then close_window();
         else state.settings.window.open = true; sound.refresh(); end
         state.broken = false;
+        state.startup_failed, state.startup_check_at = false, nil;
     elseif (command == 'show') then state.hidden = false;
     elseif (command == 'hide') then state.hidden = true;
     elseif (command == 'lock' or command == 'unlock') then change(function(s) s.bar.locked = command == 'lock'; end);
@@ -744,7 +811,7 @@ ashita.events.register('command', 'momentum_command', function(event)
     else
         say('Use /momentum for settings. Commands: show, hide, lock, unlock, dock, free, pause, resume, reset, undo, preview, mode, divider, order, profile.');
     end
-end);
+end
 
 ashita.events.register('unload', 'momentum_unload', function()
     finish_edit();
@@ -792,4 +859,139 @@ if (MOMENTUM_TEST_MODE) then
     MOMENTUM_TEST = { settings = function() return state.settings; end, tracker = function() return tracker; end,
         state = state, services = services, sample = sample, view = current_view,
         sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis };
+end
+
+return { load = initialize_resources, command = handle_command,
+    ready = function() return state.resources_ready == true; end,
+    retry_startup = function() state.startup_failed, state.startup_check_at = false, nil; end };
+end
+
+-- Momentum waits for the character before loading its runtime.
+local runtime = nil;
+local load_seen, stopped, starting = false, false, false;
+local pending_commands = {};
+local startup_zone = nil;
+local checked_at, stable_since, stable_id, stable_zone = nil, nil, nil, nil;
+
+local function clear_stability()
+    stable_since, stable_id, stable_zone = nil, nil, nil;
+end
+
+local function finite(value)
+    return type(value) == 'number' and value == value and value > -math.huge and value < math.huge;
+end
+
+local function tick()
+    local value = tonumber(ashita.time.get_tick64());
+    if finite(value) and value >= 0 then return value / 1000; end
+end
+
+local function character()
+    local memory = AshitaCore:GetMemoryManager();
+    local stats, party = memory:GetPlayer(), memory:GetParty();
+    if stats:GetLoginStatus() ~= 2 then return; end
+    local zoning = stats:GetIsZoning();
+    if zoning == true or zoning == 1 then return; end
+    local entity = GetPlayerEntity();
+    local id, zone = party:GetMemberServerId(0), party:GetMemberZone(0);
+    if entity == nil or not finite(id) or id <= 0 or id % 1 ~= 0 or entity.ServerId ~= id then return; end
+    if not finite(zone) or zone <= 0 or zone > 65535 or zone % 1 ~= 0 then return; end
+    local level = stats:GetMainJobLevel();
+    if not finite(level) or level <= 0 or level > 99 or level % 1 ~= 0 then return; end
+    return id, zone;
+end
+
+flush_commands = function()
+    if stopped or not runtime or not runtime.ready() then return false; end
+    -- Placement can measure fonts, so queued commands run during the UI frame.
+    for _ = 1, #pending_commands do
+        if stopped then return false; end
+        local command = table.remove(pending_commands, 1);
+        runtime.command({ command = command });
+    end
+    return not stopped;
+end;
+
+ashita.events.register('load', 'momentum_bootstrap_load', function()
+    load_seen = true;
+end);
+
+ashita.events.register('d3d_beginscene', 'momentum_bootstrap_start', function(rendering_back_buffer)
+    if stopped or rendering_back_buffer ~= true then return; end
+    if runtime then return; end
+    if starting or not load_seen then return; end
+    local t = tick();
+    if not t then checked_at = nil; clear_stability(); return; end
+    if checked_at and t < checked_at then clear_stability(); checked_at = nil; end
+    if checked_at and t - checked_at < 0.25 then return; end
+    checked_at = t;
+    local ok, id, zone = pcall(character);
+    if not ok or not id then clear_stability(); return; end
+    if stable_id ~= id or stable_zone ~= zone then
+        stable_since, stable_id, stable_zone = t, id, zone;
+        return;
+    end
+    if t - stable_since < 3 then return; end
+    if startup_zone and (startup_zone.player_id ~= id or startup_zone.zone_id ~= zone) then startup_zone = nil; end
+    starting = true;
+    runtime = start_runtime(startup_zone);
+    startup_zone = nil;
+    runtime.load();
+end);
+
+ashita.events.register('command', 'momentum_bootstrap_command', function(event)
+    if stopped then return; end
+    local command = event.command;
+    if type(command) ~= 'string' then return; end
+    local name = command:match('^%s*(%S+)');
+    if not name or name:lower() ~= '/momentum' then return; end
+    event.blocked = true;
+    if runtime and runtime.ready() then
+        local args = command:args();
+        if #pending_commands == 0 and (args[2] or ''):lower() ~= 'free' then
+            runtime.command(event);
+            return;
+        end
+    end
+    if runtime then runtime.retry_startup(); end
+    if #command <= 1024 and #pending_commands < 32 then
+        pending_commands[#pending_commands + 1] = command:sub(1, #command);
+    end
+end);
+
+local function uint(data, offset, size)
+    local value = 0;
+    for index = size - 1, 0, -1 do value = value * 256 + data:byte(offset + index + 1); end
+    return value;
+end
+
+ashita.events.register('packet_in', 'momentum_bootstrap_zone', function(event)
+    if runtime or stopped or starting then return; end
+    if event.id ~= 0x00A and event.id ~= 0x00B then return; end
+    if event.blocked or event.blocked_original or event.injected or event.is_injected then return; end
+    startup_zone = nil;
+    clear_stability();
+    if event.id ~= 0x00A then return; end
+    local data, size = event.data, event.size;
+    if type(data) ~= 'string' or not finite(size) or size < 60 or size > 512 or size % 1 ~= 0 or #data < size then return; end
+    local t = tick();
+    if not t then return; end
+    local id, zone = uint(data, 4, 4), uint(data, 48, 2);
+    if id == 0 or zone == 0 then return; end
+    startup_zone = { id = 0x00A, size = size, data = data:sub(1, size),
+        received_at = t, player_id = id, zone_id = zone };
+end);
+
+ashita.events.register('unload', 'momentum_bootstrap_unload', function()
+    stopped = true;
+    pending_commands, startup_zone = {}, nil;
+    clear_stability();
+end);
+
+if MOMENTUM_TEST_MODE then
+    MOMENTUM_BOOTSTRAP_TEST = { inspect = function()
+        return { load_seen = load_seen, stopped = stopped, starting = starting,
+            started = runtime ~= nil, queued_commands = #pending_commands, has_zone_packet = startup_zone ~= nil,
+            stable_since = stable_since, player_id = stable_id, zone_id = stable_zone };
+    end };
 end

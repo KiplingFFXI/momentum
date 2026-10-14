@@ -40,7 +40,7 @@ require('ui.settings_window').draw = function(s, view, services)
     if s.window.tab == 'Details' then shown_rings = services.rings_visible(details_open) end
     return false
 end
-dofile(ADDON_DIR .. '/momentum.lua'); MOCK.fire('load')
+MOCK.load_addon(); MOCK.fire('load')
 local app, settings = MOMENTUM_TEST, MOMENTUM_TEST.settings()
 equal(scans, 0, 'Default unused rings do not scan inventory at load')
 MOCK.frame(0)

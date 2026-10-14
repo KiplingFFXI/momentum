@@ -5,7 +5,7 @@ local store = require('core.file_store');
 local count = 0;
 local function eq(a, b, label) count = count + 1; assert(a == b, label .. ': ' .. tostring(a) .. ' ~= ' .. tostring(b)); end
 require('ui.hud').draw = function() return false; end;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local s = app.settings();

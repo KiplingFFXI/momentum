@@ -9,6 +9,7 @@ end
 local function command(text)
     local event = { command = text, blocked = false };
     MOCK.fire('command', event);
+    if text == '/momentum free' then MOCK.fire('d3d_present'); end
     return event;
 end
 local function battle(amount, message, actor, target, chain)
@@ -85,7 +86,7 @@ for size = 0, 34 do
     equal(#packets.awards(event, 1001), 0, 'Truncated item action');
 end
 
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 check(app ~= nil, 'Test seam exists only in test mode');

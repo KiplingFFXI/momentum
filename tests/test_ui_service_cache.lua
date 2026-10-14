@@ -11,7 +11,7 @@ store.read = function(path)
 end
 require('ui.hud').draw = function() return false end
 require('ui.settings_window').draw = function() return false end
-dofile(ADDON_DIR .. '/momentum.lua')
+MOCK.load_addon()
 MOCK.fire('load')
 local app = MOMENTUM_TEST
 local names = app.services.profile_names()

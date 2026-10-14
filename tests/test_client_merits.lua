@@ -22,7 +22,7 @@ MOCK.player.merit_cap = nil;
 equal(player.read().merit_cap, nil, 'Missing client capacity stays unknown');
 
 MOCK.player.merit_cap, MOCK.player.limit_points, MOCK.player.merits = 0, 0, 0;
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function view() return app.tracker():view(MOCK.now, app.settings()); end

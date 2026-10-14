@@ -1,6 +1,7 @@
 local rules = require('data.phoenix_rules')
 local chains = require('core.chains')
 local goals = require('core.goals')
+local gil = require('core.gil')
 local tracker = {}
 local methods = {}
 methods.__index = methods
@@ -99,7 +100,7 @@ local function exp_delta(before, after)
 end
 
 function tracker.new()
-    local self = setmetatable({ chain_state = chains.new(), tokens = {}, token_order = {}, paused = false }, methods)
+    local self = setmetatable({ chain_state = chains.new(), gil = gil.new(), tokens = {}, token_order = {}, paused = false }, methods)
     self:reset(0)
     return self
 end
@@ -184,6 +185,7 @@ end
 
 function methods:reset(now, keep_chain)
     now = self:_now(now)
+    self.gil:reset(now)
     self.started = nil
     self.pause_total = 0
     self.paused_at = self.paused and now or nil
@@ -219,6 +221,7 @@ end
 
 function methods:discontinuity(now)
     now = self:_now(now)
+    self.gil:discontinuity(now)
     self:_reconcile(now + MATCH_SECONDS + 1)
     self.baseline = nil
     self.pending_gains = {}
@@ -245,6 +248,7 @@ function methods:pause(now, paused)
         self.paused_at = nil
     end
     self.paused = paused
+    self.gil:set_paused(paused, now)
     self.pending_gains = {}
     self.pending_awards = {}
     self.death_balance = 0
@@ -279,6 +283,9 @@ function methods:observe(snapshot, now)
     local previous_zone = self.snapshot and self.snapshot.zone
     self.snapshot = snapshot
     self.baseline = copy(snapshot)
+    if previous_zone ~= snapshot.zone then self.gil:discontinuity(now) end
+    if snapshot.gil_current == nil then self.gil:discontinuity(now)
+    elseif self.gil.current == nil then self.gil:observe(snapshot.gil_current, now, true) end
     if not before or before.zone ~= snapshot.zone then
         self:_reconcile(now + MATCH_SECONDS + 1)
         self.pending_gains = {}
@@ -348,6 +355,12 @@ function methods:observe(snapshot, now)
         end
     end
     self:_reconcile(now)
+end
+
+function methods:observe_gil(balance, now, baseline_only)
+    if not self.snapshot or self.snapshot.valid ~= true or not self.identity
+        or self.identity.id ~= self.snapshot.id or self.identity.job ~= self.snapshot.job then return false end
+    return self.gil:observe(balance, self:_now(now), baseline_only)
 end
 
 function methods:award(event, now)
@@ -438,6 +451,7 @@ function methods:export(now)
     self:_reconcile(now)
     local elapsed = self:_elapsed(now)
     local result = { version = 1, identity = copy(self.identity), elapsed = elapsed,
+        gil = self.gil:export(now),
         started = self.started ~= nil, paused = self.paused, best_chain = self.chain_state.best,
         last_amount = self.last_amount, last_kind = self.last_kind,
         recent_exp = copy(self.recent_exp), recent_lp = copy(self.recent_lp), buckets = {} }
@@ -499,11 +513,15 @@ function methods:restore(data, now, identity)
         end
         if row.second >= elapsed - RATE_SECONDS then buckets[row.second % (RATE_SECONDS + 1) + 1] = bucket end
     end
+    local restored_gil = gil.new()
+    if data.gil ~= nil and (not restored_gil:restore(data.gil, now) or data.gil.paused ~= data.paused) then return false end
+    restored_gil:set_paused(data.paused, now)
     now = number(now) or 0
     self.last_time = nil
     self.snapshot = { valid = false }
     self.paused = data.paused
     self:reset(now)
+    self.gil = restored_gil
     self.identity = copy(data.identity)
     self.started = data.started and now - elapsed or nil
     self.paused_at = self.paused and now or nil
@@ -572,6 +590,7 @@ function methods:view(now, settings)
     local goal_remaining = snapshot.merits and snapshot.lp and math.max(0, (goal - snapshot.merits) * rules.lp_per_merit - snapshot.lp) or nil
     local result = {
         valid = snapshot.valid == true,
+        gil = self.gil:view(now),
         job = snapshot.job,
         job_name = snapshot.job_name,
         level = snapshot.level,

@@ -13,7 +13,7 @@ for _, id in ipairs({ 'dedication_end', 'no_exp' }) do
 end
 MOCK.settings_file = settings;
 MOCK.player.buffs = { 249 };
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local delivered = { dedication_end = 0, no_exp = 0 };

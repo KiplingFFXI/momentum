@@ -31,8 +31,6 @@ def client_runtime(folder, login_status=2):
             package.preload[name] = nil
             package.loaded[name] = nil
         end
-        require('common')
-        CLIENT_SETTINGS = require('settings')
     """)
     return lua
 
@@ -55,7 +53,7 @@ def load_entry(lua, broken=False):
         if source.count(needle) != 1:
             raise AssertionError('Expected exactly one current settings-load call for the regression fixture.')
         source = source.replace(needle, 'settings.load(defaults.make())')
-    lua.execute(source)
+    lua.execute('MOCK.load_addon(assert(loadstring(...))); CLIENT_SETTINGS = package.loaded.settings', source)
 
 
 class ClientSettingsTests(unittest.TestCase):
@@ -70,16 +68,23 @@ class ClientSettingsTests(unittest.TestCase):
         self.assertTrue(lua.eval("rawequal(MOMENTUM_TEST.settings(), CLIENT_SETTINGS.get())"))
         self.assertEqual(lua.eval("type(MOMENTUM_TEST.settings().copy)"), 'function')
 
+    def assert_unwrapped_load_fails(self, lua, pattern):
+        try:
+            load_entry(lua, broken=True)
+        except luajit21.LuaError as error:
+            self.assertRegex(str(error), pattern)
+            return
+        self.assertTrue(lua.eval('MOMENTUM_TEST == nil'))
+        self.assertRegex('\n'.join(str(value) for value in lua.globals().MOCK.printed.values()), pattern)
+
     def test_unwrapped_fresh_load_reproduces_client_failure(self):
         lua = client_runtime(self.folder)
-        with self.assertRaisesRegex(luajit21.LuaError, r"settings\.lua:\d+:.*nil value"):
-            load_entry(lua, broken=True)
+        self.assert_unwrapped_load_fails(lua, r"settings\.lua:\d+:.*nil value")
 
     def test_unwrapped_corrupt_fallback_reproduces_client_failure(self):
         write_settings(self.folder, 'this is not a settings table')
         lua = client_runtime(self.folder)
-        with self.assertRaisesRegex(luajit21.LuaError, r"settings\.lua:\d+:.*copy"):
-            load_entry(lua, broken=True)
+        self.assert_unwrapped_load_fails(lua, r"settings\.lua:\d+:.*copy")
 
     def test_existing_valid_file_hides_the_unwrapped_load_defect(self):
         write_settings(self.folder, "return T{display = T{divider = ' / '}}")
@@ -102,10 +107,15 @@ class ClientSettingsTests(unittest.TestCase):
         self.assertEqual(saved.visibility.mode, 'keep')
         self.assert_current_root(lua)
 
-    def test_fixed_logged_out_load_uses_defaults_folder(self):
+    def test_logged_out_load_waits_for_character_settings(self):
         lua = client_runtime(self.folder, login_status=0)
         load_entry(lua)
-        self.assertTrue(settings_file(self.folder, 'defaults').is_file())
+        self.assertFalse(settings_file(self.folder, 'defaults').exists())
+        self.assertFalse(settings_file(self.folder).exists())
+        self.assertTrue(lua.eval('MOMENTUM_TEST == nil and package.loaded.settings == nil'))
+        lua.execute('MOCK.login_status = 2; MOCK.finish_startup(); CLIENT_SETTINGS = package.loaded.settings')
+        self.assertTrue(settings_file(self.folder).is_file())
+        self.assertFalse(settings_file(self.folder, 'defaults').exists())
         self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.mode'), 'keep')
         self.assert_current_root(lua)
 
@@ -118,6 +128,7 @@ class ClientSettingsTests(unittest.TestCase):
             assert(MOMENTUM_TEST.settings().display.divider == ' / ')
             assert(not rawequal(MOMENTUM_TEST.settings().bar, CLIENT_SETTINGS.cache.settings.defaults.bar))
             MOCK.fire('command', {command='/momentum free'})
+            MOCK.fire('d3d_present')
             MOCK.fire('command', {command='/momentum divider +'})
             assert(CLIENT_SETTINGS.cache.settings.defaults.bar.docked)
             assert(CLIENT_SETTINGS.cache.settings.defaults.display.divider == require('ui.defaults').make().display.divider)
@@ -145,6 +156,7 @@ class ClientSettingsTests(unittest.TestCase):
         lua.execute("""
             assert(MOMENTUM_TEST.settings().display.divider == ' . ')
             MOCK.fire('command', {command='/momentum free'})
+            MOCK.fire('d3d_present')
             assert(CLIENT_SETTINGS.cache.settings.defaults.bar.docked)
             MOMENTUM_TEST.settings().visibility.mode='always'
             assert(CLIENT_SETTINGS.reset())

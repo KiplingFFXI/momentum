@@ -152,7 +152,7 @@ function methods:checkpoint(now, force)
     if not force and self.last_attempt and now >= self.last_attempt and now - self.last_attempt < SAVE_SECONDS then
         return self.error == nil, self.error
     end
-    if self.entry and (force or self.tracker.started or self.dirty) then self:_capture(now) end
+    if self.entry and (force or self.tracker.started or self.tracker.gil.started or self.dirty) then self:_capture(now) end
     if not self.dirty then return true end
     return self:_write(now)
 end

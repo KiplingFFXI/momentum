@@ -49,13 +49,15 @@ same(fresh.display, merit_display, 'All Merits display options are retained');
 equal(modes.select(fresh, 'dynamis', 'exp'), true, 'Return to saved Dynamis mode');
 equal(fresh.display.labels.dyna_time, 'Left', 'Dynamis edits are retained');
 equal(modes.select(fresh, 'auto', 'lp'), true, 'Return to automatic selection');
-same(fresh.display, original, 'Automatic selection restores the exact original display');
+local automatic_merits = history.copy(merit_display);
+automatic_merits.mode = original.mode;
+same(fresh.display, automatic_merits, 'Automatic uses the same customized normal layout');
 
 require('ui.hud').draw = function() return false; end;
 require('ui.settings_window').draw = function() return false; end;
 MOCK.player.main_level, MOCK.player.exp_needed = 75, rules.tnl[75];
 MOCK.player.exp, MOCK.player.mode = 1000, 'exp';
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 local app = MOMENTUM_TEST;
 local function frame(seconds)
@@ -137,7 +139,7 @@ equal(app.settings().modes.selected, 'dynamis', 'Leaving Dynamis keeps a manual 
 equal(app.settings().dynamis.layout_active, true, 'Manual Dynamis stays displayed after leaving');
 MOCK.fire('unload');
 MOCK.settings_file = history.copy(MOCK.settings.last_saved);
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 app = MOMENTUM_TEST;
 frame();
@@ -158,7 +160,7 @@ equal(app.settings().modes.selected, 'dynamis', 'Dynamis command selects manual 
 command('/momentum mode invalid');
 equal(app.settings().modes.selected, 'dynamis', 'Invalid command preserves the chosen mode');
 select_mode('auto');
-equal(app.settings().display.labels.rate, 'Session EXP', 'Automatic selection restores the original normal layout after reload');
+equal(app.settings().display.labels.lp_rate, 'My LP', 'Automatic uses the same saved layout after reload');
 equal(app.settings().dynamis.layout_active, false, 'Automatic mode outside Dynamis restores normal display');
 MOCK.player.zone = 185;
 frame();
@@ -221,7 +223,7 @@ equal(app.view(MOCK.now).mode, 'exp', 'Automatic job profile preserves EXP reado
 equal(app.settings().style.rounding, 9, 'Automatic job profile still applies its appearance');
 MOCK.fire('unload');
 MOCK.settings_file = history.copy(MOCK.settings.last_saved);
-dofile(ADDON_DIR .. '/momentum.lua');
+MOCK.load_addon();
 MOCK.fire('load');
 app = MOMENTUM_TEST;
 frame();

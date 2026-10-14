@@ -48,11 +48,28 @@ function ashita.events.register(name, alias, callback)
     MOCK.events[name][alias] = callback;
 end
 function MOCK.fire(name, event)
-    for _, callback in pairs(MOCK.events[name] or {}) do callback(event or {}); end
+    if event == nil then event = {}; end
+    for _, callback in pairs(MOCK.events[name] or {}) do callback(event); end
 end
 function MOCK.frame(seconds)
     MOCK.now = MOCK.now + (seconds or 1 / 60);
     MOCK.fire('d3d_present');
+end
+function MOCK.finish_startup()
+    local memory = AshitaCore:GetMemoryManager();
+    local stats, party = memory:GetPlayer(), memory:GetParty();
+    local entity = GetPlayerEntity();
+    local zoning = stats:GetIsZoning();
+    if stats:GetLoginStatus() ~= 2 or zoning == true or zoning == 1 or entity == nil
+        or party:GetMemberServerId(0) == 0 or entity.ServerId ~= party:GetMemberServerId(0) then return; end
+    MOCK.fire('d3d_beginscene', true);
+    MOCK.now = MOCK.now + 3;
+    MOCK.fire('d3d_beginscene', true);
+end
+function MOCK.load_addon(chunk)
+    if chunk then chunk(); else dofile(ADDON_DIR .. '/momentum.lua'); end
+    MOCK.fire('load');
+    MOCK.finish_startup();
 end
 function ashita.fs.exists(path)
     if MOCK.fs[path] ~= nil then return MOCK.fs[path]; end
@@ -151,7 +168,52 @@ package.preload['core.chat'] = function ()
 end
 package.loaded.ffi = {
     os = 'Windows', cdef = function () end,
+    new = function(kind)
+        assert(kind == 'momentum_find_data_a[1]', 'Unexpected mock FFI allocation: ' .. tostring(kind));
+        return { [0] = {} };
+    end,
+    cast = function(kind, value)
+        assert(kind == 'void*', 'Unexpected mock FFI cast: ' .. tostring(kind));
+        return value;
+    end,
+    string = function(value, size) return value:sub(1, size); end,
     load = function (name)
+        if name == 'kernel32' then
+            if MOCK.no_kernel32 then error('Directory library unavailable'); end
+            local function fill(data, entry)
+                local name = type(entry) == 'table' and entry.name or entry;
+                data[0].dwFileAttributes = type(entry) == 'table' and entry.attributes or 0;
+                local value = type(entry) == 'table' and entry.raw or (name .. '\0');
+                data[0].cFileName = (value .. string.rep('\0', 260)):sub(1, 260);
+            end
+            return {
+                momentum_find_first_file_a = function(pattern, data)
+                    MOCK.find_calls = MOCK.find_calls or {};
+                    MOCK.find_calls[#MOCK.find_calls + 1] = pattern;
+                    if MOCK.find_first_error then error('Directory open failed'); end
+                    local entries = MOCK.dirs and MOCK.dirs[pattern:sub(1, -2)] or {};
+                    if #entries == 0 then return -1; end
+                    local handle = { entries = entries, index = 1 };
+                    fill(data, entries[1]);
+                    MOCK.find_opened = (MOCK.find_opened or 0) + 1;
+                    return handle;
+                end,
+                momentum_find_next_file_a = function(handle, data)
+                    if MOCK.find_next_error then error('Directory enumeration failed'); end
+                    handle.index = handle.index + 1;
+                    if handle.index > #handle.entries then return 0; end
+                    fill(data, handle.entries[handle.index]);
+                    return 1;
+                end,
+                momentum_find_close = function(handle)
+                    assert(type(handle) == 'table' and not handle.closed, 'Invalid or duplicate directory close');
+                    handle.closed = true;
+                    MOCK.find_closed = (MOCK.find_closed or 0) + 1;
+                    if MOCK.find_close_error then error('Directory close failed'); end
+                    return 1;
+                end,
+            };
+        end
         if name ~= 'winmm' or MOCK.no_winmm then error('Library unavailable'); end
         return {
             mciSendStringA = function (command)

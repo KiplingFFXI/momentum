@@ -1,14 +1,18 @@
 local imgui = require('imgui');
 local fonts = {};
 local faces = {};
+local loaded = false;
 local choices = { 'Ashita', 'Segoe UI', 'Arial', 'Tahoma', 'Verdana', 'Calibri', 'Consolas' };
 local files = { ['Segoe UI'] = 'segoeui.ttf', Arial = 'arial.ttf', Tahoma = 'tahoma.ttf',
     Verdana = 'verdana.ttf', Calibri = 'calibri.ttf', Consolas = 'consola.ttf' };
 
 function fonts.names() return choices; end
 
--- Font files are loaded before drawing starts. A menu choice only selects one.
+-- Wait until drawing is done before adding fonts. A menu choice only selects one.
 function fonts.load()
+    if loaded then return true; end
+    local io = imgui.GetIO();
+    if io and io.Fonts and io.Fonts.Locked == true then return false; end
     local folder = (os.getenv('WINDIR') or 'C:\\Windows') .. '\\Fonts\\';
     for name, file in pairs(files) do
         local path = folder .. file;
@@ -17,6 +21,8 @@ function fonts.load()
             if (ok) then faces[name] = face; end
         end
     end
+    loaded = true;
+    return true;
 end
 
 function fonts.push(name, size)

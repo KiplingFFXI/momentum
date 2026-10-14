@@ -1124,10 +1124,12 @@ def _plain(v):
 def get_attr(obj, key):
     """Returns (value, kind) for a CamelCase field (mapped to imgui_bundle's snake_case). kind is
     'callable', 'vec' (an ImVec2/ImVec4 field, which imgui_bridge.lua wraps so .x reads and writes go
-    through to obj) or 'plain'."""
+    through to obj), 'proxy' for a nested atlas, or 'plain'."""
     v = getattr(obj, _field_name(obj, key))
     if isinstance(v, (imgui.ImVec2, imgui.ImVec4)):
         return None, 'vec'
+    if isinstance(v, imgui.ImFontAtlas):
+        return v, 'proxy'
     if callable(v):
         return None, 'callable'
     return v, 'plain'
