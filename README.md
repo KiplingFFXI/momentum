@@ -34,6 +34,10 @@ Type `/momentum` to open settings. Use **Bar mode** at the top to choose **EXP**
 
 **Pause session** excludes session gains, gil changes, and time while current balances keep updating. **Reset session** saves the old record and clears session totals, EXP/HR, LP/HR, Gil/HR, and Next until new data is collected. Neither action clears or restarts active EXP chain, food, Dedication, or EXP ring recast timers. Dynamis timing and totals keep running too. Paused alerts follow **When to mute alerts**. Your current points, gil, and layout stay the same. [Sessions and saving](docs/GUIDE.md#sessions).
 
+In Automatic, **Readouts and order** identifies the saved layout you are editing. **Current session** and **Copy summary** include your gil gained, gil spent, net change, and Gil/HR.
+
+To track the Dedication buff, choose **Display > Add readout > Buffs > Dedication status and timer**. The separate **Dedication bonus EXP (server data)** reading and low bonus EXP alert need extra Phoenix server support. `--` means the remaining bonus amount is unknown. [Dedication and EXP rings](docs/GUIDE.md#rings-food-and-dedication).
+
 ## What it can show
 
 - Current EXP, TNL, EXP/HR, progress, and estimated time to the next level.

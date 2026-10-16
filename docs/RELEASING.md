@@ -43,6 +43,13 @@ For the Linux, gil, and saved-layout update, keep these results separate:
 - While paused, current gil stays live but gains, spending, net change, and Gil/HR hold. Resuming counts only new changes. Reset clears totals and rates while keeping the current balance. Active EXP chain, food, Dedication, EXP ring, and Dynamis timers keep running.
 - In the matching game EXP or merit mode, customize the manual layout and return to Automatic with **Switch saved EXP / Merits layouts** enabled. Keep the same readouts, order, labels, colors, and dividers through reloads and profiles. Load inside Dynamis while earning LP, leave, and check that the saved Merits layout returns. Repeat for EXP. Older saved layouts must keep their choices.
 
+For Dedication and session UI changes, check the visible text as well as the values:
+
+- Dedication status and timer follows the ordinary buff data. The bonus EXP readout and low bonus EXP alert identify their extra server-data requirement. An unknown amount stays unknown; changing ring timing or reloading must not invent it. The Dedication wore off alert still follows the normal effect-end message.
+- The Level Sync penalty-change alert names its numeric penalty trigger. Starting sync, changing level, or editing the calculator alone must not create that alert.
+- In Automatic, the editing label follows the actual saved EXP, Merits, or Dynamis layout, even with automatic switching off or a different EXP/LP display choice. Manual selection needs no duplicate label. Showing the label must not alter settings or rebuild saved layouts.
+- Current session and Copy summary show the same current gil gained, spent, net change, and Gil/HR. Check unknown data, known zero, negative values, and held paused totals. The paused-bar help must still name the live timers that keep running.
+
 Before releasing the visibility changes, record these live-client checks separately from the offline results:
 
 - Try all three Bar visibility choices above chat, below chat, and in Free placement. Changing placement must keep the chosen visibility option. Close and reopen the main chat log, then change the chat size and resolution. Confirm the native active flag follows the visible chat window.

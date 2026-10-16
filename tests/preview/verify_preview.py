@@ -181,7 +181,14 @@ def main():
     ])
     history_fixture = "PREVIEW.session_rows={{id='current',name='',job=1,job_name='WAR',created=1700000000,elapsed=2700,session_exp=6375,session_lp=0,net_exp=6200,net_lp=0,merits_gained=0,best_chain=5,active=true}}"
     details_fixture = "dofile('tests/preview/details_fixture.lua')"
-    group_scroll = "settings.window.sections['Display/Selected readout']=true; settings.window.sections['Display/More options']=true; local ig=require('imgui'); local header=ig.CollapsingHeader; ig.CollapsingHeader=function(value,...) local open=header(value,...); if value:find((PREVIEW.edit_group and 'More options' or 'Readouts and order')..' (?)##section_',1,true)==1 then ig.SetScrollHereY(0); end; return open; end"
+    group_scroll = (
+        "settings.window.sections['Display/Selected readout']=true; settings.window.sections['Display/More options']=true; "
+        "local ig=require('imgui'); local header=ig.CollapsingHeader; "
+        "ig.CollapsingHeader=function(value,...) local open=header(value,...); "
+        "if value:find((PREVIEW.edit_group and 'More options' or 'Readouts and order')..' (?)##section_',1,true)==1 then ig.SetScrollHereY(0); end; return open; end; "
+        "local checkbox=ig.Checkbox; ig.Checkbox=function(label,...) local changed=checkbox(label,...); "
+        "if not PREVIEW.edit_group and label=='Use separate alignment groups' then ig.SetScrollHereY(0.5); end; return changed; end"
+    )
     divider_scroll = "local ig=require('imgui'); local header=ig.CollapsingHeader; ig.CollapsingHeader=function(value,...) local open=header(value,...); if value:find((PREVIEW.edit_custom and 'Dividers and formatting' or 'Readouts and order')..' (?)##section_',1,true)==1 then ig.SetScrollHereY(0); end; return open; end"
     cases.extend([
         ('input-dividers', ['--window', 'settings', '--tab', 'Display', '--frames', '42',

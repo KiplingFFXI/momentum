@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.3.0';
+addon.version = '1.3.1';
 addon.desc = 'A movable EXP, merit, gil and Dynamis tracking bar for Phoenix.';
 
 local flush_commands;

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.1
+
+Dedication choices now explain which reading tracks the buff and which needs extra server data. This update also makes saved layouts in Automatic easier to identify and adds gil to session summaries.
+
+- Renamed the buff readout to Dedication status and timer. Dedication bonus EXP (server data) and its low bonus EXP alert now explain that they need extra Phoenix server support. An unknown bonus amount does not mean the buff is inactive. The Dedication wore off alert uses the game's normal effect message.
+- Renamed the Level Sync alert to Level Sync penalty changed (server data). Its help explains that it watches reported penalty changes; starting Level Sync or changing its level alone does not trigger it.
+- Readouts and order shows Editing EXP layout, Editing Merits layout, or Editing Dynamis layout while using Automatic. It identifies the saved layout receiving your edits, including when automatic switching is off.
+- Current session and Copy summary now include gil gained, gil spent, net gil change, and Gil/HR. Known zero values stay zero, unknown values show --, and spending can produce a negative net change or rate.
+- Updated the Paused tooltip to explain that session gil changes stop counting while current gil and active EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep updating. Dynamis drops still count.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the `momentum` folder in your Phoenix `addons` folder, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, and custom sounds. The bar appears about three seconds after your character is ready.
+
+To track the Dedication buff, open **Display > Add readout > Buffs** and choose **Dedication status and timer**. **Dedication bonus EXP (server data)** may stay `--` without extra Phoenix server support; using a ring earlier or reloading does not supply that amount.
+
 ## 1.3.0
 
 Track gil alongside EXP, merits, and Dynamis, keep your saved readouts in Automatic, and use the Linux sound fix without losing any sounds or settings.
@@ -10,8 +26,7 @@ Track gil alongside EXP, merits, and Dynamis, keep your saved readouts in Automa
 - Momentum waits until your character has been in-game for three seconds before loading its settings, tracking, fonts, sounds and display. This applies to launcher startup and manual loads. Zoning or changing characters during the wait restarts the delay.
 - Commands entered during the startup wait run once Momentum is ready. Free placement waits for an active UI frame before measuring the bar, including when entered during startup. Commands keep their order, and unloading cancels queued commands. Font setup waits until the UI is between frames and runs once.
 - Sound support loads when an alert or sound test needs it. All sounds, alerts and saved settings are kept.
-- Changed how Momentum finds sound files to avoid the native directory helper's shared locale setup. Bundled and custom sounds, sorting and saved choices are kept.
-- The affected Linux player confirmed that the sound-scan test build resolves the reported freezes involving tTimers and Minimap on their setup, with no other issues reported.
+- Fixed a Linux/Proton issue that could freeze the game when using cooldown abilities or zooming the minimap. Momentum now scans sound files directly, avoiding the shared helper involved in the conflict. Bundled and custom sounds still work.
 
 ### Updating
 

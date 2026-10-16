@@ -136,8 +136,8 @@ function details.draw(settings, view, services, ui)
             end
             if not pool_known or not bonus_known then
                 local missing = not pool_known and (not bonus_known and 'Bonus values' or 'Remaining bonus') or 'Bonus percentage';
-                ui.note(missing .. ' unknown. Waiting for an update from Phoenix.');
-                ui.help('Phoenix must send these numbers. Your Dedication icon and owned rings cannot tell us how much bonus EXP is left. Unknown does not mean you have none left.');
+                ui.note(missing .. ' unknown. Needs extra Phoenix server support.');
+                ui.help('Phoenix must send these numbers through its optional server support. Your Dedication icon and timer cannot tell Momentum how much bonus EXP is left. Unknown does not mean you have none left.');
             end
         end
     end
@@ -182,10 +182,10 @@ local alert_help = {
     cap = 'Warn before your stored merit points are full. Choose how many more merit points you can hold when the warning appears.',
     food_end = 'Play a sound once when Phoenix reports that your food effect wore off. Removing food can trigger it too. Loading, zoning, and turning this on stay quiet. This alert supports sound only.',
     food_soon = 'Warn when your food effect has this much time left. Choose Food effect wore off for a sound when it ends.',
-    dedication_end = 'Notify when Phoenix reports that your Dedication effect wore off. Loading the addon or zoning does not trigger this alert.',
-    dedication_low = 'Warn when your bonus EXP remaining falls to the amount below. Phoenix must send the current amount. An unknown amount does not trigger an alert.',
+    dedication_end = 'Notify when the game reports that your Dedication effect wore off. Loading the addon or zoning does not trigger this alert.',
+    dedication_low = 'Warn when Dedication has this much bonus EXP left. Needs extra Phoenix server support. An unknown amount does not trigger an alert.',
     ring_ready = 'Notify when an EXP ring with charges finishes its recast. You still need to equip and use it yourself.',
-    sync_change = 'Notify when Phoenix reports a change to your Level Sync penalty. Changing the Level Sync estimate does not trigger this alert.',
+    sync_change = 'Notify when your Level Sync penalty changes. Needs extra Phoenix server support. Starting Level Sync or changing its level does not trigger this by itself. Changing the estimate stays quiet too.',
     no_exp = 'Notify when Phoenix says why you missed EXP, such as being too far from the monster. Simply gaining no EXP does not trigger an alert.',
     chain_soon = 'Warn when the EXP chain timer reaches the time below. Estimated timing uses Phoenix rules; timing sent by Phoenix is used when available. Your next kill still has to qualify for an EXP chain.',
     dyna_time = 'Warn when your Dynamis hourglass reaches one of the times below. Time extensions update the warnings. Unknown time stays quiet.',
@@ -253,7 +253,7 @@ local function event_alert(settings, id, services, ui, sound_files)
             'Warn when your food effect has this many seconds left.');
     elseif id == 'dedication_low' then
         ui.slider(settings.alerts, 'dedication_low_points', 'Bonus EXP remaining', 1, 100000, nil,
-            'Warn when your Dedication bonus EXP left falls to this amount. Phoenix must send the current amount before the alert can work.');
+            'Warn when Dedication has this much bonus EXP left. Needs extra Phoenix server support. Unknown amounts stay quiet.');
     elseif id == 'chain_soon' then
         ui.slider(settings.alerts, 'chain_soon_seconds', 'EXP chain warning time', 1, 60, '%.0f seconds',
             'Warn when the EXP chain timer has this many seconds left. An estimated timer can end early. No alert plays when the time is unknown.');

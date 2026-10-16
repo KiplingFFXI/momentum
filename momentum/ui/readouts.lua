@@ -321,6 +321,7 @@ end
 
 function readouts.summary(view)
     local num, time = readouts.format_number, readouts.format_time;
+    local gil = view.gil or {};
     return table.concat({
         'Momentum session',
         'Time: ' .. time(view.elapsed) .. (view.paused and ' (paused)' or ''),
@@ -331,6 +332,8 @@ function readouts.summary(view)
         'Merit points earned: ' .. num(view.merits_gained) .. ' | Stored: ' .. num(view.merits) .. ' / ' .. num(view.merit_cap),
         'Best EXP chain: ' .. num(view.best_chain),
         'Current rate: ' .. num(view.rate) .. ' ' .. (view.mode == 'lp' and 'LP' or 'EXP') .. '/HR',
+        'Gil gained: ' .. num(gil.gained) .. ' | Gil spent: ' .. num(gil.spent),
+        'Gil net change: ' .. num(gil.net) .. ' | Gil/HR: ' .. num(gil.rate),
         'At a cap, EXP or LP received can be more than the amount you keep.',
     }, '\n');
 end

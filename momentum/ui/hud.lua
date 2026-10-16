@@ -293,7 +293,7 @@ local function tooltip(settings, view, id, info)
     elseif id == 'sample' then
         return 'Preview', 'Example values', 'These example values let you try the layout before using it for your session.';
     elseif id == 'paused' then
-        return 'Session paused', 'Paused', 'EXP chain, food, Dedication, and EXP ring recast timers keep running. Dynamis time and drops keep tracking too. Choose Resume session to count EXP, LP, and session time again.';
+        return 'Session paused', 'Paused', 'Session gains, gil changes, and session time are paused. Current gil keeps updating. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis drops still count. Choose Resume session to keep counting.';
     end
     local definition = readouts.definition(id);
     if not definition then return nil; end
@@ -364,7 +364,7 @@ local function tooltip(settings, view, id, info)
         else help = 'Phoenix has not sent a recent reason for missing EXP. A missing reward alone cannot tell Momentum what happened.'; end
     elseif id == 'dedication_budget' then
         help = type(view.dedication_pool) == 'number' and 'This is the bonus EXP left from Dedication, as sent by Phoenix. After an EXP reward, it may briefly show -- until Phoenix sends a new amount.'
-            or 'Phoenix has not sent the current bonus EXP left from Dedication. The effect icon and timer cannot tell Momentum how much is left.';
+            or 'This amount needs extra Phoenix server support. -- means the remaining bonus EXP is unknown. Choose Dedication status and timer to track the buff and countdown.';
     elseif id == 'food' then
         help = definition.help;
         if view.food and not view.food_name then help = help .. ' Your food effect is active, but Momentum did not see which food you used.'; end

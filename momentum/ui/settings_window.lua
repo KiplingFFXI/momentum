@@ -399,6 +399,11 @@ end
 
 local function display_page(settings, services)
     if section('Readouts and order', 'Choose what the bar shows. Drag a :: handle to change the order, or select a row and use First, Up, Down, and Last.', true) then
+        if settings.modes.selected == 'auto' then
+            local active = settings.dynamis.layout_active and 'Dynamis' or settings.modes.active == 'merits' and 'Merits' or 'EXP';
+            note('Editing ' .. active .. ' layout');
+            tip('Your readout edits are saved to this layout. Automatic can switch to another saved layout when its switching options are on.');
+        end
         imgui.SetNextItemWidth(math.min(imgui.CalcTextSize('All readouts') + imgui.GetFrameHeight() + 16, (imgui.GetContentRegionAvail())));
         if imgui.BeginCombo('##Readout list', shown_only and 'Shown only' or 'All readouts') then
             if imgui.Selectable('All readouts', not shown_only) then shown_only = false; dragged, drag_target = nil, nil; end
@@ -755,7 +760,7 @@ local function fixed_preview(settings, view, services)
 end
 
 local function session_page(settings, view, services)
-    if section('Current session', 'Review your EXP and LP gains, EXP lost on death, EXP recovered through Raise, and time spent this session. Use Reset session to save this run and start fresh.', true) then
+    if section('Current session', 'Review EXP, LP, gil gained and spent, net changes, rates, and session time. EXP lost on death and recovered through Raise are listed separately. Use Reset session to save this run and start fresh.', true) then
         note(readouts.summary(view));
         button_row({ { 'Copy summary', function() if services.copy then services.copy(readouts.summary(view)); status = 'Session summary copied.'; end end,
             'Copy these session totals as plain text.' } });
@@ -869,7 +874,7 @@ local search_sections = {
     { 'Appearance', 'Bar and progress', 'opacity transparency corners round border fill shadow rail accent text visibility' },
     { 'Appearance', 'Bar colors', 'color background exp lp value label divider border chain ending countdown warning' },
     { 'Appearance', 'Settings window colors', 'window color heading accent text muted success warning' },
-    { 'Session', 'Current session', 'session pause resume reset copy summary rewards earned net lost recovered adjustment' },
+    { 'Session', 'Current session', 'session pause resume reset copy summary rewards earned net lost recovered adjustment gil gained spent rate' },
     { 'Session', 'Saved sessions', 'history save name rename delete records' },
     { 'Session', 'Session storage', 'retention resume storage keep' },
     { 'Profiles', 'Saved profiles', 'profile save load delete layout' },
@@ -985,7 +990,7 @@ local function toolbar(settings, view, services)
         tip('Restore the default layout and settings after confirmation. Saved sessions remain in history.');
         imgui.EndCombo();
     end
-    tip('Restore settings for this tab or the entire layout. Use Reset session to start a fresh EXP session.');
+    tip('Restore settings for this tab or the entire layout. Use Reset session to start a fresh session.');
     if reset_layout then
         note('Restore the default layout and settings? Session history stays as it is.');
         button_row({ { 'Restore default layout', function()

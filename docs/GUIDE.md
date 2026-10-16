@@ -22,6 +22,8 @@ Use **Bar mode** at the top of settings to choose **EXP**, **Merits**, or **Dyna
 
 Choose **Automatic** to resume your configured **Switch saved EXP / Merits layouts** and **Switch layouts in Dynamis** options. Automatic uses the same saved EXP and Merits layouts you arrange manually, including added readouts. It does not turn either option on for you.
 
+While using Automatic, **Readouts and order** shows **Editing EXP layout**, **Editing Merits layout**, or **Editing Dynamis layout** so you can see which saved layout your edits affect. This follows the layout being edited, including when automatic switching is off.
+
 Bar mode only changes the display. It never changes your EXP/merit mode in the game or resets your session, Dynamis run, or timers. Dynamis tracking continues when you select EXP or Merits.
 
 You can also use `/momentum mode exp`, `/momentum mode merits`, `/momentum mode dynamis`, or `/momentum mode auto`. The older `lp` command still selects Merits.
@@ -166,7 +168,7 @@ The optional **Next Dynamis entry** readout shows the 72-hour lockout remaining 
 
 ## Sessions
 
-The **Session** page separates reported EXP and LP, net progress, EXP lost, recovery, and other adjustments. Recovery is tracked from observed death and revival; a gain that cannot be matched to a reward or recovery remains an adjustment.
+The **Session** page separates reported EXP and LP, net progress, EXP lost, recovery, and other adjustments. It also includes gil gained, gil spent, net gil change, and Gil/HR in **Current session** and **Copy summary**. Unknown values show `--`, and zero remains zero. Recovery is tracked from observed death and revival; a gain that cannot be matched to a reward or recovery remains an adjustment.
 
 **Pause session** stops collecting session rewards, progress, gil changes, and elapsed time until you resume. Current EXP, LP, stored merits, and gil keep updating. **Reset session** is always available at the top of settings. One click saves the previous record and starts a new session. EXP/HR, LP/HR, Gil/HR, and Next clear until the new session has enough data. Reset also clears gil gained and spent and switches sample previews back to live readings. Your current EXP, LP, stored merits, gil, and layout stay the same. **Copy summary** on Session copies the displayed breakdown to the clipboard.
 
@@ -196,16 +198,18 @@ The [optional companion](../server/README.txt) is supplied separately under `ser
 
 Food and Dedication durations are shown only when the client supplies usable timers. Food names require an observed successful item use followed by the food effect. An effect already active at load can have an unknown source. Dedication's exact remaining bonus EXP requires the optional server companion; its icon alone does not expose that value.
 
+Under **Display > Add readout > Buffs**, choose **Dedication status and timer** to track the buff and its available countdown. **Dedication bonus EXP (server data)** shows the remaining bonus amount only with extra Phoenix server support. `--` means that amount is unknown. Using an EXP ring earlier or reloading Momentum does not supply the missing amount.
+
 ## Alerts
 
 On the **Alerts** page, open the group you want:
 
 - **Food:** food wearing off or ending soon.
 - **EXP chains:** the EXP chain timer running low.
-- **Dedication:** Dedication wearing off or its bonus EXP running low.
+- **Dedication:** Dedication wearing off. Low bonus EXP warnings need extra Phoenix server support.
 - **EXP rings:** a ring's recast finishing.
 - **Levels and merit points:** levels, merit points, goals, and nearly full merit points.
-- **Level Sync and missed EXP:** confirmed Level Sync penalty changes and reasons Phoenix gives for missed EXP.
+- **Level Sync and missed EXP:** confirmed Level Sync penalty changes and reasons Phoenix gives for missed EXP. The penalty-change alert needs extra Phoenix server support; starting Level Sync or changing its level alone does not trigger it.
 - **Dynamis:** time running low, time extensions, wanted drops, treasure pool timing, clear key items, and support job unlocks.
 
 These groups start closed and remember whether you leave them open or closed. Each heading shows how many alerts are on, such as **Food (2 on)**. An alert with both notice and sound counts once. Opening a group does not turn its alerts on. For each alert, check **Show notice**, **Play sound**, or both. Leave both unchecked to turn it off. A sound alert also needs a selected sound file. **Food effect wore off** has only **Play sound**. EXP chain warnings based on the local timer are labeled as estimated.

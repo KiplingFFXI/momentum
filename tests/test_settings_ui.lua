@@ -196,4 +196,47 @@ eq(checks['chain_soon/Play sound'], nil, 'Clearing search restores the saved gro
 eq(settings.alerts.events.chain_soon.sound, true, 'Searching never disables the saved alert');
 eq(#id_stack, 0, 'Alert IDs remain balanced across full settings renders');
 imgui.PushID, imgui.PopID, imgui.Checkbox = original_push, original_pop, original_checkbox;
+local modes = require('ui.modes');
+local dynamis_layout = require('ui.dynamis_layout');
+settings.window.tab = 'Display';
+settings.window.sections['Display/Readouts and order'] = true;
+modes.prepare(settings);
+settings.display.auto_layout = true;
+modes.automatic(settings, 'exp');
+draw();
+eq(text('Editing EXP layout'), true, 'Automatic identifies the saved EXP layout being edited');
+modes.automatic(settings, 'lp');
+draw();
+eq(text('Editing Merits layout'), true, 'Automatic updates the editing cue after switching saved layouts');
+settings.display.auto_layout, settings.display.mode = false, 'exp';
+view.mode = 'exp';
+draw();
+eq(text('Editing Merits layout'), true, 'Switching off automatic layouts keeps the actual edited bank in the cue');
+eq(text('Editing EXP layout'), false, 'The points shown do not override the saved layout being edited');
+dynamis_layout.switch(settings, true);
+draw();
+eq(text('Editing Dynamis layout'), true, 'An Automatic Dynamis override identifies its own edited layout');
+dynamis_layout.switch(settings, false);
+draw();
+eq(text('Editing Merits layout'), true, 'Leaving the Dynamis layout restores the saved normal editing cue');
+local unchanged = defaults.copy(settings);
+draw();
+eq(require('ui.history').equal(settings, unchanged), true, 'Showing the editing cue does not alter saved settings');
+for _, mode in ipairs({ 'exp', 'merits', 'dynamis' }) do
+    modes.select(settings, mode);
+    draw();
+    eq(text('Editing EXP layout') or text('Editing Merits layout') or text('Editing Dynamis layout'), false,
+        'Manual ' .. mode .. ' selection needs no Automatic editing cue');
+end
+local copied;
+services.copy = function(value) copied = value; end;
+settings.window.tab = 'Session';
+view.gil = { gained = 2500, spent = 4000, net = -1500, rate = -3000 };
+draw('Copy summary');
+eq(text(copied), true, 'Copy summary uses the same current breakdown shown on the Session page');
+eq(copied:find('Gil gained: 2,500 | Gil spent: 4,000', 1, true) ~= nil, true, 'Copied current session includes gil gains and spending');
+eq(copied:find('Gil net change: -1,500 | Gil/HR: -3,000', 1, true) ~= nil, true, 'Copied current session keeps negative net gil and rate');
+view.gil.gained = 3000;
+draw('Copy summary');
+eq(copied:find('Gil gained: 3,000', 1, true) ~= nil, true, 'Copy summary refreshes after a current total changes');
 return { count = count };
