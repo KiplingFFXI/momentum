@@ -44,26 +44,21 @@ end
 
 local settings = defaults.make();
 local view = readouts.sample('Leveling');
-view.sync_active, view.sync_source, view.sync_penalty = false, 'server', 0;
+view.sync_active = false;
 eq(details.sync_summary(view), 'Level Sync is off', 'Inactive sync uses plain state');
-view.sync_active, view.sync_source, view.sync_penalty, view.sync_gap = true, 'unknown', 0, 3;
-eq(details.sync_summary(view), 'Level Sync penalty unknown', 'Small gap does not imply an applied zero');
-view.sync_source, view.sync_penalty = 'server', nil;
-eq(details.sync_summary(view), 'Level Sync penalty unknown', 'Server marker alone cannot establish a penalty');
-view.sync_penalty = 0;
-eq(details.sync_summary(view), 'Level Sync penalty: 0%', 'Confirmed zero remains known');
-view.sync_penalty = 25;
-eq(details.sync_summary(view), 'Level Sync penalty: 25%', 'Confirmed penalty shown');
+view.sync_active, view.sync_gap = true, 3;
+eq(details.sync_summary(view), 'Level Sync is active', 'Active sync uses client status');
 view.sync_active = nil;
 eq(details.sync_summary(view), 'Level Sync status unknown', 'Missing sync status is not inactive');
-view.sync_active, view.sync_source, view.sync_penalty, view.no_exp_reason = true, 'unknown', nil, nil;
+view.sync_active, view.no_exp_reason = true, nil;
 local plans = 0;
 local services = { sync_plan = function() plans = plans + 1; return 30; end };
 local ui, seen = controls();
 details.draw(settings, view, services, ui);
 local words = table.concat(seen.words, '\n');
-eq(includes(words, 'Level Sync penalty unknown'), true, 'Unavailable status is visible');
-eq(includes(words, 'EXP/HR already includes your Level Sync penalty.'), true, 'Rate needs no manual penalty deduction');
+eq(includes(words, 'Level Sync is active'), true, 'Client sync status is visible');
+eq(includes(words, 'Level difference: 3'), true, 'Client level difference is visible');
+eq(includes(words, 'EXP/HR already includes any Level Sync penalty.'), true, 'Rate needs no manual penalty deduction');
 eq(includes(words, 'No EXP:'), false, 'No speculative no-EXP explanation');
 eq(includes(words, 'Current sampled tier'), false, 'Live view omits tier jargon');
 eq(includes(words, 'Server report age'), false, 'Live view omits age jargon');
@@ -72,7 +67,7 @@ eq(seen.sections['Recent rewards'], false, 'Reward statistics are folded');
 eq(seen.sections['Owned EXP rings'], false, 'Inventory details are folded');
 eq(plans, 0, 'Collapsed scenario is not calculated');
 eq(seen.picks['Estimated players online'], nil, 'Population selector absent from main view');
-eq(includes(table.concat(seen.help, '\n'), 'Phoenix has to send your current Level Sync penalty'), true, 'Hover help explains missing exact penalty');
+eq(includes(table.concat(seen.help, '\n'), 'planner below estimates a penalty'), true, 'Hover help describes the manual planner');
 ui, seen = controls({ ['Advanced sync estimate'] = true });
 details.draw(settings, view, services, ui);
 words = table.concat(seen.words, '\n');
@@ -80,7 +75,7 @@ eq(plans, 1, 'Expanded scenario calculates');
 eq(includes(words, 'This is an estimate for the choices below, not your current penalty.'), true, 'Scenario remains visibly separate from applied status');
 eq(includes(words, 'Estimated penalty: 30%'), true, 'Scenario result is labeled estimate');
 eq(seen.picks['Estimated players online'], true, 'Planner names assumption');
-eq(includes(words, 'Level Sync penalty unknown'), true, 'Planning does not fill unknown applied penalty');
+eq(includes(words, 'Level Sync is active'), true, 'Planning preserves observed sync status');
 view.no_exp_reason = 'distance';
 ui, seen = controls();
 details.draw(settings, view, services, ui);
@@ -93,25 +88,20 @@ eq(includes(words, 'Food: None'), true, 'Inactive food stays concise');
 eq(includes(words, 'Dedication: Inactive'), true, 'Inactive bonus stays concise');
 eq(includes(words, 'Bonus left:'), false, 'Inactive Dedication hides unavailable pool');
 eq(includes(words, 'Food time remaining: Unknown'), false, 'Inactive food does not show redundant unknown timer');
-view.dedication, view.dedication_pool, view.dedication_bonus = true, nil, 0;
+view.dedication, view.dedication_seconds = true, 90;
 ui, seen = controls();
 details.draw(settings, view, services, ui);
 words = table.concat(seen.words, '\n');
-eq(includes(words, 'Bonus: 0%'), true, 'Confirmed zero bonus remains visible');
-eq(includes(words, 'Bonus left: Unknown'), false, 'Missing bonus field is not repeated before explanation');
-local _, note_count = words:gsub('Remaining bonus unknown%. Needs extra Phoenix server support%.', '');
-eq(note_count, 1, 'Unavailable bonus values explained once in section');
-view.dedication_pool = 0;
-ui, seen = controls();
-details.draw(settings, view, services, ui);
-eq(includes(table.concat(seen.words, '\n'), 'Needs extra Phoenix server support'), false, 'Known zero needs no unavailable explanation');
-view.dedication_pool, view.dedication_bonus = nil, nil;
+eq(includes(words, 'Dedication: Active   |   1:30 left'), true, 'Client Dedication status and timer remain visible');
+eq(includes(words, 'Bonus left:'), false, 'No live remaining-bonus value is offered');
+eq(includes(words, 'server support'), false, 'No server installation is suggested');
+view.dedication_seconds = nil;
 ui, seen = controls();
 details.draw(settings, view, services, ui);
 words = table.concat(seen.words, '\n');
-eq(includes(words, 'Bonus values unknown. Needs extra Phoenix server support.'), true, 'Missing bonus fields share one clear explanation');
-eq(includes(words, 'Bonus left:'), false, 'All-unavailable bonus omits redundant unknown row');
-eq(includes(table.concat(seen.help, '\n'), 'Unknown does not mean you have none left.'), true, 'Unavailable explanation preserves uncertainty');
+eq(includes(words, 'Dedication: Active'), true, 'Known buff remains visible without a duration');
+eq(includes(words, 'Bonus left:'), false, 'No unsupported remaining bonus row appears');
+eq(includes(table.concat(seen.help, '\n'), 'not which ring you used or how much bonus EXP is left'), true, 'Help clearly states the client limit');
 local ring_demand;
 services.rings_visible = function(open)
     ring_demand = open;
@@ -133,10 +123,10 @@ eq(includes(table.concat(seen.words, '\n'), 'Some items could not be read. You m
 local alert_groups = {
     { 'Food', { 'food_soon' } },
     { 'EXP chains', { 'chain_soon' } },
-    { 'Dedication', { 'dedication_end', 'dedication_low' } },
+    { 'Dedication', { 'dedication_end' } },
     { 'EXP rings', { 'ring_ready' } },
     { 'Levels and merit points', { 'level', 'merit', 'cap', 'goal' } },
-    { 'Level Sync and missed EXP', { 'sync_change', 'no_exp' } },
+    { 'Missed EXP', { 'no_exp' } },
 };
 local saved_alerts = history.copy(settings.alerts);
 ui, seen = controls();
@@ -155,11 +145,10 @@ counted.alerts.food_enabled = true;
 counted.alerts.events.food_soon.visual, counted.alerts.events.food_soon.sound = true, true;
 counted.alerts.events.chain_soon.sound = true;
 counted.alerts.events.dedication_end.visual = true;
-counted.alerts.events.dedication_low.file = 'Disabled.wav';
 counted.alerts.events.ring_ready.sound = true;
 counted.alerts.events.level.visual, counted.alerts.events.merit.sound = true, true;
 counted.alerts.events.cap.visual, counted.alerts.events.cap.sound = true, true;
-counted.alerts.events.sync_change.sound = true;
+counted.alerts.events.no_exp.sound = true;
 local count_scans, count_plays, count_tests = 0, 0, 0;
 local count_services = {
     sound_files = function() count_scans = count_scans + 1; return {}; end,
@@ -170,7 +159,7 @@ local counted_before = history.copy(counted.alerts);
 ui, seen = controls();
 details.alerts(counted, view, count_services, ui);
 for _, expected in ipairs({ { 'Food', '2 on' }, { 'EXP chains', '1 on' }, { 'Dedication', '1 on' },
-    { 'EXP rings', '1 on' }, { 'Levels and merit points', '3 on' }, { 'Level Sync and missed EXP', '1 on' } }) do
+    { 'EXP rings', '1 on' }, { 'Levels and merit points', '3 on' }, { 'Missed EXP', '1 on' } }) do
     eq(seen.summaries[expected[1]], expected[2], expected[1] .. ' counts enabled alerts rather than enabled outputs');
 end
 eq(seen.summaries['Quiet conditions'], nil, 'Muted conditions are separate from alert counts');
@@ -234,11 +223,11 @@ seen.checks[level].sound.set(false);
 eq(level.file, 'Saved-level.wav', 'Disabling an alert preserves its saved sound file');
 eq(level.volume, 37, 'Disabling an alert preserves its saved volume');
 eq(level.cooldown, 23, 'Disabling an alert preserves its saved cooldown');
-settings.alerts.events.dedication_low.visual = true;
+settings.alerts.events.dedication_end.visual = true;
 ui, seen = controls({ Dedication = true });
 details.alerts(settings, view, {}, ui);
-eq(seen.sliders['Bonus EXP remaining'], true, 'Enabled Dedication alert keeps its threshold');
-eq(includes(table.concat(seen.help, '\n'), 'An unknown amount does not trigger an alert'), true, 'Threshold help preserves server certainty requirement');
+eq(seen.sliders['Bonus EXP remaining'], nil, 'Dedication no longer offers an unsupported threshold');
+eq(includes(table.concat(seen.help, '\n'), 'game reports that your Dedication effect wore off'), true, 'Client Dedication wear-off help remains available');
 
 local plays, refreshes, notification_tests, clicked = 0, 0, {}, nil;
 local original_button, original_push, original_pop = imgui.Button, imgui.PushID, imgui.PopID;
@@ -290,12 +279,12 @@ eq(refreshes, 1, 'Refresh still uses the existing sound folder service');
 eq(includes(table.concat(seen.words, '\n'), 'Food sound unavailable.'), false, 'Refresh clears stale playback error');
 seen.checks[settings.alerts].food_enabled.set(false);
 eq(settings.alerts.food_enabled, false, 'Food checkbox disables the existing notification key');
-clicked = { label = 'Test notification', id = 'dedication_low' };
+clicked = { label = 'Test notification', id = 'dedication_end' };
 ui, seen = controls({ Dedication = true });
 details.alerts(settings, view, food_services, ui);
 eq(seen.summaries.Food, '0 on', 'Unchecking food updates the count even when its group is closed');
 eq(#notification_tests, 1, 'Explicit test invokes one selected alert');
-eq(notification_tests[1], 'dedication_low', 'Repeated test-button labels keep separate event IDs');
+eq(notification_tests[1], 'dedication_end', 'Repeated test-button labels keep separate event IDs');
 eq(plays, 1, 'Regular alert test does not invoke the food service');
 eq(#ids, 0, 'All per-alert ImGui IDs are balanced');
 imgui.Button, imgui.PushID, imgui.PopID = original_button, original_push, original_pop;

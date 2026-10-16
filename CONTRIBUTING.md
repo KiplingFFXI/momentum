@@ -17,6 +17,7 @@ The tests read Ashita libraries from `C:/Games/PhoenixXI/addons/libs` by default
 
 - Preserve readout IDs, settings keys, profiles, saved order, labels, colors, dividers, and character-owned records. Add a tested migration when a stored value must change.
 - Keep unknown client data unknown. A missing value is not zero, and an estimate is not a confirmed server value.
+- Keep Momentum fully client-side. Use client state and normal game packets only. Never add server modules, custom server data feeds, server commands, or server changes for the addon. Leave readings out when the client cannot supply them reliably.
 - Use the pinned Phoenix source and its loaded modules for game rules. Record source changes through the exporter; do not substitute retail or another server's rules.
 - Keep the addon observational. Do not add item use, gameplay commands, automatic mode changes, or new alerts that start enabled.
 - Keep repeated frame work bounded. Avoid file reads, full inventory scans, history sorting, and unnecessary text measurements on every frame.

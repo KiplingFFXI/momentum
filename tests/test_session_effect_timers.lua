@@ -49,7 +49,7 @@ local settings = defaults.make();
 settings.window.open, settings.window.tab = true, 'Session';
 settings.bar.docked, settings.bar.auto_width = false, false;
 settings.bar.x, settings.bar.y, settings.bar.width, settings.bar.height = 20, 700, 1400, 24;
-settings.display.order = { 'rate', 'eta', 'dedication', 'dedication_budget', 'ring' };
+settings.display.order = { 'rate', 'eta', 'dedication', 'ring' };
 for id in pairs(settings.display.enabled) do settings.display.enabled[id] = false; end
 for _, id in ipairs(settings.display.order) do settings.display.enabled[id] = true; end
 settings.tracking.window = 0;
@@ -154,22 +154,9 @@ frame();
 check(drawn.view.rate > 0 and drawn.view.eta > 0, 'Real EXP awards establish EXP/HR and Next before reset');
 timers('Before reset');
 
-local message = table.concat({ 'MOM1', MOCK.player.server_id, MOCK.player.zone, MOCK.player.main_job,
-    50, 50, 1, os.time(), 0, 0, 15, 1, 700, 50, dedication_deadline - MOCK.now, 1 }, '|');
-local status = MOCK.bytes(23 + #message + 1);
-MOCK.put(status, 4, 1, 29);
-MOCK.put(status, 6, 2, MOCK.player.zone);
-for i = 1, #'Momentum' do status[7 + i] = ('Momentum'):byte(i); end
-for i = 1, #message do status[22 + i] = message:byte(i); end
-local report = MOCK.packet(0x017, status);
-MOCK.fire('packet_in', report);
-equal(report.blocked, true, 'Fresh optional Dedication status is accepted');
-frame();
-equal(app.view(MOCK.now).dedication_pool, 700, 'Fresh report supplies the bonus EXP left');
 button_reset();
 cleared('Button reset');
 timers('Button reset');
-equal(app.view(MOCK.now).dedication_pool, 700, 'Reset keeps fresh server Dedication data');
 command('reset');
 cleared('Repeated command reset');
 timers('Repeated command reset');
@@ -181,7 +168,6 @@ timers('Paused session');
 command('reset');
 cleared('Paused reset');
 timers('Paused reset');
-equal(app.view(MOCK.now).dedication_pool, 700, 'Paused reset retains the still-fresh server report');
 command('resume');
 advance(1);
 frame();
@@ -191,8 +177,7 @@ button_reset();
 timers('Repeated button reset');
 advance(9);
 frame();
-equal(app.view(MOCK.now).dedication_pool, nil, 'Resets do not extend server report freshness');
-timers('Client timers after the optional report becomes stale');
+timers('Client timers after repeated session controls');
 
 command('pause');
 advance(dedication_deadline - MOCK.now - 1);

@@ -250,6 +250,64 @@ class ClientSettingsTests(unittest.TestCase):
             assert(not MOMENTUM_TEST.state.broken)
         """)
 
+    def test_retired_bonus_readout_migrates_through_real_save_and_reload(self):
+        write_settings(self.folder, """return T{appearance_version=2,
+            style=T{palette_version=1},visibility=T{mode='keep'},
+            display=T{order=T{'remaining','dedication_budget','rate'},
+                enabled=T{dedication_budget=true,dedication=false},
+                labels=T{remaining='Needed',dedication_budget='Bonus left',rate='EXP/HR'},
+                dividers=T{dedication_budget=true},groups=T{dedication_budget='right'}},
+            alerts=T{dedication_low_points=75,events=T{
+                dedication_low=T{visual=true,sound=true},sync_change=T{visual=true,sound=true},
+                dedication_end=T{visual=true,sound=false}}}
+        }""")
+        lua = client_runtime(self.folder)
+        load_entry(lua)
+        self.assert_current_root(lua)
+        lua.execute("""
+            local s=MOMENTUM_TEST.settings()
+            assert(s.display.enabled.dedication and s.display.enabled.dedication_budget==nil)
+            assert(s.display.order[1]=='remaining' and s.display.order[2]=='dedication' and s.display.order[3]=='rate')
+            assert(s.display.labels.dedication=='' and s.display.labels.dedication_budget==nil)
+            assert(s.display.labels.remaining=='Needed' and s.display.labels.rate=='EXP/HR')
+            assert(s.display.dividers.dedication and s.display.groups.dedication=='right')
+            assert(s.alerts.events.dedication_low==nil and s.alerts.events.sync_change==nil)
+            assert(s.alerts.dedication_low_points==nil and s.alerts.events.dedication_end.visual)
+            assert(CLIENT_SETTINGS.cache.settings.defaults.display.enabled.dedication==false)
+            assert(CLIENT_SETTINGS.cache.settings.defaults.display.enabled.dedication_budget==nil)
+            MOCK.fire('load'); MOCK.frame(0.25)
+            MOMENTUM_TEST.services.save()
+            MOCK.fire('unload')
+            assert(not MOMENTUM_TEST.state.broken)
+        """)
+        saved = lua.execute('return assert(loadfile(...))()', settings_file(self.folder).as_posix())
+        self.assertTrue(saved.display.enabled.dedication)
+        self.assertIsNone(saved.display.enabled.dedication_budget)
+        self.assertEqual([saved.display.order[index] for index in (1, 2, 3)], ['remaining', 'dedication', 'rate'])
+        self.assertEqual(saved.display.labels.dedication, '')
+        self.assertIsNone(saved.display.labels.dedication_budget)
+        self.assertEqual(saved.display.labels.remaining, 'Needed')
+        self.assertEqual(saved.display.labels.rate, 'EXP/HR')
+        self.assertIsNone(saved.alerts.events.dedication_low)
+        self.assertIsNone(saved.alerts.events.sync_change)
+        self.assertIsNone(saved.alerts.dedication_low_points)
+        self.assertTrue(saved.alerts.events.dedication_end.visual)
+        reloaded = client_runtime(self.folder)
+        load_entry(reloaded)
+        self.assert_current_root(reloaded)
+        reloaded.execute("""
+            local s=MOMENTUM_TEST.settings()
+            assert(s.display.enabled.dedication and s.display.enabled.dedication_budget==nil)
+            assert(s.display.order[1]=='remaining' and s.display.order[2]=='dedication' and s.display.order[3]=='rate')
+            assert(s.display.labels.dedication=='' and s.display.labels.dedication_budget==nil)
+            assert(s.display.labels.remaining=='Needed' and s.display.labels.rate=='EXP/HR')
+            assert(s.display.dividers.dedication and s.display.groups.dedication=='right')
+            assert(s.alerts.events.dedication_low==nil and s.alerts.events.sync_change==nil)
+            assert(s.alerts.dedication_low_points==nil and s.alerts.events.dedication_end.visual)
+            assert(CLIENT_SETTINGS.cache.settings.defaults.display.enabled.dedication==false)
+            assert(CLIENT_SETTINGS.cache.settings.defaults.display.enabled.dedication_budget==nil)
+        """)
+
     def test_saved_migration_marker_prevents_repeating_migration(self):
         write_settings(self.folder, """return T{appearance_version=2,
             bar=T{width=900,height=36,x=100,padding=10},

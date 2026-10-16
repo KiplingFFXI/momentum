@@ -91,7 +91,7 @@ check(text:find('150 EXP left', 1, true) and text:find('222', 1, true) and text:
 
 settings.display.order = { 'chain_time', 'chain' };
 settings.display.enabled.chain_time = true;
-view.chain_source, view.chain_active, view.chain_left = 'local', nil, 10.1;
+view.chain_source, view.chain_left = 'local', 10.1;
 draw(); previous = builds;
 view.chain_left = 9.9;
 check(draw():find('~0:10', 1, true), 'The local countdown retains its displayed second.');
@@ -138,17 +138,19 @@ info = hud.draw_inline(settings, view, 1300);
 check(not info.overflow and info.hidden_count == 0, 'Widening the bar invalidates its overflow decision.');
 settings.display.order = { 'dedication', 'sync', 'food', 'chain_time' };
 for _, id in ipairs(settings.display.order) do settings.display.enabled[id] = true; end
-view.chain_source, view.chain_left = 'server', 15;
-for _, field in ipairs({ 'dedication', 'sync_active', 'food', 'chain_active' }) do view[field] = false; end
+view.chain_source, view.chain_left = 'unknown', 15;
+for _, field in ipairs({ 'dedication', 'sync_active', 'food' }) do view[field] = false; end
 text = draw();
 check(text:find('No Dedication', 1, true) and text:find('Off', 1, true) and text:find('None', 1, true) and not text:find('0:15', 1, true), 'Explicit inactive states have their own readings.');
-for _, field in ipairs({ 'dedication', 'sync_active', 'food', 'chain_active' }) do view[field] = nil; end
+for _, field in ipairs({ 'dedication', 'sync_active', 'food' }) do view[field] = nil; end
+view.chain_source = 'local';
 text = draw();
 check(text:find('Dedication --', 1, true) and not text:find('Off', 1, true) and not text:find('None', 1, true) and text:find('0:15', 1, true), 'False-to-unknown transitions invalidate every distinct reading.');
-for _, field in ipairs({ 'dedication', 'sync_active', 'food', 'chain_active' }) do view[field] = false; end
+for _, field in ipairs({ 'dedication', 'sync_active', 'food' }) do view[field] = false; end
+view.chain_source = 'unknown';
 text = draw();
 check(text:find('No Dedication', 1, true) and text:find('Off', 1, true) and text:find('None', 1, true) and not text:find('0:15', 1, true), 'Unknown-to-false transitions invalidate every distinct reading.');
-for _, pair in ipairs({ { 'dedication', 'dedication' }, { 'sync', 'sync_active' }, { 'food', 'food' }, { 'chain_time', 'chain_active' } }) do
+for _, pair in ipairs({ { 'dedication', 'dedication' }, { 'sync', 'sync_active' }, { 'food', 'food' } }) do
     settings.display.order = { pair[1] };
     view[pair[2]] = false;
     local inactive = readouts.cached(settings, view)[1].value;

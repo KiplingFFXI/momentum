@@ -254,7 +254,7 @@ def main():
                           '--input-script', str(HERE / 'group_controls_input.json')]),
         ('groups-priority-narrow', ['--hud', '--window', 'momentum', '--set', 'bar.docked=false', '--set', 'bar.auto_width=false',
                                     '--set', 'bar.width=240', '--input-script', str(HERE / 'priority_input.json')]),
-        ('details-server-fixture', ['--window', 'settings', '--tab', 'Details', '--exec', details_fixture,
+        ('details-client-fixture', ['--window', 'settings', '--tab', 'Details', '--exec', details_fixture,
                                     '--exec', heading_scroll('Level sync', 'Details')]),
         ('details-ring-fixture', ['--window', 'settings', '--tab', 'Details', '--exec', details_fixture,
                                   '--exec', heading_scroll('Owned EXP rings', 'Details')]),

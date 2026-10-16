@@ -80,7 +80,7 @@ Automatic and manual selection share each mode's readouts, order, labels, divide
 | Dedication | Whether the status is active, with time remaining when available. |
 | Tracking status | Paused, collecting a rate, or capped state. |
 
-Additional selectable fields cover EXP and LP progress/rates/totals independently, averages of recent gains, gains counted, Level Sync penalty and level gap, food effects, EXP rings, Dedication's remaining bonus EXP, and server no-EXP reasons. These start disabled to keep the default bar compact. **Recent gains to average** under Tracking sets the number of gains to compare. **Recent EXP and LP** under Details shows the full breakdown, including the middle, lowest, and highest recent gains.
+Additional selectable fields cover EXP and LP progress/rates/totals independently, averages of recent gains, gains counted, Level Sync levels and level gap, food effects, EXP rings, and missed EXP reasons from normal game messages. These start disabled to keep the default bar compact. **Recent gains to average** under Tracking sets the number of gains to compare. **Recent EXP and LP** under Details shows the full breakdown, including the middle, lowest, and highest recent gains.
 
 ## Place the bar
 
@@ -130,7 +130,7 @@ A stored-merit goal changes when you spend merits; a session-merits goal counts 
 
 Chain bonuses follow Phoenix's rules: 20%, 25%, 30%, 40%, then 50% for chain 5 onward. Phoenix chooses the next-chain window from the defeated monster's EXP level. After an observed chain reward, Momentum starts one local countdown using those tables. The reward packet does not identify the monster's level, so the addon uses the shortest applicable window when that level is unavailable. The actual chain can remain open longer. The next monster must still qualify.
 
-Local timing needs no server installation. The single countdown is marked with `~` because it starts when the reward reaches your client. It shows `--` before an observed chain or when the estimate expires; that is not proof that the server chain ended. An ordinary reward without a chain number cannot start the timer because it may come from a monster that does not qualify. Zoning and other observation gaps discard old timing. If the optional companion provides a fresh native deadline, that takes precedence and can also show the initial window before chain 1.
+The single countdown is marked with `~` because it starts when the reward reaches your client. It shows `--` before an observed chain or when the estimate expires; that is not proof that the server chain ended. An ordinary reward without a chain number cannot start the timer because it may come from a monster that does not qualify. Zoning and other observation gaps discard old timing.
 
 ## Gil
 
@@ -148,7 +148,7 @@ Open **Dynamis** for the current run, options, objectives, drops, treasure pool,
 
 Choose **Dynamis** from Bar mode, or **Use Dynamis bar** under Dynamis options, to arrange its readouts with the usual Display controls. Select EXP, Merits, or Automatic from Bar mode to switch back. Switching bars leaves the run and its timers alone.
 
-**Time left** comes from the end time on your Perpetual Hourglass. Time extensions update that end time automatically; they are not added twice. The hourglass can restore the timer and total extension minutes after a reload or late join, but it cannot tell Momentum which extension monsters were defeated. **Extensions seen** counts extension messages received while tracking. Without a readable hourglass for the current zone, the timer stays `--`. No server companion is needed for Dynamis.
+**Time left** comes from the end time on your Perpetual Hourglass. Time extensions update that end time automatically; they are not added twice. The hourglass can restore the timer and total extension minutes after a reload or late join, but it cannot tell Momentum which extension monsters were defeated. **Extensions seen** counts extension messages received while tracking. Without a readable hourglass for the current zone, the timer stays `--`.
 
 When server time is not available yet, Momentum uses your computer clock and marks the Dynamis countdown with `~`. It switches to server time when available.
 
@@ -182,23 +182,23 @@ Records are saved every 30 seconds and on normal unload in `config/addons/moment
 
 ## Phoenix status and planning
 
-The **Details** page shows **Level Sync is off** when sync is off. While synced, it shows your actual and synced levels, plus the applied penalty when the server provides it. **Level Sync penalty unknown** means the addon has no fresh exact percentage. Your rate still uses the EXP you actually receive or retain, including any applied penalties.
+The **Details** page shows **Level Sync is off** when sync is off. While synced, it shows your actual and synced levels and their level gap. Your rate uses the EXP you actually receive or retain, including any applied penalties.
 
 The optional **Level Sync estimate** section starts closed. Choose a **Level Sync level** and **Estimated players online** to calculate a possible penalty. Phoenix uses actual main-job level minus effective level. A fresh calculation returns zero for a gap of ten or fewer. Above ten, the entire gap is multiplied by the sampled population-tier rate, rounded down, and capped at 50 percent. The tier rates are 0 below 500 sessions, 1.5 from 500, 2 from 1,000, and 2.5 from 2,000.
 
-Phoenix stores the applied penalty on the character. Its population tier and effective level can change without immediately replacing that stored amount. Only a fresh report from the optional server companion establishes the applied penalty. Unknown stays Unknown; the planner does not replace it. This penalty changes the EXP bonus modifier, not necessarily that percentage of the final award.
+Phoenix stores the applied penalty on the character. Its population tier and effective level can change without immediately replacing that stored amount. Normal client data does not expose the stored amount, so Momentum does not show it or alert on changes to it. The manual calculator is an estimate, not your current applied penalty. This penalty changes the EXP bonus modifier, not necessarily that percentage of the final award.
 
 Server no-EXP notices identify an out-of-range recipient or a sync target that is dead or too far from the defeated monster. A missing reward alone does not establish either cause.
 
-The [optional companion](../server/README.txt) is supplied separately under `server/`, with operator installation instructions. It includes a Lua publisher and a C++ reader for the native chain deadline. The native deadline requires the server to be configured and rebuilt with the C++ module; the Lua status feed can run without that reader. Installing or reloading the client addon does not activate either module, and this repository does not establish that they are deployed. Players can opt in with `!momentumstatus on` only after an operator installs the service, and opt out with `!momentumstatus off`. Momentum never sends those commands itself. The client accepts only valid, current reports for its own character and leaves ordinary chat alone.
+Momentum uses client state and normal game packets only. It will never require a server module, custom server data feed, or server commands.
 
 ## Rings, food, and Dedication
 
 **EXP rings** under Details uses Phoenix's ring definitions and readable inventory data for charges, recast, and the wait after equipping. A finished recast does not guarantee that all equipment or other use requirements are satisfied. The addon never equips or uses an item.
 
-Food and Dedication durations are shown only when the client supplies usable timers. Food names require an observed successful item use followed by the food effect. An effect already active at load can have an unknown source. Dedication's exact remaining bonus EXP requires the optional server companion; its icon alone does not expose that value.
+Food and Dedication durations are shown only when the client supplies usable timers. Food names require an observed successful item use followed by the food effect. An effect already active at load can have an unknown source. Dedication's remaining bonus EXP is not exposed by normal client data and is not tracked.
 
-Under **Display > Add readout > Buffs**, choose **Dedication status and timer** to track the buff and its available countdown. **Dedication bonus EXP (server data)** shows the remaining bonus amount only with extra Phoenix server support. `--` means that amount is unknown. Using an EXP ring earlier or reloading Momentum does not supply the missing amount.
+Under **Display > Add readout > Buffs**, choose **Dedication status and timer** to track the buff and its available countdown. Older layouts that enabled the removed bonus EXP reading switch to this buff reading. Your other readouts and display choices are kept.
 
 ## Alerts
 
@@ -206,17 +206,17 @@ On the **Alerts** page, open the group you want:
 
 - **Food:** food wearing off or ending soon.
 - **EXP chains:** the EXP chain timer running low.
-- **Dedication:** Dedication wearing off. Low bonus EXP warnings need extra Phoenix server support.
+- **Dedication:** Dedication wearing off.
 - **EXP rings:** a ring's recast finishing.
 - **Levels and merit points:** levels, merit points, goals, and nearly full merit points.
-- **Level Sync and missed EXP:** confirmed Level Sync penalty changes and reasons Phoenix gives for missed EXP. The penalty-change alert needs extra Phoenix server support; starting Level Sync or changing its level alone does not trigger it.
+- **Missed EXP:** reasons Phoenix gives for missed EXP through normal game messages.
 - **Dynamis:** time running low, time extensions, wanted drops, treasure pool timing, clear key items, and support job unlocks.
 
 These groups start closed and remember whether you leave them open or closed. Each heading shows how many alerts are on, such as **Food (2 on)**. An alert with both notice and sound counts once. Opening a group does not turn its alerts on. For each alert, check **Show notice**, **Play sound**, or both. Leave both unchecked to turn it off. A sound alert also needs a selected sound file. **Food effect wore off** has only **Play sound**. EXP chain warnings based on the local timer are labeled as estimated.
 
 Each sound alert has its own **Sound** and **Sound volume**. Warning times or amounts appear with the alerts that use them. Alerts other than **Food effect wore off** also have **Time between alerts** and a **Test notification** button to try your choices. Food effect wore off uses **Play** and plays once per confirmed end message. Notices briefly show a small marker and border highlight inside the existing bar. Hover the marker for the notice; your readings and progress rail stay visible. **When to mute alerts** covers paused sessions and events. Simultaneous alerts produce at most one sound per second.
 
-All new events start off. Initial state, reloads, zoning, death, stale reports, and enabling an option do not produce inferred milestone alerts. Chain warnings use the current local countdown or a fresh server timer; changing timing sources does not trigger a warning. Dedication removal follows an authoritative effect-end message; it does not prove that duration expired naturally.
+All new events start off. Initial state, reloads, zoning, death, and enabling an option do not produce inferred milestone alerts. Chain warnings use the local estimated countdown. Dedication removal follows the game's effect-end message; it does not prove that duration expired naturally.
 
 ## Food notification
 

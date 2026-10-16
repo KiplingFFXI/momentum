@@ -1,7 +1,7 @@
 [
   {
     "frame": 2,
-    "lua": "PREVIEW.assert_alerts_unchanged(); for _,open in pairs(PREVIEW.alert_sections) do assert(not open,'Alert groups must start collapsed') end; PREVIEW.assert_alert_counts({Food=0,['EXP chains']=0,Dedication=0,['EXP rings']=0,['Levels and merit points']=0,['Level Sync and missed EXP']=0})"
+    "lua": "PREVIEW.assert_alerts_unchanged(); for _,open in pairs(PREVIEW.alert_sections) do assert(not open,'Alert groups must start collapsed') end; PREVIEW.assert_alert_counts({Food=0,['EXP chains']=0,Dedication=0,['EXP rings']=0,['Levels and merit points']=0,['Missed EXP']=0})"
   },
   {
     "frame": 2,

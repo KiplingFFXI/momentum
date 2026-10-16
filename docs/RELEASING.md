@@ -45,8 +45,9 @@ For the Linux, gil, and saved-layout update, keep these results separate:
 
 For Dedication and session UI changes, check the visible text as well as the values:
 
-- Dedication status and timer follows the ordinary buff data. The bonus EXP readout and low bonus EXP alert identify their extra server-data requirement. An unknown amount stays unknown; changing ring timing or reloading must not invent it. The Dedication wore off alert still follows the normal effect-end message.
-- The Level Sync penalty-change alert names its numeric penalty trigger. Starting sync, changing level, or editing the calculator alone must not create that alert.
+- Dedication status and timer follows the ordinary buff data, and Dedication wore off follows the normal effect-end message. The removed bonus EXP reading and low bonus EXP alert must not appear. Older enabled bonus EXP readings migrate to Dedication status and timer in every saved layout and profile without carrying the old Bonus left label. Other readout choices stay intact.
+- Level Sync shows actual level, synced level, and level gap. The manual calculator clearly describes an estimate, never a current applied penalty. The removed penalty-change alert must not appear. Standard missed EXP messages and alerts still work.
+- Former custom status messages remain ordinary chat and cannot change readings or trigger extra player sampling. Packaging and source contain no server module or custom feed implementation. Check repeated loading and profile migration without reintroducing removed options.
 - In Automatic, the editing label follows the actual saved EXP, Merits, or Dynamis layout, even with automatic switching off or a different EXP/LP display choice. Manual selection needs no duplicate label. Showing the label must not alter settings or rebuild saved layouts.
 - Current session and Copy summary show the same current gil gained, spent, net change, and Gil/HR. Check unknown data, known zero, negative values, and held paused totals. The paused-bar help must still name the live timers that keep running.
 
@@ -80,8 +81,6 @@ python tools/release_notes.py --out tests/out/release-notes.md
 
 Check the notes against the final changes and include the update steps that preserve `config/addons/momentum/`. Keep verification results separate from feature claims, and do not describe a local archive as published.
 
-If an operator specifically needs the optional server package, build it separately with `--server` and review [its instructions](../server/README.txt). Packaging it is not deployment, and the client addon does not require it. Dynamis uses the client hourglass and incoming state and needs no server companion.
-
 ## Create a draft
 
 After the reviewed source is available in the GitHub repository, a maintainer can open **Actions > Draft release > Run workflow** and choose the intended branch. The workflow:
@@ -92,7 +91,7 @@ After the reviewed source is available in the GitHub repository, a maintainer ca
 4. Builds the runtime ZIP and a SHA-256 file on Ubuntu.
 5. Creates a draft named `Momentum <version>` for the selected commit.
 
-The workflow runs only by manual request. Version edits, pushes, tags, and schedules do not create a release. It does not regenerate Phoenix data or upload the optional server package.
+The workflow runs only by manual request. Version edits, pushes, tags, and schedules do not create a release. It does not regenerate Phoenix data. Momentum is fully client-side; do not add or package server modules or custom server data feeds.
 
 Review the draft's version, target commit, notes, archive, and checksum. Publishing remains a separate maintainer action on the Releases page. An existing release's files should not be silently replaced.
 

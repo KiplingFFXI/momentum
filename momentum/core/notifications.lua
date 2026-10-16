@@ -3,7 +3,7 @@ local methods = {}
 methods.__index = methods
 
 notifications.EVENTS = { 'level', 'merit', 'goal', 'cap', 'food_soon', 'dedication_end',
-    'dedication_low', 'ring_ready', 'sync_change', 'no_exp', 'chain_soon' }
+    'ring_ready', 'no_exp', 'chain_soon' }
 
 local function finite(value)
     return type(value) == 'number' and value == value and value ~= math.huge and value ~= -math.huge
@@ -23,7 +23,7 @@ function notifications.new()
 end
 
 function methods:discontinuity()
-    self.before, self.sampled, self.dedication_seen, self.server = nil, nil, nil, nil
+    self.before, self.sampled, self.dedication_seen = nil, nil, nil
     self.queue, self.notice, self.enabled = {}, nil, {}
 end
 
@@ -84,31 +84,6 @@ function methods:dynamis(event, now, settings, quiet)
     return self:_emit(event.id, event.message, now, settings, quiet)
 end
 
-function methods:confirmed(feed, now, settings, quiet)
-    if not finite(now) or not self.before or not self.sampled or now < self.sampled or now - self.sampled > 2 then return end
-    local old = self.server
-    self.server = { id = feed.id, job = feed.job, zone = feed.zone, at = now, enabled = feed.enabled,
-        sync_penalty = feed.sync_penalty, dedication = feed.dedication, dedication_pool = feed.dedication_pool }
-    local alerts = settings.alerts or {}
-    quiet = quiet or (alerts.quiet_paused ~= false and self.before.paused) or self.before.dead
-    if not old or not old.enabled or not feed.enabled or old.id ~= feed.id or old.job ~= feed.job or old.zone ~= feed.zone
-        or now < old.at or now - old.at > 15 then return end
-    for _, id in ipairs({ 'sync_change', 'dedication_low' }) do
-        local row = config(settings, id)
-        if self.enabled[id] == signature(row) then
-            if id == 'sync_change' and finite(old.sync_penalty) and finite(feed.sync_penalty) and old.sync_penalty ~= feed.sync_penalty then
-                self:_emit(id, 'Level Sync penalty: ' .. feed.sync_penalty .. '%.', now, settings, quiet)
-            elseif id == 'dedication_low' and old.dedication and feed.dedication
-                and finite(old.dedication_pool) and finite(feed.dedication_pool) then
-                local threshold = tonumber(alerts.dedication_low_points) or 100
-                if old.dedication_pool > threshold and feed.dedication_pool <= threshold then
-                    self:_emit(id, 'Dedication bonus EXP left: ' .. math.floor(feed.dedication_pool) .. '.', now, settings, quiet)
-                end
-            end
-        end
-    end
-end
-
 function methods:observe(view, snapshot, now, settings, quiet)
     if not finite(now) or not view or not view.valid or not snapshot or not snapshot.valid then
         self:discontinuity()
@@ -119,10 +94,9 @@ function methods:observe(view, snapshot, now, settings, quiet)
     local current = { id = snapshot.id, job = snapshot.job, zone = snapshot.zone, dead = snapshot.dead == true,
         level = view.level, merits = view.merits, merit_cap = view.merit_cap, merits_gained = view.merits_gained,
         paused = view.paused == true, food = snapshot.food == true, food_seconds = snapshot.food_seconds,
-        dedication = snapshot.dedication == true, dedication_pool = view.dedication_pool,
-        sync_penalty = view.sync_source == 'server' and view.sync_penalty or nil,
+        dedication = snapshot.dedication == true,
         chain = view.chain, chain_source = view.chain_source,
-        chain_left = (view.chain_source == 'server' or view.chain_source == 'local') and view.chain_left or nil,
+        chain_left = view.chain_source == 'local' and view.chain_left or nil,
         rings = {}, goal = view.goal }
     for _, ring in ipairs((view.rings or {}).entries or view.rings or {}) do
         if ring.key then
@@ -135,7 +109,6 @@ function methods:observe(view, snapshot, now, settings, quiet)
         before = nil
         self.notice, self.queue = nil, {}
         self.dedication_seen = nil
-        self.server = nil
     end
     if current.dedication and not current.dead then self.dedication_seen = now end
     local armed = {}
@@ -183,11 +156,10 @@ function methods:observe(view, snapshot, now, settings, quiet)
             end
         end
         local chain_threshold = tonumber(alerts.chain_soon_seconds) or 10
-        if current.chain_source == before.chain_source
-            and (current.chain_source == 'server' or current.chain_source == 'local')
+        if current.chain_source == 'local' and before.chain_source == 'local'
             and current.chain == before.chain and finite(before.chain_left) and finite(current.chain_left)
             and before.chain_left > chain_threshold and current.chain_left <= chain_threshold and current.chain_left > 0 then
-            emit('chain_soon', current.chain_source == 'local' and 'Estimated EXP chain time is running out.' or 'EXP chain time is running out.')
+            emit('chain_soon', 'Estimated EXP chain time is running out.')
         end
     end
     self.before, self.sampled = current, now

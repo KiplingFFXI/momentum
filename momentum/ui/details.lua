@@ -24,35 +24,22 @@ local function row(ui, text, help)
     ui.help(help);
 end
 
-local sync_help = 'Phoenix has to send your current Level Sync penalty before Momentum can show it. Your level difference alone cannot tell us the penalty. EXP/HR already uses the EXP you gain, so you do not need to subtract it again.';
+local sync_help = 'Shows your normal level, synced level, and level difference. EXP/HR uses the EXP you receive, including any Level Sync penalty. The planner below estimates a penalty for the choices you enter.';
 
 function details.sync_summary(view)
     if view.sync_active == false then return 'Level Sync is off'; end
     if view.sync_active ~= true then return 'Level Sync status unknown'; end
-    if view.sync_source == 'server' and type(view.sync_penalty) == 'number' then
-        return 'Level Sync penalty: ' .. known(view.sync_penalty, '%');
-    end
-    return 'Level Sync penalty unknown';
+    return 'Level Sync is active';
 end
 
 local function sync_details(settings, view, services, ui)
     if ui.section('Level sync', sync_help, true) then
-        local report_help = sync_help;
-        if view.sync_active == true and view.sync_source == 'server' then
-            if type(view.sync_age) == 'number' then report_help = report_help .. ' Last updated ' .. time(view.sync_age) .. ' ago.'; end
-            if type(view.sync_rate) == 'number' then
-                report_help = report_help .. ' Phoenix currently reports ' .. tostring(view.sync_rate / 10)
-                    .. '% per level for its population bracket. Your penalty may have been set at a different rate. This does not show how many players are online.';
-            end
-        end
-        row(ui, details.sync_summary(view), report_help);
+        row(ui, details.sync_summary(view), sync_help);
         if view.sync_active then
             row(ui, 'Your level: ' .. known(view.level) .. '   |   Synced to: ' .. known(view.sync_level or view.effective_level),
                 'Your level is your main job\'s level. Synced to is the level you are playing at during Level Sync. The difference is ' .. known(view.sync_gap) .. ' levels.');
-            if view.sync_source ~= 'server' or type(view.sync_penalty) ~= 'number' then
-                ui.note('Phoenix has not sent your current Level Sync penalty.');
-            end
-            row(ui, 'EXP/HR already includes your Level Sync penalty.',
+            row(ui, 'Level difference: ' .. known(view.sync_gap), 'Your normal level minus your synced level. This is a level difference, not a penalty percentage.');
+            row(ui, 'EXP/HR already includes any Level Sync penalty.',
                 'Both rate calculations use the EXP you actually receive. Do not subtract the Level Sync penalty again.');
         end
         local reasons = {
@@ -126,20 +113,6 @@ function details.draw(settings, view, services, ui)
         local dedication_time = view.dedication and type(view.dedication_seconds) == 'number' and '   |   ' .. time(view.dedication_seconds) .. ' left' or '';
         row(ui, 'Dedication: ' .. dedication .. dedication_time,
             'Dedication is the bonus EXP effect from an EXP ring. The status icon tells us it is active, but not which ring you used or how much bonus EXP is left.');
-        if view.dedication then
-            local pool_known, bonus_known = type(view.dedication_pool) == 'number', type(view.dedication_bonus) == 'number';
-            local values = {};
-            if pool_known then values[#values + 1] = 'Bonus left: ' .. known(view.dedication_pool); end
-            if bonus_known then values[#values + 1] = 'Bonus: ' .. known(view.dedication_bonus, '%'); end
-            if #values > 0 then
-                row(ui, table.concat(values, '   |   '), 'The bonus EXP left and bonus percentage for your current Dedication effect, as reported by Phoenix.');
-            end
-            if not pool_known or not bonus_known then
-                local missing = not pool_known and (not bonus_known and 'Bonus values' or 'Remaining bonus') or 'Bonus percentage';
-                ui.note(missing .. ' unknown. Needs extra Phoenix server support.');
-                ui.help('Phoenix must send these numbers through its optional server support. Your Dedication icon and timer cannot tell Momentum how much bonus EXP is left. Unknown does not mean you have none left.');
-            end
-        end
     end
     local rings_open = ui.section('Owned EXP rings', 'Charges and recast for EXP rings the client can read in your bags. Equip and use your rings yourself.', false);
     local ring_snapshot = services.rings_visible and services.rings_visible(rings_open);
@@ -183,11 +156,9 @@ local alert_help = {
     food_end = 'Play a sound once when Phoenix reports that your food effect wore off. Removing food can trigger it too. Loading, zoning, and turning this on stay quiet. This alert supports sound only.',
     food_soon = 'Warn when your food effect has this much time left. Choose Food effect wore off for a sound when it ends.',
     dedication_end = 'Notify when the game reports that your Dedication effect wore off. Loading the addon or zoning does not trigger this alert.',
-    dedication_low = 'Warn when Dedication has this much bonus EXP left. Needs extra Phoenix server support. An unknown amount does not trigger an alert.',
     ring_ready = 'Notify when an EXP ring with charges finishes its recast. You still need to equip and use it yourself.',
-    sync_change = 'Notify when your Level Sync penalty changes. Needs extra Phoenix server support. Starting Level Sync or changing its level does not trigger this by itself. Changing the estimate stays quiet too.',
     no_exp = 'Notify when Phoenix says why you missed EXP, such as being too far from the monster. Simply gaining no EXP does not trigger an alert.',
-    chain_soon = 'Warn when the EXP chain timer reaches the time below. Estimated timing uses Phoenix rules; timing sent by Phoenix is used when available. Your next kill still has to qualify for an EXP chain.',
+    chain_soon = 'Warn when the estimated EXP chain timer reaches the time below. Timing uses Phoenix rules and may end early. Your next kill still has to qualify for an EXP chain.',
     dyna_time = 'Warn when your Dynamis hourglass reaches one of the times below. Time extensions update the warnings. Unknown time stays quiet.',
     dyna_extension = 'Notify when your Dynamis run gains a time extension. Loading or rejoining a run stays quiet.',
     dyna_wanted = 'Notify when a wanted item enters the treasure pool. Choose jobs and items under Dynamis > Wanted drops.',
@@ -199,10 +170,10 @@ local alert_help = {
 local alert_groups = {
     { 'Food', 'Food wearing off or running low.', { 'food_end', 'food_soon' } },
     { 'EXP chains', 'A warning before your EXP chain timer runs out.', { 'chain_soon' } },
-    { 'Dedication', 'Dedication wearing off or running low on bonus EXP.', { 'dedication_end', 'dedication_low' } },
+    { 'Dedication', 'Dedication wearing off.', { 'dedication_end' } },
     { 'EXP rings', 'An EXP ring with charges is ready to use.', { 'ring_ready' } },
     { 'Levels and merit points', 'Levels, merit points, nearly full merits, and your tracking goal.', { 'level', 'merit', 'cap', 'goal' } },
-    { 'Level Sync and missed EXP', 'Level Sync penalty changes and reasons Phoenix gives for missed EXP.', { 'sync_change', 'no_exp' } },
+    { 'Missed EXP', 'Reasons the game gives for missed EXP.', { 'no_exp' } },
     { 'Dynamis', 'Time, time extensions, wanted drops, the treasure pool, clears, and support job unlocks.', { 'dyna_time', 'dyna_extension', 'dyna_wanted', 'dyna_pool', 'dyna_clear', 'dyna_subjob' } },
 };
 local alert_names = { food_end = 'Food effect wore off' };
@@ -251,9 +222,6 @@ local function event_alert(settings, id, services, ui, sound_files)
     if id == 'food_soon' then
         ui.slider(settings.alerts, 'food_soon_seconds', 'Food warning time', 5, 600, '%.0f seconds',
             'Warn when your food effect has this many seconds left.');
-    elseif id == 'dedication_low' then
-        ui.slider(settings.alerts, 'dedication_low_points', 'Bonus EXP remaining', 1, 100000, nil,
-            'Warn when Dedication has this much bonus EXP left. Needs extra Phoenix server support. Unknown amounts stay quiet.');
     elseif id == 'chain_soon' then
         ui.slider(settings.alerts, 'chain_soon_seconds', 'EXP chain warning time', 1, 60, '%.0f seconds',
             'Warn when the EXP chain timer has this many seconds left. An estimated timer can end early. No alert plays when the time is unknown.');

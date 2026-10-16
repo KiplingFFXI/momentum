@@ -1,9 +1,8 @@
--- Synthetic server observations for UI review, not a client capture.
+-- Example values for UI review.
 local view = PREVIEW.view;
 view.sync_active, view.sync_level, view.effective_level, view.sync_gap = true, 50, 50, 11;
-view.sync_source, view.sync_penalty, view.sync_rate, view.sync_age = 'server', 16, 15, 3;
 view.food, view.food_name, view.food_seconds = true, 'Meat Mithkabob', 840;
-view.dedication, view.dedication_pool, view.dedication_bonus, view.dedication_seconds = true, 850, 50, 1830;
+view.dedication, view.dedication_seconds = true, 1830;
 view.no_exp_reason = 'sync_target';
 local ring = require('ui.defaults').copy(require('data.phoenix_rules').rings[15762]);
 ring.id, ring.key, ring.charges, ring.recast, ring.ready, ring.equip_delay = 15762, 'fixture', 4, 125, false, 8;

@@ -67,14 +67,14 @@ local function award(amount, chain)
     app.sample(MOCK.now);
     frame();
 end
-local function timers(chain, deadline, label, source)
+local function timers(chain, deadline, label)
     local view = app.view(MOCK.now);
     equal(view.chain, chain, label .. ': chain number stays');
-    equal(view.chain_source, source or 'local', label .. ': chain source stays');
+    equal(view.chain_source, 'local', label .. ': chain source stays');
     close(view.chain_left, deadline - MOCK.now, label .. ': original chain deadline stays');
     equal(view.food, true, label .. ': food effect stays active');
     close(view.food_seconds, food_deadline - MOCK.now, label .. ': original food expiry stays');
-    equal(drawn.parts.chain_time, (source == 'server' and '' or '~') .. readouts.format_time(deadline - MOCK.now),
+    equal(drawn.parts.chain_time, '~' .. readouts.format_time(deadline - MOCK.now),
         label .. ': cached chain timer follows the same deadline');
     check(drawn.parts.food:find(readouts.format_time(food_deadline - MOCK.now), 1, true), label .. ': food readout keeps counting');
 end
@@ -156,24 +156,14 @@ equal(app.view(MOCK.now).chain_left, nil, 'Reset cannot restart an expired chain
 equal(drawn.parts.chain_time, '--', 'Expired timer stays empty on the bar after reset');
 close(app.view(MOCK.now).food_seconds, food_deadline - MOCK.now, 'Food continues after chain expiry and reset');
 
-local server_deadline = MOCK.now + 45;
-local message = table.concat({ 'MOMC1', MOCK.player.server_id, MOCK.player.zone, MOCK.player.main_job,
-    50, 50, 1, os.time(), 1, 1, 4, 100000, 145000 }, '|');
-local bytes = MOCK.bytes(23 + #message + 1);
-MOCK.put(bytes, 4, 1, 29);
-MOCK.put(bytes, 6, 2, MOCK.player.zone);
-for i = 1, #'Momentum' do bytes[7 + i] = ('Momentum'):byte(i); end
-for i = 1, #message do bytes[22 + i] = message:byte(i); end
-local report = MOCK.packet(0x017, bytes);
-MOCK.fire('packet_in', report);
-equal(report.blocked, true, 'Optional server chain report is accepted');
-frame();
-timers(4, server_deadline, 'Server chain before reset', 'server');
+award(100, 4);
+deadline = app.view(MOCK.now).chain_started + app.view(MOCK.now).chain_window;
+timers(4, deadline, 'Fresh observed chain before reset');
 command_reset();
-cleared('Server chain reset');
-timers(4, server_deadline, 'Server chain reset', 'server');
+cleared('Fresh observed chain reset');
+timers(4, deadline, 'Fresh observed chain reset');
 frame(1);
-timers(4, server_deadline, 'Server chain next second', 'server');
+timers(4, deadline, 'Fresh observed chain next second');
 
 local isolated = require('core.tracker').new();
 isolated:observe(history.copy(app.state.snapshot), MOCK.now);
@@ -212,7 +202,7 @@ equal(paused_defeat:view(MOCK.now + 2, app.settings()).chain_left, nil,
 local zone = MOCK.bytes(8);
 MOCK.put(zone, 4, 4, MOCK.player.server_id);
 MOCK.fire('packet_in', MOCK.packet(0x00A, zone));
-equal(app.view(MOCK.now).chain_left, nil, 'Zoning still invalidates retained local and server chain timing');
+equal(app.view(MOCK.now).chain_left, nil, 'Zoning still invalidates retained client chain timing');
 equal(app.view(MOCK.now).food_seconds, nil, 'Zoning discards stale food timing until fresh status arrives');
 MOCK.fire('packet_in', MOCK.packet(0x061, MOCK.bytes(96)));
 frame(1);

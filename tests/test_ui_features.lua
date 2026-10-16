@@ -26,18 +26,14 @@ eq(s.display.priorities.rate, 50, 'Invalid priority restored');
 eq(s.alerts.events.level.file, 'test.wav', 'Event sound keeps safe filename');
 eq(s.alerts.events.level.cooldown, 0, 'Cooldown nonnegative');
 local view = readouts.sample('Leveling');
-s.display.order = { 'sync', 'dedication_budget', 'food', 'no_exp', 'average3', 'sample_count', 'exp_rate', 'lp_rate', 'goal' };
+s.display.order = { 'sync', 'dedication', 'food', 'no_exp', 'average3', 'sample_count', 'exp_rate', 'lp_rate', 'goal' };
 for _, id in ipairs(s.display.order) do s.display.enabled[id] = true; end
 local function values()
     local result = {}; for _, item in ipairs(readouts.build(s, view)) do result[item.id] = item.value; end; return result;
 end
-view.sync_active, view.sync_level, view.sync_penalty, view.sync_source = true, 54, 25, 'unknown';
-eq(values().sync, '61 > 54 (penalty unknown)', 'Unverified penalty cannot become applied');
-view.sync_source = 'server';
-eq(values().sync, '61 > 54 (-25%)', 'Server penalty displayed');
-eq(values().dedication_budget, '--', 'Unknown pool remains unknown despite active buff');
-view.dedication_pool = 0;
-eq(values().dedication_budget, '0', 'Authoritative empty pool is known');
+view.sync_active, view.sync_level = true, 54;
+eq(values().sync, '61 > 54', 'Client levels show without an invented penalty');
+eq(values().dedication, 'Dedication 30:30', 'Ordinary Dedication keeps its client timer');
 eq(values().average3, '198', 'Recent average rounds for display');
 eq(values().sample_count, '10 / 10', 'Sample coverage shown');
 eq(values().exp_rate, '8,500', 'EXP rate independent');
@@ -59,7 +55,7 @@ eq(values().exp_rate, '8,500', 'EXP condition retains value');
 s.display.order = { 'chain', 'chain_time' };
 s.display.enabled.chain, s.display.enabled.chain_time = true, true;
 s.display.conditions.chain, s.display.conditions.chain_time = 'chain', 'chain';
-view.chain_source, view.chain_active, view.chain_left = 'local', nil, 38;
+view.chain_source, view.chain_left = 'local', 38;
 eq(values().chain, '4 (+40%)', 'A positive local countdown keeps the conditional observed count');
 eq(values().chain_time, '~0:38', 'A positive local countdown keeps the conditional timer');
 view.chain_left = nil;
@@ -69,17 +65,14 @@ eq(values().chain_time, nil, 'Expired local timing hides its conditional timer')
 view.chain_source, view.chain_left = 'unknown', 38;
 eq(values().chain, nil, 'Unknown timing hides a conditional count even with stale numbers');
 eq(values().chain_time, nil, 'Unknown timing hides the conditional timer');
-view.chain_source, view.chain_active = 'server', false;
-eq(values().chain, nil, 'Server inactive state hides the conditional count');
-eq(values().chain_time, nil, 'Server inactive state hides the conditional timer');
-view.chain_active, view.chain = true, 0;
-eq(values().chain, '0', 'Server active state supports a chain that has not reached chain one');
-eq(values().chain_time, '0:38', 'Server active chain zero keeps the conditional countdown');
-view.chain_source, view.chain_active, view.chain_left = 'local', nil, 0;
+view.chain_source, view.chain, view.chain_left = 'local', 4, 38;
+eq(values().chain, '4 (+40%)', 'An observed chain reward restores its conditional count');
+eq(values().chain_time, '~0:38', 'A renewed local countdown restores the conditional timer');
+view.chain_left = 0;
 eq(values().chain, nil, 'An expired zero-second local estimate hides conditional readouts');
 view.chain_left = math.huge;
 eq(values().chain_time, nil, 'Invalid local timing cannot activate a conditional readout');
-view.valid, view.chain_source, view.chain_active = false, 'server', true;
+view.valid, view.chain_source = false, 'local';
 eq(values().chain, nil, 'Unavailable player data cannot retain a conditional chain');
 
 local display = defaults.make().display;

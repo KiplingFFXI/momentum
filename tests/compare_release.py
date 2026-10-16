@@ -96,9 +96,21 @@ def trace(addon):
         run.ADDON = previous
 
 
+def exclude_readouts(rows, excluded):
+    if not excluded:
+        return
+    for row in rows.values():
+        readouts = row['readouts']
+        kept = [readouts[index] for index in sorted(readouts)
+                if readouts[index]['id'] not in excluded]
+        row['readouts'] = dict(enumerate(kept, 1))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('baseline', type=Path)
+    parser.add_argument('--exclude-readout', action='append', default=[], metavar='ID',
+                        help='Explicitly omit a retired readout from both traces; views and all other readouts stay strict.')
     args = parser.parse_args()
     current = trace(run.ADDON)
     with tempfile.TemporaryDirectory(prefix='momentum_previous_') as folder:
@@ -109,12 +121,16 @@ def main():
                     raise ValueError('Unexpected archive path: ' + member.filename)
             archive.extractall(root)
         baseline = trace(root / 'momentum')
+    exclude_readouts(current, set(args.exclude_readout))
+    exclude_readouts(baseline, set(args.exclude_readout))
     for index, expected in baseline.items():
         if current[index] != expected:
             differing = [key for key in expected if current[index][key] != expected[key]]
             raise AssertionError('Release behavior differs at trace view %d: %s' % (index, differing))
     assert len(current) == len(baseline)
     print('PASS: %d tracking views and readout sets match the previous release.' % len(current))
+    if args.exclude_readout:
+        print('Explicitly excluded retired readouts: ' + ', '.join(sorted(set(args.exclude_readout))))
 
 
 if __name__ == '__main__':

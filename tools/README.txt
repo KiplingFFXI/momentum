@@ -96,15 +96,9 @@ A temporary archive is verified before replacing an existing output.
 Job artwork, player settings, profiles, session and Dynamis files, tests, source notes, and
 developer tools are not copied into the runtime archive.
 
-Optional server package
------------------------
-
-  python tools/build_release.py --server
-
-This also builds momentum-phoenix-status-<version>.zip as a separate operator
-package. It does not install, build, enable, or deploy anything on Phoenix.
-The client addon, local chain estimate, and Dynamis tracking work without it.
-Read server/README.txt before considering server work.
+Momentum is fully client-side. Do not add or package server modules, custom
+server data feeds, or server commands. Rules exporters read source for reference;
+they do not change Phoenix or require anything to be installed on the server.
 
 Release notes and GitHub
 -----------------------
@@ -130,4 +124,4 @@ release or version tag so an archive cannot be attached to different source.
 It does not run from a version edit, a tag, or a schedule, and it never publishes.
 
 See docs/RELEASING.md for the full checklist. Offline checks, source checks, live
-client checks, server deployment, and publication are separate results.
+client checks, and publication are separate results.

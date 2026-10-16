@@ -16,7 +16,7 @@ elseif PREVIEW.alert_case == 'counts' then
     for _, id in ipairs({ 'food_soon', 'ring_ready', 'level' }) do
         settings.alerts.events[id].visual, settings.alerts.events[id].sound = true, true;
     end
-    for _, id in ipairs({ 'dedication_low', 'merit', 'sync_change' }) do settings.alerts.events[id].visual = true; end
+    for _, id in ipairs({ 'dedication_end', 'merit', 'no_exp' }) do settings.alerts.events[id].visual = true; end
     for _, id in ipairs({ 'chain_soon', 'cap' }) do settings.alerts.events[id].sound = true; end
 end
 PREVIEW.alerts_before = history.copy(settings.alerts);

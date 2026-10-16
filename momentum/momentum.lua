@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.3.1';
+addon.version = '1.3.2';
 addon.desc = 'A movable EXP, merit, gil and Dynamis tracking bar for Phoenix.';
 
 local flush_commands;
@@ -619,33 +619,12 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
             end
         end
     end
-    if (event.id == 0x017) then
-        local feed = packets.status(event, state.player_id or player.id());
-        if feed then
-            sample(t);
-            if phoenix:message(feed, t) then
-                notifications:confirmed(feed, t, state.settings, quiet_notifications());
-                event.blocked = true;
-                state.sampled = -1;
-            end
-        else
-            local chain_feed = packets.chain_status(event, state.player_id or player.id());
-            if chain_feed then
-                sample(t);
-                if phoenix:chain_message(chain_feed, t) then
-                    event.blocked = true;
-                    state.sampled = -1;
-                end
-            end
-        end
-    end
     if (event.id == 0x029) then
         local ended = packets.food_end(event, state.player_id);
         if (ended and food:message(ended, t, state.settings.alerts.food_enabled)) then state.food_pending = t; end
         local dedication_ended = packets.dedication_end(event, state.player_id);
         if dedication_ended then
             notifications:message('dedication_end', 'Dedication ended.', t, state.settings, quiet_notifications(), dedication_ended.token);
-            phoenix:dedication_end();
         end
         local reason = packets.no_exp(event, state.player_id);
         if reason and phoenix:reason(reason, t) then

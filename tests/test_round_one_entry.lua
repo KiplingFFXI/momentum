@@ -14,16 +14,6 @@ local function reward(amount)
     MOCK.put(bytes, 24, 2, 8)
     return MOCK.packet(0x02D, bytes)
 end
-local function feed(sequence, penalty, pool)
-    local message = table.concat({ 'MOM1', MOCK.player.server_id, MOCK.player.zone, MOCK.player.main_job,
-        75, 50, sequence, 1800000000, 1, penalty, 15, 1, pool, 50, 600, 1 }, '|')
-    local bytes = MOCK.bytes(23 + #message + 1)
-    MOCK.put(bytes, 4, 1, 29)
-    MOCK.put(bytes, 6, 2, MOCK.player.zone)
-    for index, byte in ipairs({ string.byte('Momentum', 1, -1) }) do bytes[7 + index] = byte end
-    for index = 1, #message do bytes[22 + index] = message:byte(index) end
-    return MOCK.packet(0x017, bytes)
-end
 local function effect(effect_id, message)
     local bytes = MOCK.bytes(28)
     MOCK.put(bytes, 4, 4, MOCK.player.server_id)
@@ -139,39 +129,15 @@ app.sample(MOCK.now)
 equal(app.view(MOCK.now).session_exp, 275, 'First character resumes its own job')
 
 local stats = AshitaCore:GetMemoryManager():GetPlayer()
--- The fixture's server reports and fallback clock share the same UTC second.
-local original_time = os.time
-os.time = function() return 1800000000 end
 stats.GetJobLevel = function(_, id) return id == MOCK.player.main_job and 75 or 1 end
 MOCK.player.main_level, MOCK.player.exp_needed = 50, rules.tnl[75]
 MOCK.player.exp, MOCK.player.buffs = 20000, { 269, 249 }
-for _, id in ipairs({ 'sync_change', 'dedication_low' }) do
-    app.settings().alerts.events[id].visual = true
-    app.settings().alerts.events[id].cooldown = 0
-end
 MOCK.now = started_at + 30001
 app.sample(MOCK.now)
-local first = feed(11, 37, 200)
-MOCK.fire('packet_in', first)
-equal(first.blocked, true, 'Accepted server status stays out of player chat')
-equal(app.view(MOCK.now).sync_penalty, 37, 'Accepted status appears in combined view')
-equal(app.view(MOCK.now).dedication_pool, 200, 'Server-only budget appears when confirmed')
-app.notifications:take(MOCK.now)
-MOCK.now = started_at + 30001.1
-local second = feed(12, 50, 90)
-MOCK.fire('packet_in', second)
-local notices = app.notifications:take(MOCK.now)
-equal(#notices, 2, 'Confirmed changes produce one notice each')
-MOCK.now = started_at + 30001.3
-app.sample(MOCK.now)
-equal(#app.notifications:take(MOCK.now), 0, 'Next sample does not duplicate confirmed changes with zero cooldown')
-local duplicate = feed(12, 50, 90)
-MOCK.fire('packet_in', duplicate)
-equal(duplicate.blocked, false, 'Replayed server status is not accepted')
-equal(#app.notifications:take(MOCK.now), 0, 'Replayed status creates no notice')
+equal(app.view(MOCK.now).dedication, true, 'Ordinary buff data supplies Dedication status')
+equal(app.view(MOCK.now).sync_active, true, 'Ordinary buff data supplies Level Sync status')
 MOCK.fire('packet_in', reward(50))
-equal(app.view(MOCK.now).dedication_pool, nil, 'New reward invalidates stale bonus budget')
-os.time = original_time
+equal(app.view(MOCK.now).dedication, true, 'EXP reward does not remove an active Dedication effect')
 app.settings().alerts.food_enabled = true
 app.settings().alerts.events.no_exp.sound = true
 app.settings().alerts.events.no_exp.visual = true

@@ -92,9 +92,9 @@ local function value_for(id, view, settings)
         if view.chain_bonus and view.chain and view.chain > 0 then value = value .. ' (+' .. tostring(view.chain_bonus) .. '%)'; end
         return value;
     elseif id == 'chain_time' then
-        if (view.chain_source == 'server' or view.chain_source == 'local') and view.chain_active ~= false
+        if view.chain_source == 'local'
             and type(view.chain_left) == 'number' and view.chain_left >= 0 and view.chain_left < math.huge then
-            return (view.chain_source == 'local' and '~' or '') .. readouts.format_time(view.chain_left);
+            return '~' .. readouts.format_time(view.chain_left);
         end
         return '--';
     elseif id == 'last' then return view.last_amount and '+' .. number(view.last_amount) .. ' ' .. string.upper(view.last_kind or (lp and 'LP' or 'EXP')) or '--';
@@ -128,8 +128,7 @@ local function value_for(id, view, settings)
     elseif id == 'status' then return not view.valid and 'Waiting for character' or view.paused and 'Paused' or view.capped and 'Full' or view.collecting and 'Calculating rate' or 'Tracking';
     elseif id == 'sync' then
         if not view.sync_active then return view.sync_active == false and 'Off' or '--'; end
-        return number(view.level) .. ' > ' .. number(view.sync_level or view.effective_level)
-            .. (view.sync_source == 'server' and type(view.sync_penalty) == 'number' and ' (-' .. number(view.sync_penalty) .. '%)' or ' (penalty unknown)');
+        return number(view.level) .. ' > ' .. number(view.sync_level or view.effective_level);
     elseif id == 'no_exp' then return ({ sync_target = 'Level Sync target unavailable', distance = 'Too far for EXP' })[view.no_exp_reason] or '--';
     elseif id == 'exp_progress' or id == 'lp_progress' then
         local progress = view[id:sub(1, -10)] or {};
@@ -147,7 +146,6 @@ local function value_for(id, view, settings)
         local value = view.food == false and 'None' or view.food and (view.food_name or 'Active') or '--';
         if view.food and view.food_seconds then value = value .. ' ' .. readouts.format_time(view.food_seconds); end
         return value;
-    elseif id == 'dedication_budget' then return number(view.dedication_pool);
     elseif id == 'ring' then
         if not view.rings or not view.rings.available then return '--'; end
         local ring;
@@ -164,8 +162,8 @@ local function visible(condition, view, value)
     if condition == 'exp' or condition == 'lp' then return view.mode == condition; end
     if condition == 'synced' then return view.sync_active == true or view.level and view.effective_level and view.effective_level < view.level; end
     if condition == 'chain' then
-        return view.valid == true and (view.chain_source == 'server' and view.chain_active == true
-            or view.chain_source == 'local' and type(view.chain_left) == 'number' and view.chain_left > 0 and view.chain_left < math.huge);
+        return view.valid == true and view.chain_source == 'local'
+            and type(view.chain_left) == 'number' and view.chain_left > 0 and view.chain_left < math.huge;
     end
     if condition == 'dedication' then return view.dedication == true; end
     if condition == 'food' then return view.food == true; end
@@ -192,15 +190,15 @@ end
 
 local dependencies = {
     job = 'job job_name level effective_level', progress = 'current needed', remaining = 'capped remaining lp.blocked', rate = 'rate', eta = 'capped eta rate lp.blocked',
-    chain = 'chain chain_bonus', chain_time = 'chain_source chain_active chain_left', last = 'last_amount last_kind', percent = 'percent',
+    chain = 'chain chain_bonus', chain_time = 'chain_source chain_left', last = 'last_amount last_kind', percent = 'percent',
     merits = 'merits merit_cap', merit_rate = 'lp.rate', merits_session = 'merits_gained', merit_headroom = 'merit_headroom',
     lp_remaining = 'lp.remaining lp.blocked', merit_eta = 'lp.eta lp.rate lp.blocked', goal = 'goal goal_remaining goal_eta', buffer = 'buffer_current buffer_needed',
     session = 'session_exp session_lp', net = 'net_exp net_lp', elapsed = 'elapsed', average = 'average', best_chain = 'best_chain',
-    dedication = 'dedication dedication_seconds', status = 'paused capped collecting', sync = 'sync_active level sync_level effective_level sync_source sync_penalty',
+    dedication = 'dedication dedication_seconds', status = 'paused capped collecting', sync = 'sync_active level sync_level effective_level',
     no_exp = 'no_exp_reason', exp_progress = 'exp.current exp.needed', lp_progress = 'lp.current lp.needed', exp_rate = 'exp.rate', lp_rate = 'lp.rate',
     exp_session = 'session_exp', lp_session = 'session_lp', average3 = 'recent3.average', average10 = 'recent10.average', average_n = 'recent.average',
     sample_count = 'recent.count recent.requested', minimum = 'recent.min', maximum = 'recent.max', median = 'recent.median',
-    food = 'food food_name food_seconds', dedication_budget = 'dedication_pool', ring = 'rings',
+    food = 'food food_name food_seconds', ring = 'rings',
     gil = 'gil.current', gil_gained = 'gil.gained', gil_spent = 'gil.spent', gil_net = 'gil.net', gil_rate = 'gil.rate',
     dyna_zone = 'dynamis.active dynamis.name dynamis.short_name', dyna_time = 'dynamis.active dynamis.remaining dynamis.clock_estimated',
     dyna_extensions = 'dynamis.active dynamis.extension_minutes', dyna_currency = 'dynamis.active dynamis.currency_found',
@@ -216,7 +214,7 @@ for id, fields in pairs(dependencies) do
     dependencies[id] = names;
 end
 local condition_fields = { synced = { 'sync_active', 'level', 'effective_level' },
-    chain = { 'chain_source', 'chain_active', 'chain_left' }, dedication = { 'dedication' }, food = { 'food' } };
+    chain = { 'chain_source', 'chain_left' }, dedication = { 'dedication' }, food = { 'food' } };
 local timer_fields = { chain_left = true, eta = true, ['lp.eta'] = true, goal_eta = true, elapsed = true, dedication_seconds = true, food_seconds = true, recast = true };
 local countdown_fields = { ['dynamis.remaining'] = true, ['dynamis.weakness_seconds'] = true };
 timer_fields['dynamis.next_entry_seconds'] = true;
@@ -344,7 +342,7 @@ function readouts.sample(scenario)
         current = 12450, needed = 20000, remaining = 7550, percent = 0.6225, rate = 8500, eta = 3198,
         session_exp = 6375, session_lp = 0, net_exp = 6200, net_lp = 0, lost = 525, recovered = 350, adjustment = 0,
         merits = 3, merit_cap = 10, merit_headroom = 7, merit_full = false, merits_gained = 0, elapsed = 2700, last_amount = 240, last_kind = 'exp', average = 185,
-        chain = 4, chain_bonus = 40, chain_left = 38, chain_window = 60, chain_source = 'server', chain_active = true,
+        chain = 4, chain_bonus = 40, chain_left = 38, chain_window = 60, chain_source = 'local',
         best_chain = 5, paused = false, collecting = false, capped = false, dedication = true,
         dedication_seconds = 1830, buffer_current = 12450, buffer_needed = 20000, goal_remaining = nil, goal_eta = nil,
         gil = { current = 125400, gained = 15800, spent = 5800, net = 10000, rate = 13333 },
@@ -373,7 +371,7 @@ function readouts.sample(scenario)
     sample.recent3 = { count = 3, requested = 3, average = 198.33, min = 170, max = 240, median = 185, total = 595 };
     sample.recent10 = { count = 10, requested = 10, average = 185, min = 100, max = 240, median = 180, total = 1850 };
     sample.recent = defaults.copy(sample.recent10);
-    sample.sync_active, sample.sync_source, sample.sync_gap = false, 'unknown', 0;
+    sample.sync_active, sample.sync_gap = false, 0;
     sample.food, sample.food_seconds = true, 840;
     sample.rings = { available = false, entries = {} };
     if scenario == 'Dynamis' then

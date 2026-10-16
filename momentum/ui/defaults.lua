@@ -8,7 +8,7 @@ defaults.READOUTS = {
     { id = 'rate', name = 'EXP/HR', label = '', enabled = true, help = 'Shows your EXP per hour over the time period chosen in Tracking. It changes to LP/HR when the bar shows limit points. Choose EXP/HR (always) or LP/HR (always) to show one of these all the time.' },
     { id = 'eta', name = 'Time to next level or merit', label = 'Next', enabled = false, help = 'Estimates how long it will take to fill the EXP or LP bar at your current rate. -- means Momentum does not have enough information yet. Spend merits means you must spend a stored merit point before earning another.' },
     { id = 'chain', name = 'EXP chain', label = 'Chain', enabled = true, help = 'Shows the last EXP chain number and its bonus. The chain may have ended since that reward.' },
-    { id = 'chain_time', name = 'EXP chain timer', label = 'Next chain', enabled = false, help = 'Estimates the time left to earn the next EXP chain using Phoenix rules. ~ means the timer is estimated, and the chain may last longer. If Phoenix sends an end time, the timer uses it instead.' },
+    { id = 'chain_time', name = 'EXP chain timer', label = 'Next chain', enabled = false, help = 'Estimates the time left to earn the next EXP chain using Phoenix rules. ~ means the timer is estimated, and the chain may last longer.' },
     { id = 'last', name = 'Last EXP / LP reward', label = 'Last', enabled = false, help = 'Shows the last EXP or LP reward. When your EXP or LP is capped, the reward can be larger than the amount you keep.' },
     { id = 'percent', name = 'Progress percent', label = '', enabled = false, help = 'Shows how full your EXP or LP bar is, as a percentage.' },
     { id = 'merits', name = 'Stored merit points', label = 'Merits', enabled = false, help = 'Shows your unspent merit points and how many you can hold, such as 3 / 10. Every 10,000 LP earns one merit point when you have room for it.' },
@@ -22,7 +22,7 @@ defaults.READOUTS = {
     { id = 'best_chain', name = 'Best EXP chain', label = 'Best chain', enabled = false, help = 'Shows the highest EXP chain number recorded during this session.' },
     { id = 'dedication', name = 'Dedication status and timer', label = '', enabled = false, help = 'Shows whether Dedication is active and its time left when the game provides it. Choose this to track the buff.' },
     { id = 'status', name = 'Tracking status', label = '', enabled = false, help = 'Shows whether the session is tracking, paused, waiting to calculate a rate, or at the EXP or LP cap.' },
-    { id = 'sync', name = 'Level Sync', label = 'Sync', enabled = false, help = 'Shows your normal level and synced level. It only shows an EXP penalty when Phoenix has sent your current penalty.' },
+    { id = 'sync', name = 'Level Sync', label = 'Sync', enabled = false, help = 'Shows your normal level and synced level. Open Details to see the level difference or try a Level Sync penalty estimate.' },
     { id = 'no_exp', name = 'No EXP reason', label = '', enabled = false, help = 'Shows why you missed EXP when Phoenix provides a reason. A missing reward alone cannot tell Momentum what happened.' },
     { id = 'exp_progress', name = 'EXP progress', label = 'EXP', enabled = false, help = 'Shows your current EXP and the amount needed to fill your EXP bar, even while the main bar shows LP.' },
     { id = 'lp_progress', name = 'LP toward next merit point', label = 'LP', enabled = false, help = 'Shows your LP toward the next merit point, out of 10,000, even while the main bar shows EXP. When your merit points are full, spend at least one before earning another.' },
@@ -39,7 +39,6 @@ defaults.READOUTS = {
     { id = 'median', name = 'Middle recent gain', label = 'Median', enabled = false, help = 'Shows the middle value when recent EXP or LP gains are sorted from lowest to highest. With an even number of gains, it averages the two middle values.' },
     { id = 'food', name = 'Food effect', label = 'Food', enabled = false, help = 'Shows your food effect and its time left. The food name and timer only appear when Momentum knows them.' },
     { id = 'ring', name = 'EXP ring', label = 'Ring', enabled = false, help = 'Shows the charges and recast for an EXP ring you own when the game provides them. Momentum does not use the ring for you.' },
-    { id = 'dedication_budget', name = 'Dedication bonus EXP (server data)', label = 'Bonus left', enabled = false, help = 'Needs extra Phoenix server support to show your remaining bonus EXP. -- means that amount is unknown. For the buff and countdown, choose Dedication status and timer.' },
     { id = 'merits_session', name = 'Merit points earned this session', label = 'Merits earned', enabled = false, help = 'Counts whole merit points earned since this session started. Spending merit points does not lower this count. LP you already had can help earn the first merit point.' },
     { id = 'merit_headroom', name = 'Merit points before cap', label = 'Merit slots', enabled = false, help = 'Shows how many more merit points you can hold. For example, 3 out of 10 leaves room for 7. At zero, spend a merit point before earning another.' },
     { id = 'lp_remaining', name = 'LP to next merit point', label = 'LP needed', enabled = false, help = 'Shows the LP needed for your next merit point, even while the main bar shows EXP. Spend merits means you must spend a merit point before earning another.' },
@@ -74,8 +73,7 @@ defaults.READOUTS = {
 defaults.ALERTS = {
     { 'level', 'Level gained' }, { 'merit', 'Merit point gained' }, { 'goal', 'Goal reached' }, { 'cap', 'Merit points almost full' },
     { 'food_soon', 'Food effect ending soon' }, { 'dedication_end', 'Dedication wore off' },
-    { 'dedication_low', 'Dedication bonus EXP low (server data)' }, { 'ring_ready', 'EXP ring ready' },
-    { 'sync_change', 'Level Sync penalty changed (server data)' }, { 'no_exp', 'No EXP reason' }, { 'chain_soon', 'EXP chain timer low' },
+    { 'ring_ready', 'EXP ring ready' }, { 'no_exp', 'No EXP reason' }, { 'chain_soon', 'EXP chain timer low' },
     { 'dyna_time', 'Dynamis time running low' }, { 'dyna_extension', 'Dynamis time extended' },
     { 'dyna_wanted', 'Wanted Dynamis drop' }, { 'dyna_pool', 'Treasure pool item expiring' },
     { 'dyna_clear', 'Dynamis clear obtained' }, { 'dyna_subjob', 'Support job unlocked' },
@@ -126,7 +124,7 @@ function defaults.make()
             warning_minutes = { 10, 5, 1 }, pool_warning_seconds = 60 },
         planner = { level = 50, population = 0 },
         alerts = { food_enabled = false, food_sound = 'FF VII Save.mp3', food_volume = 100, events = {},
-            food_soon_seconds = 60, dedication_low_points = 100, chain_soon_seconds = 10, cap_headroom = 1,
+            food_soon_seconds = 60, chain_soon_seconds = 10, cap_headroom = 1,
             quiet_paused = true, quiet_events = true },
         style = { preset = 'Phoenix', palette_version = 0, font = 'Segoe UI', font_size = 13, opacity = 0.96, rounding = 5, fill_style = 'rail',
             fill_direction = 'right', border = false, text_shadow = false,
@@ -180,6 +178,43 @@ local function choice(value, choices, fallback)
     return fallback;
 end
 
+local readout_options = { 'enabled', 'labels', 'dividers', 'colors', 'groups', 'priorities', 'pinned', 'conditions' };
+local function retire_bonus_readout(display)
+    if type(display) ~= 'table' then return; end
+    local retired = false;
+    for _, key in ipairs(readout_options) do
+        if type(display[key]) == 'table' and display[key].dedication_budget ~= nil then retired = true; break; end
+    end
+    if not retired and type(display.order) == 'table' then
+        for _, id in ipairs(display.order) do if id == 'dedication_budget' then retired = true; break; end end
+    end
+    if not retired then return; end
+    local enabled = type(display.enabled) == 'table' and display.enabled or {};
+    local replace = enabled.dedication_budget == true and enabled.dedication ~= true;
+    if replace then
+        enabled.dedication = true;
+        if type(display.labels) == 'table' then display.labels.dedication = ''; end
+    end
+    if type(display.order) == 'table' then
+        local order = {};
+        for _, id in ipairs(display.order) do
+            if id == 'dedication_budget' then
+                if replace then order[#order + 1] = 'dedication'; end
+            elseif id ~= 'dedication' or not replace then order[#order + 1] = id; end
+        end
+        display.order = order;
+    end
+    for _, key in ipairs(readout_options) do
+        local values = display[key];
+        if type(values) == 'table' then
+            if replace and key ~= 'enabled' and key ~= 'labels' and values.dedication_budget ~= nil then
+                values.dedication = copy(values.dedication_budget);
+            end
+            values.dedication_budget = nil;
+        end
+    end
+end
+
 local function tidy_saved_display(display, fresh, known)
     local order = type(display.order) == 'table' and copy(display.order) or {};
     merge(display, fresh);
@@ -209,6 +244,14 @@ end
 
 function defaults.tidy(settings)
     if type(settings) ~= 'table' then return defaults.make(); end
+    retire_bonus_readout(settings.display);
+    if type(settings.modes) == 'table' then
+        for _, key in ipairs({ 'exp', 'merits', 'previous_display', 'legacy_auto_display' }) do retire_bonus_readout(settings.modes[key]); end
+    end
+    if type(settings.dynamis) == 'table' then
+        retire_bonus_readout(settings.dynamis.layout);
+        retire_bonus_readout(settings.dynamis.previous_display);
+    end
     local visibility = type(settings.visibility) == 'table' and settings.visibility.mode or nil;
     local fresh = defaults.make();
     local order = type(settings.display) == 'table' and settings.display.order or nil;
@@ -218,6 +261,10 @@ function defaults.tidy(settings)
     dyna_order = type(dyna_order) == 'table' and copy(dyna_order) or copy(fresh.dynamis.layout.order);
     local warnings = type(dynamis.warning_minutes) == 'table' and copy(dynamis.warning_minutes) or copy(fresh.dynamis.warning_minutes);
     merge(settings, fresh);
+    settings.alerts.events.dedication_low, settings.alerts.events.sync_change, settings.alerts.dedication_low_points = nil, nil, nil;
+    local old_section = 'Alerts/Level Sync and missed EXP';
+    if settings.window.sections['Alerts/Missed EXP'] == nil then settings.window.sections['Alerts/Missed EXP'] = settings.window.sections[old_section]; end
+    settings.window.sections[old_section] = nil;
     local known, seen = {}, {};
     for _, item in ipairs(defaults.READOUTS) do known[item.id] = true; end
     settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis' }, 'auto');
@@ -336,7 +383,6 @@ function defaults.tidy(settings)
         if event.file:find('^%.*$') then event.file = ''; end
     end
     settings.alerts.food_soon_seconds = math.floor(number(settings.alerts.food_soon_seconds, 5, 600, 60));
-    settings.alerts.dedication_low_points = math.floor(number(settings.alerts.dedication_low_points, 1, 100000, 100));
     settings.alerts.chain_soon_seconds = math.floor(number(settings.alerts.chain_soon_seconds, 1, 60, 10));
     settings.alerts.cap_headroom = math.floor(number(settings.alerts.cap_headroom, 0, 30, 1));
     settings.window.width = number(settings.window.width, 320, 16384, 920);

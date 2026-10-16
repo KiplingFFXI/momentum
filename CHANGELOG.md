@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.2
+
+- Removed the Dedication and Level Sync tracking module that was erroneously kept from testing, along with its custom data feed, server-only readouts and alerts, and server packaging tools. Momentum is fully client-side and will never require a server module or custom server data feed.
+- Dedication status, its available timer, and the wore-off alert still use normal client data. Older layouts with the removed bonus EXP reading switch to Dedication status and timer without the old Bonus left label.
+- Level Sync still shows actual level, synced level, and level gap. The manual penalty calculator remains an estimate. The stored applied penalty is not available from normal client data and is no longer offered as a reading or alert.
+- EXP chain timing stays a local estimate based on Phoenix's rules. Removed the unused custom deadline feed. Food, EXP rings, EXP, merits, gil, Dynamis, sounds, and session tracking remain available.
+- Updated the menus, hover help, guide, and developer instructions to match the client-only behavior. Existing layout choices and profiles are kept apart from the removed options.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the `momentum` folder in your Phoenix `addons` folder, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, and custom sounds. The bar appears about three seconds after your character is ready.
+
 ## 1.3.1
 
 Dedication choices now explain which reading tracks the buff and which needs extra server data. This update also makes saved layouts in Automatic easier to identify and adds gil to session summaries.

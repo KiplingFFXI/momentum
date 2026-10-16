@@ -112,47 +112,10 @@ def build(out, addon=ADDON, license_path=LICENSE):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, default=Path.home() / 'Downloads')
-    parser.add_argument('--server', action='store_true', help='Also build the optional Phoenix server companion.')
     args = parser.parse_args()
     path, count, digest = build(args.out)
     print('Wrote %s with %d files.' % (path, count))
     print('SHA-256 ' + digest)
-    if args.server:
-        path, count, digest = build_server(args.out)
-        print('Wrote %s with %d files.' % (path, count))
-        print('SHA-256 ' + digest)
-
-
-def build_server(out, server=ROOT / 'server', license_path=LICENSE):
-    out, server = Path(out), Path(server)
-    if linked(server) or out.resolve().is_relative_to(server.resolve()):
-        raise RuntimeError('Keep server sources separate from the output archive.')
-    expected = {'README.txt', 'momentum_status.lua', 'momentum_chain.cpp'}
-    if {p.name for p in server.iterdir()} != expected:
-        raise RuntimeError('Unexpected or missing server companion files.')
-    contents = [(name, checked_bytes(server / name, name)) for name in sorted(expected)]
-    contents.append(('LICENSE', checked_bytes(license_path, 'LICENSE')))
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / ('momentum-phoenix-status-%s.zip' % addon_version())
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(prefix='.momentum-server-', suffix='.zip', dir=out, delete=False) as handle:
-            temporary = Path(handle.name)
-        with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
-            for name, data in contents:
-                entry = zipfile.ZipInfo('momentum-status-server/' + name, date_time=(1980, 1, 1, 0, 0, 0))
-                entry.create_system = 3
-                entry.external_attr = 0o100644 << 16
-                entry.compress_type = zipfile.ZIP_DEFLATED
-                archive.writestr(entry, data)
-        with zipfile.ZipFile(temporary) as archive:
-            if archive.testzip() or archive.namelist() != ['momentum-status-server/' + name for name, _ in contents]:
-                raise RuntimeError('The server companion archive did not pass verification.')
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-    return path, len(contents), hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 if __name__ == '__main__':

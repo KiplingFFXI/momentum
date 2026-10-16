@@ -225,7 +225,7 @@ local function paint(settings, view, rect, sample, mouse_x, mouse_y)
     end
     local chain_left, chain_right;
     local hovered = not settings.display.show_text and mouse_x and 'progress' or nil;
-    local chain_ending = view.valid and (view.chain_source == 'local' or view.chain_source == 'server') and view.chain_active ~= false
+    local chain_ending = view.valid and view.chain_source == 'local'
         and type(view.chain_left) == 'number' and view.chain_left > 0 and view.chain_left < 10;
     list:PushClipRect({ rect.x + 2, rect.y + 1 }, { rect.x + rect.width - 2, rect.y + rect.height - 1 }, true);
     for _, segment in ipairs(segments) do
@@ -259,13 +259,13 @@ local function paint(settings, view, rect, sample, mouse_x, mouse_y)
         if segment.id == 'chain' and segment.role ~= 'divider' then chain_right = x; end
     end
     if settings.display.chain_strip and view.valid and chain_left and chain_right
-        and (view.chain_source == 'server' or view.chain_source == 'local') and view.chain_active ~= false
+        and view.chain_source == 'local'
         and type(view.chain_left) == 'number' and view.chain_left >= 0 and view.chain_left < math.huge
         and type(view.chain_window) == 'number' and view.chain_window > 0 and view.chain_window < math.huge then
         local fraction = layout.clamp(view.chain_left / view.chain_window, 0, 1);
         if fraction > 0 then
             list:AddRectFilled({ chain_left, rect.y + 1 }, { chain_left + (chain_right - chain_left) * fraction, rect.y + 2 },
-                theme.u32(colors.chain, view.chain_source == 'local' and 0.45 or 0.8), 0.5);
+                theme.u32(colors.chain, 0.45), 0.5);
         end
     end
     if notice then
@@ -328,26 +328,17 @@ local function tooltip(settings, view, id, info)
         if view.capped then help = help .. ' Your EXP or LP bar is full.'; end
     elseif id == 'sync' then
         if view.sync_active == false then
-            help = 'Level Sync is off. You have no Level Sync penalty.';
+            help = 'Level Sync is off.';
         elseif view.sync_active then
             help = 'Your normal job level is ' .. readouts.format_number(view.level) .. '. Your synced level is '
                 .. readouts.format_number(view.sync_level or view.effective_level) .. '.';
-            if view.sync_source == 'server' and type(view.sync_penalty) == 'number' then
-                help = help .. ' Phoenix reports a Level Sync EXP penalty of ' .. readouts.format_number(view.sync_penalty) .. '%.';
-                help = help .. ' Your other EXP bonuses also affect the final amount you receive.';
-            else
-                help = help .. ' Phoenix has not sent your current Level Sync penalty. The level difference alone is not enough to work it out.';
-            end
-            help = help .. ' EXP/HR already includes any penalty. Do not subtract it again. Open Details to check Level Sync or try a different sync level.';
+            help = help .. ' The level difference is ' .. readouts.format_number(view.sync_gap) .. ' levels.';
+            help = help .. ' EXP/HR already includes any penalty. Do not subtract it again. Open Details to try a Level Sync penalty estimate.';
         else
             help = 'Momentum does not know whether Level Sync is active yet. This will update when your character information is available.';
         end
     elseif id == 'chain_time' then
-        if view.chain_source == 'server' and view.chain_active == false then
-            help = 'No EXP chain is active. Phoenix will send a new end time when a qualifying reward starts one.';
-        elseif view.chain_source == 'server' and type(view.chain_left) == 'number' and view.chain_left >= 0 and view.chain_left < math.huge then
-            help = 'This is the time left for your next qualifying EXP chain kill, using the end time sent by Phoenix. A connection delay can affect the displayed time slightly.';
-        elseif view.chain_source == 'local' then
+        if view.chain_source == 'local' then
             if type(view.chain_left) == 'number' and view.chain_left >= 0 and view.chain_left < math.huge then
                 title = 'EXP chain timer (estimated)';
                 help = 'This timer uses Phoenix EXP chain rules. ~ means it is estimated. When the defeated monster\'s level is unknown, Momentum uses the shortest possible time, so the chain may last longer. Your next kill must qualify for an EXP chain. The timer starts when the reward arrives, so a connection delay can affect it slightly.';
@@ -362,9 +353,6 @@ local function tooltip(settings, view, id, info)
         if view.no_exp_reason == 'distance' then help = 'Phoenix reported that you were too far from the defeated monster to receive EXP.';
         elseif view.no_exp_reason == 'sync_target' then help = 'Phoenix reported that your Level Sync target was unavailable for this EXP reward. The target may have been KO\'d or too far from the defeated monster.';
         else help = 'Phoenix has not sent a recent reason for missing EXP. A missing reward alone cannot tell Momentum what happened.'; end
-    elseif id == 'dedication_budget' then
-        help = type(view.dedication_pool) == 'number' and 'This is the bonus EXP left from Dedication, as sent by Phoenix. After an EXP reward, it may briefly show -- until Phoenix sends a new amount.'
-            or 'This amount needs extra Phoenix server support. -- means the remaining bonus EXP is unknown. Choose Dedication status and timer to track the buff and countdown.';
     elseif id == 'food' then
         help = definition.help;
         if view.food and not view.food_name then help = help .. ' Your food effect is active, but Momentum did not see which food you used.'; end

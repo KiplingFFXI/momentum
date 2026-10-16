@@ -29,10 +29,10 @@ contains(readouts.text(settings, view), 'EXP/HR 8,500', 'Default rate puts the l
 contains(readouts.text(settings, view), 'Chain 4 (+40%)', 'Confirmed chain bonus');
 settings.display.order = { 'chain_time' };
 settings.display.enabled.chain_time = true;
-equal(readouts.text(settings, view), 'Next chain 0:38', 'Fresh server timing shows one countdown');
+equal(readouts.text(settings, view), 'Next chain ~0:38', 'Local timing shows one estimated countdown');
 view.chain_left_min, view.chain_estimated = 10, true;
-equal(readouts.text(settings, view), 'Next chain 0:38', 'Legacy estimated fields cannot turn a server deadline into a range');
-view.chain_source, view.chain_active = 'local', nil;
+equal(readouts.text(settings, view), 'Next chain ~0:38', 'Legacy estimated fields cannot turn the local timer into a range');
+view.chain_source = 'local';
 equal(readouts.text(settings, view), 'Next chain ~0:38', 'Local timing has a single estimate instead of a range');
 view.chain_estimated = false;
 equal(readouts.text(settings, view), 'Next chain ~0:38', 'Local source remains visibly estimated');
@@ -43,16 +43,11 @@ view.chain_source = 'unknown';
 equal(readouts.text(settings, view), 'Next chain --', 'Unsupported timing is not shown as a deadline');
 view.chain_source = nil;
 equal(readouts.text(settings, view), 'Next chain --', 'A countdown without source stays unknown');
-view.chain_source, view.chain_active = 'server', false;
-equal(readouts.text(settings, view), 'Next chain --', 'An authoritative inactive chain has no countdown');
-view.chain_active, view.chain_left = true, 0;
-equal(readouts.text(settings, view), 'Next chain 0:00', 'A zero server countdown stays a known time');
+view.chain_source, view.chain_left = 'local', 0;
+equal(readouts.text(settings, view), 'Next chain ~0:00', 'A zero local countdown stays a known estimate');
 for _, value in ipairs({ -1, math.huge, -math.huge, 0 / 0, '38' }) do
     view.chain_left = value;
-    equal(readouts.text(settings, view), 'Next chain --', 'Invalid server timing stays unknown');
-    view.chain_source = 'local';
     equal(readouts.text(settings, view), 'Next chain --', 'Invalid local timing stays unknown without an estimate prefix');
-    view.chain_source = 'server';
 end
 view.chain_left = nil;
 contains(readouts.text(settings, view), '--', 'Unknown chain expiry does not invent countdown');

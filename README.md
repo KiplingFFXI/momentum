@@ -36,7 +36,7 @@ Type `/momentum` to open settings. Use **Bar mode** at the top to choose **EXP**
 
 In Automatic, **Readouts and order** identifies the saved layout you are editing. **Current session** and **Copy summary** include your gil gained, gil spent, net change, and Gil/HR.
 
-To track the Dedication buff, choose **Display > Add readout > Buffs > Dedication status and timer**. The separate **Dedication bonus EXP (server data)** reading and low bonus EXP alert need extra Phoenix server support. `--` means the remaining bonus amount is unknown. [Dedication and EXP rings](docs/GUIDE.md#rings-food-and-dedication).
+To track the Dedication buff, choose **Display > Add readout > Buffs > Dedication status and timer**. This shows the buff and its countdown when the client has a usable timer. The client does not provide the remaining bonus EXP. [Dedication and EXP rings](docs/GUIDE.md#rings-food-and-dedication).
 
 ## What it can show
 
@@ -51,9 +51,9 @@ To track the Dedication buff, choose **Display > Add readout > Buffs > Dedicatio
 
 EXP/HR and LP/HR need one minute of session time. Gil/HR uses gil gained minus gil spent and needs one minute of tracking after the first gil change. Merit tracking keeps earned points separate from spending; full storage shows **Spend merits** before another conversion. Bar mode only changes what Momentum shows. It never changes your EXP/merit mode in the game or resets a session, run, or timer. [Choosing a bar mode](docs/GUIDE.md#choose-a-bar-mode).
 
-Unknown values stay `--`; estimates use `~`. The local EXP chain timer follows Phoenix's rules, but the chain may stay open longer when the monster's EXP level is unknown. Exact applied Level Sync penalties and remaining Dedication bonus EXP need optional server reports. The calculator does not replace an unknown applied penalty. [Tracking limits](docs/GUIDE.md#exp-lp-and-rates) | [Phoenix status and planning](docs/GUIDE.md#phoenix-status-and-planning).
+Unknown values stay `--`; estimates use `~`. The local EXP chain timer follows Phoenix's rules, but the chain may stay open longer when the monster's EXP level is unknown. Level Sync shows your actual level, synced level, and level gap. Its manual calculator estimates a possible penalty; it cannot show the stored penalty currently applied to your character. [Tracking limits](docs/GUIDE.md#exp-lp-and-rates) | [Phoenix status and planning](docs/GUIDE.md#phoenix-status-and-planning).
 
-Momentum reads client state and incoming packets. It sends no gameplay commands, uses no items, and works without server changes. Dynamis needs no server companion. Settings and run records stay local.
+Momentum is fully client-side. It reads client state and normal incoming game packets. It sends no gameplay commands and uses no items. It will never require a server module or custom server data feed. Settings and run records stay local.
 
 ## Source and license
 

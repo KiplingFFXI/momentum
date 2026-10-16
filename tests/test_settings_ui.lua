@@ -138,7 +138,7 @@ local plays, tests = 0, 0;
 services.sound_play = function() plays = plays + 1; return true; end;
 services.notification_test = function() tests = tests + 1; end;
 draw();
-for _, group in ipairs({ 'Food', 'EXP chains', 'Dedication', 'EXP rings', 'Levels and merit points', 'Level Sync and missed EXP' }) do
+for _, group in ipairs({ 'Food', 'EXP chains', 'Dedication', 'EXP rings', 'Levels and merit points', 'Missed EXP' }) do
     eq(settings.window.sections['Alerts/' .. group], nil, group .. ' starts folded without writing a preference');
 end
 eq(next(checks), nil, 'Initially collapsed groups have no alert controls');

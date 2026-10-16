@@ -74,28 +74,5 @@ class ReleaseTests(unittest.TestCase):
         path, _, _ = release.build(self.folder / 'out', self.addon)
         self.assertEqual(path.name, 'momentum-9.8.7.zip')
 
-    def test_server_companion_is_separate_and_reproducible(self):
-        first, count, digest = release.build_server(self.folder / 'one')
-        second, _, second_digest = release.build_server(self.folder / 'two')
-        self.assertEqual(digest, second_digest)
-        self.assertEqual(first.read_bytes(), second.read_bytes())
-        with zipfile.ZipFile(first) as archive:
-            self.assertEqual(count, 4)
-            self.assertEqual(set(archive.namelist()), {
-                'momentum-status-server/README.txt',
-                'momentum-status-server/momentum_status.lua',
-                'momentum-status-server/momentum_chain.cpp',
-                'momentum-status-server/LICENSE',
-            })
-            self.assertIsNone(archive.testzip())
-
-    def test_server_extra_file_is_rejected(self):
-        server = self.folder / 'server'
-        shutil.copytree(ROOT / 'server', server)
-        (server / 'settings.json').write_text('{}', encoding='ascii')
-        with self.assertRaisesRegex(RuntimeError, 'Unexpected'):
-            release.build_server(self.folder / 'out', server)
-
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

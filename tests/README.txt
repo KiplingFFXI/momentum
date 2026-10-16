@@ -85,8 +85,8 @@ The focused suites cover:
   switching, reloads, profile changes, commands, and unchanged session timers.
 
 The archive suite checks the exact runtime manifest, reproducibility, normalized
-line endings, private-path rejection, links, missing or extra files, sound hashes,
-and the separate optional server package. The public repository
+line endings, private-path rejection, links, missing or extra files, and sound
+hashes. The public repository
 check validates text, release documents, local Markdown links, and the changelog
 version. Developer files do not enter the runtime ZIP.
 
@@ -137,6 +137,10 @@ compares tracking views and readouts, including pauses, resets, recovery, rates,
 goals, and saved resumes. Compare only versions with compatible behavior; an
 intentional change needs its own focused expectations.
 
+Use --exclude-readout ID only for an intentionally retired reading. For example,
+the 1.3.2 comparison with 1.3.1 excludes dedication_budget. The default comparison
+stays strict; every tracking view and every other readout must still match.
+
 Source checks and releases
 --------------------------
 
@@ -157,4 +161,6 @@ rules automatically.
 
 Offline tests and rendered previews do not validate live packet delivery, graphics
 driver behavior, client reloads, or Phoenix gameplay. Report those separately.
-Server companion tests mock engine bindings; they do not establish deployment.
+Client-only regression checks cover normal buff timers, local chain estimates,
+Level Sync levels, and migration of removed server-dependent settings. Former
+custom status messages remain ordinary chat and cannot change tracking.

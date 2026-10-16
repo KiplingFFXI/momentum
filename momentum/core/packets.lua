@@ -97,59 +97,6 @@ function packets.no_exp(event, player_id)
     if (reason) then return { reason = reason, actor_id = player_id, target_id = player_id, token = identity(event) }; end
 end
 
--- SYSTEM_3 is server-only; player chat cannot select this channel.
-function packets.status(event, player_id)
-    if (not player_id or player_id == 0 or event.id ~= 0x017 or not packets.valid(event, 24)) then return nil; end
-    local data = event.data:sub(1, math.min(#event.data, event.size));
-    if (data:byte(5) ~= 29 or data:sub(9, 23):gsub('%z.*', '') ~= 'Momentum') then return nil; end
-    local message = data:sub(24):gsub('%z.*', '');
-    if (#message > 150 or not message:match('^MOM1|[%d|]+$')) then return nil; end
-    local values = {};
-    for value in message:sub(6):gmatch('[^|]+') do
-        if (#value > 16 or not value:match('^%d+$')) then return nil; end
-        values[#values + 1] = tonumber(value);
-    end
-    if (#values ~= 15 or message:find('||', 1, true) or message:sub(-1) == '|') then return nil; end
-    local limits = { 4294967295, 65535, 22, 99, 99, 9007199254740991, 4294967295, 1, 50, 25, 1, 65535, 1000, 604800, 1 };
-    for i, value in ipairs(values) do if (value < 0 or value > limits[i] or value ~= math.floor(value)) then return nil; end end
-    if (values[1] ~= player_id or values[2] ~= uint(data, 6, 2) or values[3] == 0 or values[4] == 0
-        or values[5] == 0 or values[5] > values[4] or values[6] == 0 or values[7] == 0
-        or not ({ [0] = true, [15] = true, [20] = true, [25] = true })[values[10]]) then return nil; end
-    if (values[8] == 0 and values[9] ~= 0) then return nil; end
-    if (values[11] == 0 and (values[12] ~= 0 or values[13] ~= 0 or values[14] ~= 0)) then return nil; end
-    return { id = values[1], zone = values[2], job = values[3], level = values[4], effective_level = values[5],
-        sequence = values[6], utc = values[7], sync_active = values[8] == 1, sync_penalty = values[9], sync_rate = values[10],
-        dedication = values[11] == 1, dedication_pool = values[12], dedication_bonus = values[13], dedication_seconds = values[14],
-        enabled = values[15] == 1, protocol = 1 };
-end
-
-function packets.chain_status(event, player_id)
-    if (not player_id or player_id == 0 or event.id ~= 0x017 or not packets.valid(event, 24)) then return nil; end
-    local data = event.data:sub(1, math.min(#event.data, event.size));
-    if (data:byte(5) ~= 29 or data:sub(9, 23):gsub('%z.*', '') ~= 'Momentum') then return nil; end
-    local message = data:sub(24):gsub('%z.*', '');
-    if (#message > 150 or not message:match('^MOMC1|[%d|]+$')) then return nil; end
-    local values = {};
-    for value in message:sub(7):gmatch('[^|]+') do
-        if (#value > 16 or not value:match('^%d+$')) then return nil; end
-        values[#values + 1] = tonumber(value);
-    end
-    if (#values ~= 12 or message:find('||', 1, true) or message:sub(-1) == '|') then return nil; end
-    local limits = { 4294967295, 65535, 22, 99, 99, 9007199254740991, 4294967295, 1, 1, 65534, 9007199254740991, 9007199254740991 };
-    for i, value in ipairs(values) do if (value < 0 or value > limits[i] or value ~= math.floor(value)) then return nil; end end
-    if (values[1] ~= player_id or values[2] ~= uint(data, 6, 2) or values[3] == 0 or values[4] == 0
-        or values[5] == 0 or values[5] > values[4] or values[6] == 0 or values[7] == 0) then return nil; end
-    if (values[8] == 0 and values[9] ~= 0) then return nil; end
-    if (values[9] == 0) then
-        if (values[10] ~= 0 or values[11] ~= 0 or values[12] ~= 0) then return nil; end
-    elseif (values[12] == 0) then
-        if (values[10] ~= 0) then return nil; end
-    elseif (values[12] <= values[11] or values[12] - values[11] > 300000) then return nil; end
-    return { id = values[1], zone = values[2], job = values[3], level = values[4], effective_level = values[5],
-        sequence = values[6], utc = values[7], enabled = values[8] == 1, known = values[9] == 1,
-        count = values[10], server_now_ms = values[11], deadline_ms = values[12], protocol = 'MOMC1' };
-end
-
 function packets.item_use(event, player_id)
     if (not player_id or player_id == 0 or event.id ~= 0x028 or not packets.valid(event, 35)) then return nil; end
     local data = event.data:sub(1, math.min(#event.data, event.size));

@@ -8,22 +8,22 @@ end
 local function equal(value, expected, message)
     check(value == expected, message .. ': ' .. tostring(value) .. ' ~= ' .. tostring(expected))
 end
-local settings = { alerts = { events = {}, cap_headroom = 1, food_soon_seconds = 60, dedication_low_points = 100,
+local settings = { alerts = { events = {}, cap_headroom = 1, food_soon_seconds = 60,
     chain_soon_seconds = 10, quiet_paused = true } }
 for _, id in ipairs(engine.EVENTS) do
     settings.alerts.events[id] = { visual = true, sound = true, file = 'example.wav', volume = 42, cooldown = 30 }
 end
 local snapshot = { valid = true, id = 1001, job = 1, zone = 100, food = true, food_seconds = 61, dedication = true }
 local view = { valid = true, level = 32, merits = 8, merit_cap = 10, merits_gained = 0,
-    dedication_pool = 101, sync_source = 'server', sync_penalty = 30, chain = 3, chain_left = 11, chain_left_min = 11,
-    chain_source = 'server', chain_estimated = false, rings = { { key = '0:1:1', name = 'Empress Band', charges = 2, recast = 1 } },
+    chain = 3, chain_left = 11, chain_left_min = 11,
+    chain_source = 'local', chain_estimated = true, rings = { { key = '0:1:1', name = 'Empress Band', charges = 2, recast = 1 } },
     goal = { type = 'session_exp', label = 'Session EXP goal', target = 1000, current = 900, available = true, complete = false } }
 local n = engine.new()
 n:observe(view, snapshot, 0, settings)
 equal(#n:take(0), 0, 'Loading known state is quiet')
 local next_view, next_snapshot = history.copy(view), history.copy(snapshot)
 next_view.level, next_view.merits, next_view.merits_gained = 33, 9, 1
-next_view.dedication_pool, next_view.sync_penalty, next_view.chain_left_min = 90, 40, 9
+next_view.chain_left_min = 9
 next_view.chain_left = 9
 next_view.rings[1].recast, next_view.goal.complete = 0, true
 next_snapshot.food_seconds = 59
@@ -35,14 +35,14 @@ for _, message in ipairs(messages) do found[message.id] = message; equal(message
 for _, id in ipairs({ 'level', 'merit', 'goal', 'cap', 'food_soon', 'ring_ready', 'chain_soon' }) do
     check(found[id], 'Observed event: ' .. id)
 end
--- A server timer and a local estimate keep their own warning baselines.
+-- The chain warning follows the observed local countdown.
 local chain = engine.new()
 chain:observe(view, snapshot, 0, settings)
 local changed = history.copy(view); changed.chain_left, changed.chain_left_min = 9, 9
 chain:observe(changed, snapshot, 1, settings)
 messages = chain:take(1)
 equal(#messages, 1, 'One chain warning')
-equal(messages[1].text, 'EXP chain time is running out.', 'Confirmed chain warning has no estimate wording')
+equal(messages[1].text, 'Estimated EXP chain time is running out.', 'Chain warning identifies the estimate')
 check(chain:view(1) ~= nil, 'Visual notice is available')
 equal(chain:view(6), nil, 'Notice expires without changing layout')
 chain:observe(changed, snapshot, 1.5, settings)
@@ -54,30 +54,13 @@ chain = engine.new()
 chain:observe(unconfirmed, snapshot, 0, settings)
 unconfirmed.chain_left, unconfirmed.chain_left_min = 9, 9
 chain:observe(unconfirmed, snapshot, 1, settings)
-equal(#chain:take(1), 0, 'An inferred range cannot trigger a chain warning')
+equal(#chain:take(1), 0, 'Unavailable timing cannot trigger a chain warning')
 chain:observe(changed, snapshot, 2, settings)
-equal(#chain:take(2), 0, 'A first confirmed report below the threshold establishes a quiet baseline')
+equal(#chain:take(2), 0, 'A first local countdown below the threshold establishes a quiet baseline')
 chain = engine.new()
 chain:observe(view, snapshot, 0, settings)
 chain:observe(unconfirmed, snapshot, 1, settings)
-equal(#chain:take(1), 0, 'Losing authoritative timing cannot trigger a chain warning')
-
-local local_before, local_after = history.copy(view), history.copy(changed)
-local_before.chain_source, local_after.chain_source = 'local', 'local'
-chain = engine.new()
-chain:observe(local_before, snapshot, 0, settings)
-chain:observe(local_after, snapshot, 1, settings)
-messages = chain:take(1)
-equal(#messages, 1, 'Local countdown can warn without a server companion')
-equal(messages[1].text, 'Estimated EXP chain time is running out.', 'Local warning identifies the estimate')
-chain = engine.new()
-chain:observe(view, snapshot, 0, settings)
-chain:observe(local_after, snapshot, 1, settings)
-equal(#chain:take(1), 0, 'Server-to-local fallback does not manufacture a threshold crossing')
-chain = engine.new()
-chain:observe(local_before, snapshot, 0, settings)
-chain:observe(changed, snapshot, 1, settings)
-equal(#chain:take(1), 0, 'First server report does not manufacture a threshold crossing')
+equal(#chain:take(1), 0, 'Losing local timing cannot trigger a chain warning')
 
 local function fresh()
     local result = engine.new()
@@ -120,10 +103,10 @@ n:observe(view, snapshot, 0, off)
 n:observe(next_view, next_snapshot, 1, settings)
 equal(#n:take(1), 0, 'Enabling an alert does not report an old threshold')
 n = fresh()
-check(n:message('no_exp', 'Too far away to gain EXP.', 1, settings, false, 'one'), 'Server reason accepted while fresh')
+check(n:message('no_exp', 'Too far away to gain EXP.', 1, settings, false, 'one'), 'Normal no-EXP message accepted while fresh')
 check(not n:message('no_exp', 'Too far away to gain EXP.', 1, settings, false, 'one'), 'Duplicate message suppressed')
 check(not n:message('no_exp', 'Too far away to gain EXP.', 1, settings, false, 'two'), 'Per-event cooldown suppresses repetition')
-equal(#n:take(1), 1, 'One server reason delivered')
+equal(#n:take(1), 1, 'One no-EXP reason delivered')
 check(n:message('dedication_end', 'Dedication ended.', 1, settings, false, 'three'), 'Observed Dedication loss accepted')
 equal(#n:take(1), 1, 'Dedication loss delivered')
 check(not n:message('dedication_end', 'Dedication ended.', 1, settings, false, 'four'), 'One loss does not rearm itself')
@@ -134,32 +117,6 @@ n:message('no_exp', 'Too far away to gain EXP.', 1, settings, false, 'one')
 equal(#n:take(4), 0, 'Delayed audio is discarded')
 
 n = fresh()
-local unknown = history.copy(view)
-unknown.sync_source, unknown.sync_penalty, unknown.dedication_pool = 'unknown', nil, nil
-n:observe(unknown, snapshot, 1, settings)
-equal(#n:take(1), 0, 'Lost server data is not a penalty change')
-n:observe(next_view, next_snapshot, 2, settings)
-messages = n:take(2)
-for _, message in ipairs(messages) do
-    check(message.id ~= 'sync_change' and message.id ~= 'dedication_low', 'Unknown-to-known values are not change evidence')
-end
-n = fresh()
-local first = { id = 1001, job = 1, zone = 100, enabled = true, sync_penalty = 30, dedication = true, dedication_pool = 101 }
-n:confirmed(first, 0, settings)
-equal(#n:take(0), 0, 'First authoritative snapshot establishes a baseline')
-n:observe(unknown, snapshot, 1, settings)
-local second = history.copy(first); second.sync_penalty, second.dedication_pool = 40, 99
-local immediate = history.copy(settings)
-immediate.alerts.events.sync_change.cooldown, immediate.alerts.events.dedication_low.cooldown = 0, 0
-n:confirmed(second, 1, immediate)
-equal(#n:take(1), 2, 'Consecutive authoritative reports cross confirmed thresholds despite temporary pool invalidation')
-n:observe(next_view, next_snapshot, 1.5, immediate)
-messages = n:take(1.5)
-for _, message in ipairs(messages) do
-    check(message.id ~= 'sync_change' and message.id ~= 'dedication_low', 'Rendering a confirmed report never emits it twice')
-end
-n:confirmed(second, 1.5, immediate)
-equal(#n:take(1.5), 0, 'Unchanged authoritative report is quiet with zero cooldown')
 n:preview('goal', 'Test notification', 2)
 equal(n:view(2).text, 'Test notification', 'Explicit visual preview works independently of automatic alerts')
 
@@ -185,7 +142,7 @@ first_gain.chain_left, first_gain.chain_left_min = 9, 9
 local expiring_food = history.copy(snapshot)
 expiring_food.food_seconds = 59
 
-for _, source in ipairs({ 'server', 'local' }) do
+for _, source in ipairs({ 'local' }) do
     old_session.chain_source, reset_view.chain_source, first_gain.chain_source = source, source, source
     local reset_engine = engine.new()
     reset_engine:observe(old_session, snapshot, 100, reset_settings)
