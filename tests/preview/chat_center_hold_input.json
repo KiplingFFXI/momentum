@@ -1,0 +1,8 @@
+[
+  {"frame":2,"mouse":[-100,-100],"lua":"PREVIEW.rect=function() return {PREVIEW_PY.window_x('##momentum_bar'),PREVIEW_PY.window_y('##momentum_bar'),PREVIEW_PY.window_width('##momentum_bar'),PREVIEW_PY.window_height('##momentum_bar')} end; PREVIEW.same=function(expected) local actual=PREVIEW.rect(); for i=1,4 do assert(actual[i]==expected[i],'Closed chat moved or resized centered bar at '..i) end end; PREVIEW.before=PREVIEW.rect(); assert(math.abs(PREVIEW.before[1]+PREVIEW.before[3]/2-MOCK.chat.x-MOCK.chat.width/2)<=1,'Initial bar was not centered'); PREVIEW.saved=require('ui.history').copy(settings.bar); MOCK.chat=nil; MOCK.chat_visible=false; MOCK.chat_retained=nil"},
+  {"frame":5,"lua":"PREVIEW.same(PREVIEW.before); settings.display.labels.progress='A different EXP label'; MOCK.chat_visible=nil"},
+  {"frame":8,"lua":"PREVIEW.same(PREVIEW.before); MOCK.chat_visible=false; MOCK.chat_retained={x=200,y=400,width=600,height=200,windows={}}"},
+  {"frame":11,"lua":"PREVIEW.same(PREVIEW.before); assert(require('ui.history').equal(settings.bar,PREVIEW.saved),'Closed chat changed saved placement'); MOCK.chat={x=72,y=500,width=740,height=330,windows={}}; MOCK.chat_visible=true; MOCK.chat_retained=nil"},
+  {"frame":14,"lua":"local rect=PREVIEW.rect(); assert(math.abs(rect[1]+rect[3]/2-442)<=1,'Reopened chat did not recenter the bar'); assert(rect[3]<=740,'Reopened bar exceeded chat'); assert(rect[2]==(settings.bar.anchor=='top' and 480 or 832),'Reopened chat changed the chosen edge'); PREVIEW.reopened=rect; MOCK.chat=nil; MOCK.chat_visible=nil"},
+  {"frame":17,"lua":"PREVIEW.same(PREVIEW.reopened); assert(require('ui.history').equal(settings.bar,PREVIEW.saved),'Holding centered bar changed saved placement'); assert(#MOCK.commands==0)"}
+]

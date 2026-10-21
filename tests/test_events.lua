@@ -1,0 +1,105 @@
+local events = require('core.events');
+local rules = require('data.event_rules');
+local count = 0;
+local function eq(a, b, name) count = count + 1; assert(a == b, name .. ': ' .. tostring(a) .. ' ~= ' .. tostring(b)); end
+local function find(kind)
+    for zone, area in pairs(rules.areas) do
+        for index, row in pairs(area.battles or {}) do if row.kind == kind then return zone, index, row; end end
+    end
+    error('No ' .. kind .. ' in catalog');
+end
+local utc, id, settings = 1800000000, 1001, { events = { enabled = true, history_limit = 3, warning_minutes = 5 } };
+local tracker = events.new();
+tracker:context(id, 102, 0, utc, false);
+eq(tracker:view(5, utc + 5, settings).zone_elapsed, 5, 'Zone time observed since load');
+eq(tracker:view(5, utc + 5, settings).zone_partial, true, 'Initial zone visit marked partial');
+tracker:context(id, 103, 10, utc + 10, true);
+eq(tracker:view(15, utc + 15, settings).zone_elapsed, 5, 'New zone resets visit only');
+eq(tracker:view(15, utc + 15, settings).zone_partial, false, 'Witnessed zone entry known');
+for _, kind in ipairs({ 'bcnm', 'ksnm', 'enm', 'limbus', 'assault' }) do
+    local zone, index = find(kind);
+    tracker:context(id, zone, 20, utc + 20, true);
+    eq(tracker:begin(zone, index, 20, utc + 20, false), true, kind .. ' recognized');
+    eq(tracker:view(20, utc + 20, settings).kind, kind, kind .. ' category');
+    eq(tracker:view(20, utc + 20, settings).remaining, nil, 'No invented countdown');
+    tracker:timer(600, 20, utc + 20, false);
+    eq(tracker:view(30, utc + 30, settings).remaining, 590, 'Normal countdown');
+    tracker:award({ kind = 'exp', amount = 123, token = 'award-' .. kind }, 30, utc + 30);
+    tracker:award({ kind = 'exp', amount = 123, token = 'award-' .. kind }, 30, utc + 30);
+    eq(tracker:view(30, utc + 30, settings).exp, 123, 'Duplicate award ignored');
+    tracker:outcome(true, 40, utc + 40, 20, 15);
+    tracker:finish(41, utc + 41);
+end
+eq(#tracker:view(50, utc + 50, settings).history, 3, 'History bounded');
+local zone, index = find('limbus');
+tracker:context(id, zone, 50, utc + 50, true);
+tracker:begin(zone, index, 50, utc + 50, false);
+tracker:timer(600, 50, utc + 50, true);
+tracker:extension(5, 55, utc + 55, 'ext');
+tracker:extension(5, 55, utc + 55, 'ext');
+eq(tracker:view(55, utc + 55, settings).remaining, 895, 'Extension added once');
+eq(tracker:view(55, utc + 55, settings).extensions, 1, 'Extension count');
+local coin;
+for item, row in pairs(rules.items) do if row.kind == 'coin' then coin = item; break; end end
+coin = coin or 1875;
+tracker:drop({ slot = 0, item_id = coin, count = 2, old = false, start_time = 123 }, 55, utc + 55, 'drop');
+tracker:drop({ slot = 0, item_id = coin, count = 2, old = false, start_time = 123 }, 55, utc + 55, 'drop2');
+eq(tracker:view(55, utc + 55, settings).drops[1].count, 2, 'Repeated pool state not a second drop');
+tracker:lot({ slot = 0, kind = 'win', winner_id = id }, 56, utc + 56, 'win');
+tracker:lot({ slot = 0, kind = 'win', winner_id = id }, 56, utc + 56, 'win');
+eq(tracker:view(56, utc + 56, settings).received[1].count, 2, 'Personal receipt counted once');
+tracker:drop({ slot = 1, item_id = coin, count = 1, old = true }, 57, utc + 57, 'old');
+eq(tracker:view(57, utc + 57, settings).drops[1].count, 2, 'Existing pool not counted as found');
+tracker:lot({ slot = 1, kind = 'win', winner_id = 9999 }, 58, utc + 58, 'other');
+eq(tracker:view(58, utc + 58, settings).received[1].count, 2, 'Other player receipt excluded');
+tracker:cooldown('limbus', 'Limbus entry', utc + 100, utc + 50, 'Observed Limbus entry', false);
+tracker:cooldown('enm:8', 'Bearclaw Pinnacle', utc + 200, utc + 50, 'ENM timer NPC', false);
+eq(tracker:view(60, utc + 60, settings).cooldowns[2].remaining, 40, 'Absolute cooldown');
+local state = tracker:export(utc + 60);
+state.current.wave_ended_at = 'invalid saved tick';
+local restored = events.new();
+restored:context(id, zone, 60, utc + 60, false);
+eq(restored:restore(state, utc + 60), true, 'Validated saved data');
+eq(restored:view(60, utc + 60, settings).active, false, 'Saved fight not blindly resumed');
+eq(restored:resume_run(zone, 60, utc + 60, true), true, 'Matching native battlefield resumes');
+eq(restored.current.wave_ended_at, nil, 'Reload discards a wave timestamp from the previous observation period');
+eq(restored:view(60, utc + 60, settings).partial, true, 'Reload observation remains partial');
+eq(restored:view(60, utc + 60, settings).remaining, 890, 'Reload does not restart timer');
+restored:take_alerts(220, utc + 220, settings);
+eq(#restored:take_alerts(220, utc + 220, settings), 0, 'No ready-alert replay');
+eq(restored:restore({ schema = 1, player_id = 9999, history = {}, currencies = {}, cooldowns = {} }, utc), false, 'Other character rejected');
+eq(restored:restore({ schema = 1, player_id = id, history = { { name = 'bad', elapsed = -1 } }, currencies = {}, cooldowns = {} }, utc), false, 'Invalid history rejected');
+settings.events.enabled = false;
+eq(tracker:view(60, utc + 60, settings).active, false, 'Disabled event view');
+eq(#tracker:take_alerts(60, utc + 60, settings), 0, 'Disabled alerts drained');
+local alerts = events.new();
+settings.events.enabled = true;
+settings.alerts = { events = { event_time = { visual = true } } };
+alerts:context(id, zone, 0, utc, true);
+alerts:begin(zone, index, 0, utc, false);
+alerts:timer(301, 0, utc, true);
+eq(#alerts:take_alerts(0, utc, settings), 0, 'Initial timer is quiet');
+eq(alerts:take_alerts(1, utc + 1, settings)[1].id, 'event_time', 'Warn only when crossing configured threshold');
+eq(#alerts:take_alerts(2, utc + 2, settings), 0, 'Time warning once per run');
+alerts:begin(zone, index, 3, utc + 3, false);
+alerts:timer(100, 3, utc + 3, true);
+settings.events.warning_minutes = 1;
+eq(#alerts:take_alerts(3, utc + 3, settings), 0, 'Changing warning setting does not replay');
+alerts:cooldown('limbus', 'Limbus entry', utc - 10, utc, 'Sagheera', false);
+eq(#alerts:take_alerts(4, utc + 4, settings), 0, 'Past NPC deadline never creates ready alert');
+alerts:cooldown('enm:8', 'Bearclaw Pinnacle', utc + 6, utc + 4, 'ENM timer NPC', false);
+alerts:take_alerts(5, utc + 5, settings);
+eq(alerts:take_alerts(6, utc + 6, settings)[1].id, 'event_ready', 'Observed future cooldown expires once');
+alerts:outcome(true, 7, utc + 7);
+alerts:finish(70, utc + 70);
+eq(alerts:view(70, utc + 70, settings).history[1].elapsed, 7, 'Waiting after victory does not increase clear time');
+alerts.assault_current, alerts.assault_completed, alerts.assault_report = 21, { [21] = true }, 21;
+alerts.resume = { zone = zone };
+alerts:context(2002, zone, 80, utc + 80, false);
+eq(alerts.assault_current, nil, 'New character clears current Assault');
+eq(alerts.assault_completed, nil, 'New character clears Assault clears');
+eq(alerts.assault_report, nil, 'New character clears report reminder');
+eq(alerts.resume, nil, 'New character clears pending resume');
+eq(next(alerts.cooldowns), nil, 'New character clears cooldowns');
+eq(next(alerts.currencies), nil, 'New character clears currencies');
+return { count = count };

@@ -8,6 +8,7 @@ local fonts = require('ui.fonts');
 local hud = require('ui.hud');
 local details = require('ui.details');
 local dynamis = require('ui.dynamis');
+local events = require('ui.events');
 local settings_window = {};
 local selected = 'progress';
 local scroll_selected = false;
@@ -35,9 +36,9 @@ local dragged, drag_target;
 local readout_sizes = {};
 local section_labels = {};
 local help_marker;
-local pages = { 'Display', 'Tracking', 'Dynamis', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
+local pages = { 'Display', 'Tracking', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
 local jobs = { 'WAR', 'MNK', 'WHM', 'BLM', 'RDM', 'THF', 'PLD', 'DRK', 'BST', 'BRD', 'RNG', 'SAM', 'NIN', 'DRG', 'SMN', 'BLU', 'COR', 'PUP' };
-local page_section = { Display = 'display', Tracking = 'tracking', Dynamis = 'dynamis', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions', Profiles = 'profiles' };
+local page_section = { Display = 'display', Tracking = 'tracking', Dynamis = 'dynamis', Events = 'events', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions', Profiles = 'profiles' };
 local section_names = {
     ['Level sync'] = 'Level Sync', ['Advanced sync estimate'] = 'Level Sync estimate',
     ['Recent rewards'] = 'Recent EXP and LP', ['Owned EXP rings'] = 'EXP rings',
@@ -78,9 +79,9 @@ local tips = {
     ['Settings text size'] = 'Set the text size in settings. Bar text keeps its own size.',
     ['Bar background opacity'] = 'Set how solid the bar background looks. Lower values let more of the game show through.',
     ['Corner roundness'] = 'Round the ends of the bar, or use zero for square corners.',
-    ['Progress style'] = 'Show your EXP or LP as a thin line or a fill behind the text.',
-    ['Fill direction'] = 'Choose which way the EXP or LP bar fills. This does not change the readout order.',
-    ['Sample state'] = 'Try sample EXP, LP, or Dynamis readings in the preview. Your session keeps tracking normally.',
+    ['Progress style'] = 'Show progress as a thin line or a fill behind the text. Event layouts use the time left when it is known.',
+    ['Fill direction'] = 'Choose which way the progress bar fills. This does not change the readout order.',
+    ['Sample state'] = 'Try sample EXP, LP, Dynamis, Assault, Limbus, or battlefield readings. Your session keeps tracking normally.',
     ['Sound'] = 'Choose a sound from the list. To add your own .mp3 or .wav, put it in config/addons/momentum/sounds and press Refresh.',
     ['Sound volume'] = '0 is silent. 100 is full volume.',
     ['Profile'] = 'Choose a saved layout, then press Load profile to use it or Delete profile to remove it.',
@@ -281,9 +282,16 @@ local function position(settings, services)
     checkbox(settings.bar, 'snap', 'Snap to chat when dropped nearby', 'When moving the bar, dropping it close to the top or bottom of chat attaches it there. Choosing Free placement turns this off so the bar stays where you drop it.');
     if not settings.bar.docked then note(settings.bar.locked and 'Locked. Turn off Lock movement and resizing to move the bar.' or 'Hold Shift and drag to move. Shift-drag the right edge to resize.'); end
     if settings.bar.docked then
-        local chat_width = services.chat_width and services.chat_width() or imgui.GetIO().DisplaySize.x;
-        slider(settings.bar, 'start', 'Starting point', 0, math.max(0, math.floor(chat_width) - 120));
-        tip(tips['Starting point']);
+        pick(settings.bar, 'chat_alignment', 'Chat alignment', { { name = 'Left', value = 'left' }, { name = 'Center', value = 'center' } },
+            'Center the bar above or below your chat log. Left uses your saved starting point. This does not change readout order or alignment.');
+        if settings.bar.chat_alignment == 'center' then
+            checkbox(settings.bar, 'auto_width', 'Fit width to readouts', 'Keep the centered bar compact, up to the maximum width below. The bar always stays within your chat log width.');
+            slider(settings.bar, 'width', settings.bar.auto_width and 'Maximum width' or 'Custom bar width', 120, 3840);
+        else
+            local chat_width = services.chat_width and services.chat_width() or imgui.GetIO().DisplaySize.x;
+            slider(settings.bar, 'start', 'Starting point', 0, math.max(0, math.floor(chat_width) - 120));
+            tip(tips['Starting point']);
+        end
         slider(settings.bar, 'bottom', 'Gap from chat', 2, 40);
         local problem = services.dock_problem and services.dock_problem();
         if services.chat_fallback and services.chat_fallback() then
@@ -298,7 +306,7 @@ local function position(settings, services)
 end
 
 local function starter_name(settings)
-    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits', 'Dynamis' }) do
+    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }) do
         local chosen, matches, index = {}, true, 0;
         for _, id in ipairs(defaults.STARTER_LAYOUTS[name]) do chosen[id] = true; end
         for _, item in ipairs(defaults.READOUTS) do
@@ -326,10 +334,11 @@ end
 local catalog_groups = {
     { 'Progress', 'job progress remaining rate eta chain chain_time percent goal buffer status sync no_exp exp_progress exp_rate' },
     { 'Merit points and LP', 'merits merit_rate lp_progress lp_rate merits_session merit_headroom lp_remaining merit_eta' },
-    { 'Session', 'last session net elapsed best_chain exp_session lp_session' },
+    { 'Session', 'last session net elapsed best_chain exp_session lp_session zone_time zone_name' },
     { 'Gil', 'gil gil_gained gil_spent gil_net gil_rate' },
     { 'Buffs', 'dedication food ring' },
     { 'Dynamis', 'dyna_zone dyna_time dyna_extensions dyna_currency dyna_af2 dyna_currency_received dyna_currency_rate dyna_af2_received dyna_bynes dyna_bronze dyna_shells dyna_bynes_received dyna_bronze_received dyna_shells_received dyna_kills dyna_objectives dyna_pool dyna_subjob dyna_weakness dyna_next_entry' },
+    { 'Assault and battlefields', 'event_name event_time event_elapsed event_objective event_status event_kills event_points event_exp event_lp event_floor event_extensions event_coins event_coins_received event_materials event_materials_received event_drops event_received event_best limbus_next_entry limbus_account_entry enm_next_entry assault_tags assault_next_tag beastmen_seals kindred_seals beastcoins_stored beastcoins_carried beastmen_carried kindred_carried' },
     { 'Detailed statistics', 'average average3 average10 average_n sample_count minimum maximum median' },
 };
 local catalog_category = {};
@@ -400,7 +409,8 @@ end
 local function display_page(settings, services)
     if section('Readouts and order', 'Choose what the bar shows. Drag a :: handle to change the order, or select a row and use First, Up, Down, and Last.', true) then
         if settings.modes.selected == 'auto' then
-            local active = settings.dynamis.layout_active and 'Dynamis' or settings.modes.active == 'merits' and 'Merits' or 'EXP';
+            local active = settings.events.active_kind and require('ui.modes').names[settings.events.active_kind]
+                or settings.dynamis.layout_active and 'Dynamis' or settings.modes.active == 'merits' and 'Merits' or 'EXP';
             note('Editing ' .. active .. ' layout');
             tip('Your readout edits are saved to this layout. Automatic can switch to another saved layout when its switching options are on.');
         end
@@ -534,13 +544,14 @@ local function display_page(settings, services)
             { 'Remove all dividers', function()
                 for _, item in ipairs(defaults.READOUTS) do set_divider(settings, item.id, false); end
             end, 'Remove the dividers from every readout. Your chosen divider style stays saved.' } });
-        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits', 'Dynamis' }, function(value)
+        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }, function(value)
             if defaults.apply_starter(settings, value) then pending = true; end
         end);
         imgui.BeginDisabled(settings.modes.selected ~= 'auto');
-        local automatic_display = settings.dynamis.layout_active and settings.dynamis.previous_display or settings.display;
+        local automatic_display = settings.events.active_kind and settings.events.previous_display
+            or settings.dynamis.layout_active and settings.dynamis.previous_display or settings.display;
         checkbox(automatic_display, 'auto_layout', 'Switch saved EXP / Merits layouts',
-            'When Bar mode is Automatic, use your saved EXP layout when earning EXP and your saved Merits layout when earning LP. Added readouts and their order stay saved, including after Dynamis. Manual modes stay selected. This does not change how you earn EXP or LP.');
+            'When Bar mode is Automatic, use your saved EXP layout when earning EXP and your saved Merits layout when earning LP. Added readouts and their order stay saved when event layouts end. Manual modes stay selected. This does not change how you earn EXP or LP.');
         imgui.EndDisabled();
         checkbox(settings.display, 'groups_enabled', 'Use separate alignment groups',
             'Put readouts on the left, in the center, or on the right under Selected readout. Each group follows your list order. Turn this off to use one alignment for the whole bar.');
@@ -594,7 +605,7 @@ local function display_page(settings, services)
         slider(settings.display, 'spacing', 'Extra space between readouts', 0, 24);
         color(settings.style.colors, 'divider', 'Divider color');
         checkbox(settings.display, 'short', 'Short numbers', 'Show values such as 12.5k instead of 12,500.');
-        checkbox(settings.display, 'chain_strip', 'Show the EXP chain timer line', 'Show a countdown line above your EXP chain. A dim line uses an estimate from Phoenix rules. A bright line uses an end time reported by Phoenix. The line stays hidden when no timer is available.');
+        checkbox(settings.display, 'chain_strip', 'Show the EXP chain timer line', 'Show an estimated countdown line above your EXP chain using Phoenix rules. The line stays hidden when no timer is available.');
         checkbox(settings.display, 'hover', 'Show details on hover', 'Hover over a readout for its value and an explanation. Hover over ... for readings that do not fit. Hold Shift when you want to move or resize the bar instead.');
     end
 end
@@ -673,8 +684,8 @@ local function appearance_page(settings)
         slider(settings.style, 'rounding', 'Corner roundness', 0, 24);
         pick(settings.style, 'fill_style', 'Progress style', { { name = 'Thin line', value = 'rail' }, { name = 'Full background', value = 'full' } });
         pick(settings.style, 'fill_direction', 'Fill direction', { { name = 'Left to right', value = 'right' }, { name = 'Right to left', value = 'left' } });
-        checkbox(settings.display, 'show_fill', 'Show progress fill', 'Show how much EXP or LP you have toward your next level or merit point.');
-        checkbox(settings.display, 'show_text', 'Show readout text', 'Turn this off to show just the EXP or LP bar without the numbers.');
+        checkbox(settings.display, 'show_fill', 'Show progress fill', 'Show EXP or LP progress. Event layouts show the observed time left when it is known.');
+        checkbox(settings.display, 'show_text', 'Show readout text', 'Turn this off to show just the progress bar without the numbers.');
         checkbox(settings.style, 'border', 'Show border', 'Draw an outline around the bar.');
         checkbox(settings.style, 'text_shadow', 'Text shadow', 'Add a small shadow to help text stand out against the game.');
     end
@@ -701,18 +712,18 @@ local function fixed_preview(settings, view, services)
         if imgui.Selectable('Sample', sample_preview) then sample_preview = true; end
         imgui.EndCombo();
     end
-    tip('Preview your current EXP and LP or use sample numbers. This only changes the preview in settings.');
+    tip('Preview your current readings or use sample numbers. This only changes the preview in settings.');
     if sample_preview then
         local sample_width = imgui.CalcTextSize('Leveling') + imgui.GetFrameHeight() + 16;
         beside(sample_width);
         imgui.SetNextItemWidth(math.min(sample_width, (imgui.GetContentRegionAvail())));
         if imgui.BeginCombo('##Sample state', settings.preview.scenario) then
-            for _, name in ipairs({ 'Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused' }) do
+            for _, name in ipairs({ 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }) do
                 if imgui.Selectable(name, name == settings.preview.scenario) then settings.preview.scenario = name; pending = true; end
             end
             imgui.EndCombo();
         end
-        tip('Choose sample EXP and LP readings. If Show sample on game bar is on, the same sample appears there.');
+        tip('Choose a sample session or event. If Show sample on game bar is on, the same sample appears there.');
     end
     beside(imgui.CalcTextSize('Preview options') + 20);
     local opening = imgui.Button('Preview options') or preview_options_requested;
@@ -740,7 +751,7 @@ local function fixed_preview(settings, view, services)
     imgui.SetNextWindowSize({ popup_width, 0 }, ImGuiCond_Always);
     imgui.SetNextWindowSizeConstraints({ popup_width, 0 }, { popup_width, popup_height });
     if imgui.BeginPopup('##preview_options') then
-        checkbox(settings.preview, 'show', 'Show sample on game bar', 'Show sample numbers on your game bar. Your session keeps tracking. Turn this off to show your current EXP and LP again.');
+        checkbox(settings.preview, 'show', 'Show sample on game bar', 'Show sample numbers on your game bar. Tracking keeps running. Turn this off to show your current readings again.');
         note('Sample on game bar: ' .. settings.preview.scenario);
         local key = 'Preview/Narrow width test';
         local saved = settings.window.sections[key] == true;
@@ -843,7 +854,7 @@ local search_sections = {
     { 'Display', 'Selected readout', 'label divider value color countdown chain ending' },
     { 'Display', 'More options', 'condition pinned priority group advanced readout' },
     { 'Display', 'Preview options', 'sample preview leveling merits capped paused no data narrow game bar' },
-    { 'Display', 'Position and size', 'alignment left right label position before after width maximum auto height placement free dock chat top bottom above below start lock snap hide typing' },
+    { 'Display', 'Position and size', 'alignment left center centered right label position before after width maximum auto height placement free dock chat top bottom above below start lock snap hide typing' },
     { 'Display', 'Dividers and formatting', 'divider custom spacing separator short numbers hover chain strip' },
     { 'Tracking', 'EXP and merits', 'rate hour window exp limit points mode merits reward sample earned net' },
     { 'Tracking', 'Progress goal', 'goal target level session buffer merit' },
@@ -855,6 +866,17 @@ local search_sections = {
     { 'Dynamis', 'Treasure pool', 'dynamis treasure pool lot pass expiration items waiting' },
     { 'Dynamis', 'Wanted drops', 'dynamis wanted drops alert job relic armor af2 accessory weapon attestation fragment search' },
     { 'Dynamis', 'Dynamis run history', 'dynamis saved run history summary copy' },
+    { 'Events', 'Event tracking options', 'assault limbus bcnm ksnm enm automatic layout mode tracking history' },
+    { 'Events', 'Current Assault or battlefield', 'assault battlefield current run timer remaining status time reset pause copy' },
+    { 'Events', 'Event objectives', 'assault limbus bcnm ksnm enm objective wave vortex crate kills progress record clear time' },
+    { 'Events', 'Event treasure', 'limbus ancient beastcoins upgrade materials chips omega ultima homam nashira drops treasure found received' },
+    { 'Events', 'Entry items and balances', 'assault points imperial army tags stored seals beastmen kindred beastcoins entry orb key item' },
+    { 'Events', 'Assault mission checklist', 'assault mission clear checklist complete record rytaal report current' },
+    { 'Events', 'Entry cooldowns', 'limbus cosmo cleanse enm key item cooldown entry ready timer' },
+    { 'Events', 'Account timers', 'account group dynamis limbus share timer cooldown reminder characters' },
+    { 'Events', 'Wanted event drops', 'assault limbus bcnm ksnm enm wanted drops filter job item alert' },
+    { 'Events', 'Fight reference', 'assault limbus bcnm ksnm enm reference orb seals cost cap reward entry objective' },
+    { 'Events', 'Event run history', 'assault limbus bcnm ksnm enm history runs wins losses clears copy summary' },
     { 'Details', 'Level sync', 'sync penalty level' },
     { 'Details', 'Advanced sync estimate', 'sync planner estimate population tier' },
     { 'Details', 'EXP and limit points', 'exp lp progress totals earned net lost recovered' },
@@ -869,6 +891,7 @@ local search_sections = {
     { 'Alerts', 'Levels and merit points', 'alert notification level gained merit point gained goal reached merit points almost full cap storage sound volume notice visual cooldown play refresh' },
     { 'Alerts', 'Missed EXP', 'alert notification missed no exp reason distance range sound volume notice visual cooldown play refresh' },
     { 'Alerts', 'Dynamis', 'dynamis alert warning time extension wanted drop pool expires clear support job sound notice' },
+    { 'Alerts', 'Assault and battlefields', 'assault limbus bcnm ksnm enm alert warning time objective clear fail wanted drop entry ready cooldown sound' },
     { 'Alerts', 'Quiet conditions', 'quiet paused event cutscene suppress' },
     { 'Appearance', 'Skin and text', 'skin font text size compact tab navigation selector' },
     { 'Appearance', 'Bar and progress', 'opacity transparency corners round border fill shadow rail accent text visibility' },
@@ -939,14 +962,14 @@ local function search(settings)
     end
 end
 
-local bar_modes = { 'auto', 'exp', 'merits', 'dynamis' };
+local bar_modes = { 'auto', 'exp', 'merits', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' };
 local mode_names = require('ui.modes').names;
 local function toolbar(settings, view, services)
     imgui.AlignTextToFramePadding();
     imgui.TextUnformatted('Bar mode');
     beside(210);
     imgui.SetNextItemWidth(math.min(170, (imgui.GetContentRegionAvail())));
-    if imgui.BeginCombo('##Bar mode', mode_names[settings.modes.selected]) then
+    if imgui.BeginCombo('##Bar mode', mode_names[settings.modes.selected], ImGuiComboFlags_HeightLarge or 0) then
         for _, mode in ipairs(bar_modes) do
             if imgui.Selectable(mode_names[mode] .. '##bar_mode_' .. mode, settings.modes.selected == mode) and services.bar_mode then
                 services.bar_mode(mode);
@@ -954,13 +977,13 @@ local function toolbar(settings, view, services)
         end
         imgui.EndCombo();
     end
-    help('Pick EXP, Merits, or Dynamis to keep that bar selected. Automatic uses the same saved layouts, including your added readouts. Turn on automatic EXP / Merits switching under Display to follow the points you earn. This only changes the bar, not how you earn EXP or LP.');
+    help('Choose a mode to keep its saved bar selected. Automatic uses your saved layouts and added readouts. Event switching is under Events; EXP / Merits switching is under Display. This only changes the bar.');
     button_row({
         { view.paused and 'Resume session' or 'Pause session', function()
             if services.session_pause then services.session_pause(not view.paused); end
         end, (view.paused and 'Resume counting EXP, LP, merit points, gil changes, and session time.'
             or 'Stop counting EXP, LP, merit points, gil changes, and session time. Current gil keeps updating.')
-            .. ' EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis drops still count.' },
+            .. ' EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count.' },
         { 'Reset session', function()
             local current = services.session_current and services.session_current();
             reset_layout = false;
@@ -976,7 +999,7 @@ local function toolbar(settings, view, services)
                     status = problem or 'The session could not be saved and reset. Wait for your EXP and LP to load, then try again.';
                 end
             end
-        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil stays the same. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis totals stay as they are.' },
+        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil stays the same. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event totals stay as they are.' },
         { 'Undo', function() if services.undo then services.undo(); end end, 'Undo one of the last eight saved settings changes. This does not undo a session reset.' },
     });
     beside(108);
@@ -1059,6 +1082,7 @@ function settings_window.draw(settings, view, services)
             if settings.window.tab == 'Display' then display_page(settings, services);
             elseif settings.window.tab == 'Tracking' then tracking_page(settings, view, services);
             elseif settings.window.tab == 'Dynamis' then dynamis.draw(settings, view, services, controls);
+            elseif settings.window.tab == 'Events' then events.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Details' then details.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Alerts' then details.alerts(settings, view, services, controls);
             elseif settings.window.tab == 'Appearance' then appearance_page(settings);
@@ -1086,6 +1110,7 @@ function settings_window.close()
     reset_layout, profile_confirmation = false, nil;
     details.cancel_pending();
     dynamis.cancel_pending();
+    events.cancel_pending();
     focus_on_open = true;
 end
 

@@ -150,7 +150,7 @@ function hud.bounds(settings, view, context)
             width = width, height = height }, context);
     end
     local desired;
-    if (not settings.bar.docked or keep_visible and not chat) and settings.bar.auto_width then
+    if (not settings.bar.docked or settings.bar.chat_alignment == 'center' or keep_visible and not chat) and settings.bar.auto_width then
         desired = content_width(settings, view, math.min(settings.bar.height, display.y), context and context.preview);
     end
     local rect = layout.rect(settings.bar, display.x, display.y, chat, desired, keep_visible);
@@ -195,6 +195,11 @@ local function paint(settings, view, rect, sample, mouse_x, mouse_y)
         if settings.dynamis and settings.dynamis.layout_active and dyna and dyna.active then
             local duration = dyna.end_time and dyna.start_time and dyna.end_time - dyna.start_time;
             percent = duration and duration > 0 and dyna.remaining and dyna.remaining / duration or nil;
+            merit_fill = false;
+        end
+        if settings.events and settings.events.active_kind then
+            local event = view.events or {};
+            percent = event.active and event.time_limit and event.time_limit > 0 and event.remaining and event.remaining / event.time_limit or nil;
             merit_fill = false;
         end
         if percent then
@@ -293,7 +298,11 @@ local function tooltip(settings, view, id, info)
     elseif id == 'sample' then
         return 'Preview', 'Example values', 'These example values let you try the layout before using it for your session.';
     elseif id == 'paused' then
-        return 'Session paused', 'Paused', 'Session gains, gil changes, and session time are paused. Current gil keeps updating. EXP chain, food, Dedication, EXP ring recast, and Dynamis timers keep running. Dynamis drops still count. Choose Resume session to keep counting.';
+        return 'Session paused', 'Paused', 'Session gains, gil changes, and session time are paused. Current gil keeps updating. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count. Choose Resume session to keep counting.';
+    end
+    if id == 'progress' and not settings.display.show_text then
+        if settings.events and settings.events.active_kind then id = 'event_time';
+        elseif settings.dynamis and settings.dynamis.layout_active then id = 'dyna_time'; end
     end
     local definition = readouts.definition(id);
     if not definition then return nil; end
@@ -301,12 +310,14 @@ local function tooltip(settings, view, id, info)
     for _, item in ipairs(readouts.cached(settings, view)) do
         if item.id == id then value = item.value; break; end
     end
-    if id == 'progress' and not settings.display.show_text and view.valid then
-        value = readouts.format_number(view.current, settings.display.short) .. ' / ' .. readouts.format_number(view.needed, settings.display.short);
-    end
+    if not settings.display.show_text then value = readouts.value(id, view, settings) or '--'; end
     local title, help = definition.name, definition.help;
-    if not view.valid and id:sub(1, 5) ~= 'dyna_' then return title, value, 'Waiting for your character information. -- means this amount is not known yet.'; end
-    if id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'merit_rate' then
+    if not view.valid and readouts.needs_character(id) then
+        return title, value, 'Waiting for your character information. -- means this amount is not known yet.';
+    end
+    if id == 'zone_time' then
+        help = view.events and view.events.zone_partial and 'Momentum loaded during this visit. ~ shows only the time observed since loading. Leaving and returning starts a new visit. Session reset and pause leave this running.' or definition.help;
+    elseif id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'merit_rate' then
         local unit = id == 'exp_rate' and 'EXP' or (id == 'lp_rate' or id == 'merit_rate') and 'LP' or view.mode == 'lp' and 'LP' or 'EXP';
         title = id == 'merit_rate' and 'Merit points per hour' or unit .. '/HR';
         help = settings.tracking.rate_basis == 'net'

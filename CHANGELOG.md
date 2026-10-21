@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.0
+
+Track Assault, Limbus, BCNM, KSNM, and ENM alongside EXP, merits, gil, and Dynamis. Each mode keeps its own layout, and Automatic can follow the event you enter.
+
+- Added separate saved Assault, Limbus, BCNM, KSNM, and ENM layouts, manual selection, and optional Automatic switching. Leaving an event restores the previous layout. Existing readouts, themes, profiles, placement, and sounds are kept.
+- Added Time in zone and Current zone readouts in every mode. Loading during a visit shows the time observed since loading, marked with `~`.
+- Added the Events page for observed objectives, found treasure and personal awards, entry items, stored balances, wanted drops, optional alerts, fight references, and run history. The reference follows the pinned Phoenix source. Hidden progress and missed drops stay unknown.
+- BCNM, KSNM, and ENM use the game's normal battlefield countdown when available. Assault and Limbus wait for usable remaining-time updates and mark estimates with `~`. An advertised full time limit does not restart an existing run's clock.
+- Added Next ENM key item and Next Limbus entry readouts. ENM waits start when the entry key item is obtained; fights using the same item share one wait. Limbus starts its twenty-hour character wait on entry, when the entry key items are consumed. Normal NPC timer updates take priority over local estimates.
+- Added optional local account groups for recorded Dynamis timers and Limbus reminders. Dynamis has a seventy-two-hour account-wide lockout from successful registration. Phoenix currently tracks Limbus per character, so its shared account reading is labeled as a reminder. Only activity observed on grouped characters on this computer can be shared.
+- Added Chat alignment with Left and Center choices above or below chat. Center supports compact automatic width or a custom width, follows chat resizing, and holds its last position when chat closes. Returning to Left restores the saved starting point.
+- Stored Beastmen's Seals and Kindred's Seals refresh when talking to Shami, depositing seals, buying an orb, or withdrawing seals. Purchases and withdrawals update after confirmed item receipt; cancelled or failed transactions leave the balance alone. Hover help separates seals stored with Shami from seals carried in Inventory.
+- Resetting Display in an event mode restores that mode's starter. Resetting Events preserves your saved EXP and Merits readouts.
+- Repeated treasure-pool updates no longer count the same event drop twice after entry.
+- Clearer hover help for carried and stored seals and coins, EXP chain estimates, and Limbus floors. Hovering an event bar with text hidden now explains its time reading, including unknown or estimated time.
+- Invalid saved event timers no longer break the bar or its alerts. Account timers retry failed file operations at a set interval instead of on every tracking update.
+- EXP session pause and reset leave zone visits, event timers, objectives, drops, and cooldowns running. New alerts start off. Momentum stays client-only and sends no gameplay commands.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the `momentum` folder in your Phoenix `addons` folder, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, recorded cooldowns, and custom sounds. The bar appears about three seconds after your character is ready.
+
+Use **Bar mode** to choose a layout. For event switching, choose **Automatic** and enable **Events > Event tracking options > Switch event layouts in Automatic**. For a compact centered bar, use **Display > Position and size > Chat alignment > Center**. All new readings are available under **Display > Add readout**.
+
 ## 1.3.2
 
 - Removed the Dedication and Level Sync tracking module that was erroneously kept from testing, along with its custom data feed, server-only readouts and alerts, and server packaging tools. Momentum is fully client-side and will never require a server module or custom server data feed.

@@ -1,0 +1,11 @@
+[
+  {"frame":3,"target":"##Account group"},
+  {"frame":4,"target":"##Account group","down":true},
+  {"frame":5,"down":false},
+  {"frame":6,"text":"Test account"},
+  {"frame":8,"mouse":[-100,-100],"lua":"assert(settings.account.group=='Test account','Account group edit was not applied')"},
+  {"frame":9,"target":"Share Limbus reminder"},
+  {"frame":10,"target":"Share Limbus reminder","down":true},
+  {"frame":11,"down":false},
+  {"frame":13,"mouse":[-100,-100],"lua":"assert(not settings.account.share_limbus,'Shared Limbus reminder checkbox did not change'); assert(PREVIEW.view.account_cooldowns.limbus.remaining==7200,'UI edit changed the observed cooldown')"}
+]

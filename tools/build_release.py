@@ -10,9 +10,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 ADDON = ROOT / 'momentum'
 LICENSE = ROOT / 'LICENSE'
-CORE = 'chains chat dynamis dynamis_client dynamis_runtime file_store food gil goals notifications packets phoenix_status player rings sessions sound tracker'.split()
-UI = 'defaults details dynamis dynamis_layout fonts history hud job_icons layout migrate modes profiles readouts settings_window theme'.split()
-FILES = {'momentum.lua', 'data/phoenix_rules.lua', 'data/dynamis_rules.lua', 'sounds/README.txt'} | {'core/%s.lua' % name for name in CORE} | {'ui/%s.lua' % name for name in UI}
+CORE = 'chains chat cooldowns dynamis dynamis_client dynamis_runtime events events_client events_runtime file_store food gil goals notifications packets phoenix_status player rings sessions sound tracker'.split()
+UI = 'defaults details dynamis dynamis_layout event_layout events fonts history hud job_icons layout migrate modes profiles readouts settings_window theme'.split()
+FILES = {'momentum.lua', 'data/phoenix_rules.lua', 'data/dynamis_rules.lua', 'data/event_rules.lua', 'sounds/README.txt'} | {'core/%s.lua' % name for name in CORE} | {'ui/%s.lua' % name for name in UI}
 SOUNDS = {
     'sounds/FF VII Save.mp3': '1c86e387a56cbedf6c2d3401f9600924b6c1580a5f64b7d66813af529fbec5d7',
     'sounds/FF IX Moogle.mp3': '8aff95a7b14597e0701edf82af0c01af13a49a3cb460af34ce64246da28d7bd2',

@@ -35,6 +35,72 @@ local currency_family = {
     dyna_bynes_received = { 'byne', 'received' }, dyna_bronze_received = { 'bronze', 'received' }, dyna_shells_received = { 'shell', 'received' },
 };
 local gil_fields = { gil = 'current', gil_gained = 'gained', gil_spent = 'spent', gil_net = 'net', gil_rate = 'rate' };
+local currency_fields = { assault_tags = 'assault_tags', beastmen_seals = 'beastmen_seals', kindred_seals = 'kindred_seals', beastcoins_stored = 'ancient_beastcoins' };
+local inventory_fields = { beastcoins_carried = 1875, beastmen_carried = 1126, kindred_carried = 1127 };
+local independent = {};
+for _, item in ipairs(defaults.READOUTS) do
+    local id = item.id;
+    independent[id] = id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_'
+        or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil or inventory_fields[id] ~= nil or gil_fields[id] ~= nil;
+end
+
+function readouts.needs_character(id)
+    return not independent[id] and id ~= 'status';
+end
+
+local function cooldown_for(view, key)
+    for _, cooldown in ipairs(view.events and view.events.cooldowns or {}) do
+        if cooldown.key == key then return cooldown; end
+    end
+end
+
+local function item_count(items)
+    local total = 0;
+    for _, item in ipairs(items or {}) do total = total + (item.count or 1); end
+    return total;
+end
+
+local function event_value(id, view, settings)
+    local event = view.events or {};
+    local function number(value) return readouts.format_number(value, settings.display.short); end
+    if id == 'zone_name' then return event.zone_name or '--';
+    elseif id == 'zone_time' then return (event.zone_partial and event.zone_elapsed and '~' or '') .. readouts.format_time(event.zone_elapsed);
+    elseif id == 'limbus_account_entry' then
+        local cooldown = view.account_cooldowns and view.account_cooldowns.limbus;
+        return cooldown and cooldown.remaining == 0 and 'Wait ended' or readouts.format_time(cooldown and cooldown.remaining);
+    elseif currency_fields[id] then
+        local currency = (event.currencies or {})[currency_fields[id]];
+        return number(type(currency) == 'table' and currency.value or currency);
+    elseif inventory_fields[id] then
+        return number(event.inventory_available and ((event.inventory or {})[inventory_fields[id]] or 0) or nil);
+    elseif id == 'limbus_next_entry' or id == 'assault_next_tag' or id == 'enm_next_entry' then
+        local key = id == 'limbus_next_entry' and 'limbus' or id == 'assault_next_tag' and 'assault_tag'
+            or settings.events.enm_group > 0 and 'enm:' .. settings.events.enm_group or event.cooldown_key;
+        if id == 'enm_next_entry' and key and key:sub(1, 4) ~= 'enm:' then key = nil; end
+        local cooldown = key and cooldown_for(view, key);
+        return cooldown and cooldown.remaining == 0 and 'Wait ended' or (cooldown and cooldown.estimated and '~' or '') .. readouts.format_time(cooldown and cooldown.remaining);
+    end
+    if not event.active then return '--'; end
+    if id == 'event_name' then return event.name or '--';
+    elseif id == 'event_time' then return (event.time_estimated and event.remaining and '~' or '') .. readouts.countdown(event.remaining);
+    elseif id == 'event_elapsed' then return readouts.format_time(event.elapsed);
+    elseif id == 'event_objective' then return event.objective or 'Progress not observed';
+    elseif id == 'event_status' then return event.status or '--';
+    elseif id == 'event_kills' then return number(event.kills);
+    elseif id == 'event_points' then return number(event.points);
+    elseif id == 'event_exp' then return number(event.exp);
+    elseif id == 'event_lp' then return number(event.lp);
+    elseif id == 'event_floor' then return number(event.floor) .. (type(event.floors) == 'number' and event.floors > 0 and ' / ' .. number(event.floors) or '');
+    elseif id == 'event_extensions' then return number(event.extensions) .. ' (+' .. number(event.extension_minutes) .. 'm)';
+    elseif id == 'event_coins' then return number(event.coins_found);
+    elseif id == 'event_coins_received' then return number(event.coins_received);
+    elseif id == 'event_materials' then return number(event.materials_found);
+    elseif id == 'event_materials_received' then return number(event.materials_received);
+    elseif id == 'event_drops' then return number(item_count(event.drops));
+    elseif id == 'event_received' then return number(item_count(event.received));
+    elseif id == 'event_best' then return readouts.format_time(type(event.personal_best) == 'table' and event.personal_best.time or event.personal_best); end
+    return '--';
+end
 
 local function objective_count(objectives)
     local complete, total = 0, 0;
@@ -73,6 +139,9 @@ end
 
 local function value_for(id, view, settings)
     if not definitions[id] then return nil; end
+    if id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_' or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or currency_fields[id] or inventory_fields[id] then
+        return event_value(id, view, settings);
+    end
     if id:sub(1, 5) == 'dyna_' then return dynamis_value(id, view, settings.display.short); end
     if gil_fields[id] then return readouts.format_number(view.gil and view.gil[gil_fields[id]], settings.display.short); end
     if not view.valid and id ~= 'status' then return '--'; end
@@ -157,6 +226,8 @@ local function value_for(id, view, settings)
     end
 end
 
+readouts.value = value_for;
+
 local function visible(condition, view, value)
     if condition == 'known' then return not value:find('--', 1, true); end
     if condition == 'exp' or condition == 'lp' then return view.mode == condition; end
@@ -207,7 +278,20 @@ local dependencies = {
     dyna_kills = 'dynamis.active dynamis.kills', dyna_pool = 'dynamis.active dynamis.pool_count',
     dyna_objectives = 'dynamis.active dynamis.objectives', dyna_subjob = 'dynamis.active dynamis.subjob_locked',
     dyna_weakness = 'dynamis.active dynamis.weakness_seconds', dyna_next_entry = 'dynamis.next_entry_seconds',
+    zone_time = 'events.zone_elapsed events.zone_partial', zone_name = 'events.zone_name',
+    event_name = 'events.active events.name', event_time = 'events.active events.remaining events.time_estimated',
+    event_elapsed = 'events.active events.elapsed', event_objective = 'events.active events.objective',
+    event_status = 'events.active events.status', event_kills = 'events.active events.kills', event_points = 'events.active events.points',
+    event_exp = 'events.active events.exp', event_lp = 'events.active events.lp', event_floor = 'events.active events.floor events.floors',
+    event_extensions = 'events.active events.extensions events.extension_minutes', event_coins = 'events.active events.coins_found',
+    event_coins_received = 'events.active events.coins_received', event_materials = 'events.active events.materials_found',
+    event_materials_received = 'events.active events.materials_received', event_drops = 'events.active events.drops',
+    event_received = 'events.active events.received', event_best = 'events.active events.personal_best',
+    limbus_next_entry = 'events.cooldowns', limbus_account_entry = 'account_cooldowns.limbus.remaining',
+    enm_next_entry = 'events.cooldowns events.cooldown_key', assault_next_tag = 'events.cooldowns',
 };
+for id, field in pairs(currency_fields) do dependencies[id] = 'events.currencies.' .. field .. '.value'; end
+for id in pairs(inventory_fields) do dependencies[id] = 'events.inventory_available events.inventory'; end
 for id, family in pairs(currency_family) do dependencies[id] = 'dynamis.active dynamis.currency.' .. family[1] .. '.' .. family[2]; end
 for id, fields in pairs(dependencies) do
     local names = {}; for name in fields:gmatch('%S+') do names[#names + 1] = name; end
@@ -218,6 +302,8 @@ local condition_fields = { synced = { 'sync_active', 'level', 'effective_level' 
 local timer_fields = { chain_left = true, eta = true, ['lp.eta'] = true, goal_eta = true, elapsed = true, dedication_seconds = true, food_seconds = true, recast = true };
 local countdown_fields = { ['dynamis.remaining'] = true, ['dynamis.weakness_seconds'] = true };
 timer_fields['dynamis.next_entry_seconds'] = true;
+timer_fields['events.zone_elapsed'], timer_fields['events.elapsed'], timer_fields['account_cooldowns.limbus.remaining'] = true, true, true;
+countdown_fields['events.remaining'] = true;
 local cached = setmetatable({}, { __mode = 'k' });
 
 local function field_value(view, field)
@@ -263,11 +349,21 @@ local function number_key(value, short)
     return value < 0 and '-' .. tostring(rounded) or rounded;
 end
 
-local function append_dependency(parts, view, id, field, short)
+local function append_dependency(parts, view, id, field, short, settings)
     local value = field_value(view, field);
     if id == 'dyna_objectives' and field == 'dynamis.objectives' then
         local complete, total = objective_count(value);
         value = tostring(complete) .. '/' .. tostring(total);
+    elseif field == 'events.drops' or field == 'events.received' then
+        value = item_count(value);
+    elseif field == 'events.cooldowns' then
+        local key = id == 'limbus_next_entry' and 'limbus' or id == 'assault_next_tag' and 'assault_tag'
+            or settings.events.enm_group > 0 and 'enm:' .. settings.events.enm_group or view.events and view.events.cooldown_key;
+        if id == 'enm_next_entry' and key and key:sub(1, 4) ~= 'enm:' then key = nil; end
+        local cooldown = key and cooldown_for(view, key);
+        value = cooldown and (tostring(cooldown.estimated) .. ':' .. tostring(math.floor((cooldown.remaining or 0) + 0.5))) or nil;
+    elseif field == 'events.inventory' then
+        value = value and value[inventory_fields[id]];
     elseif gil_fields[id] or id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
         value = number_key(value, short);
     elseif id == 'merit_rate' then
@@ -287,7 +383,7 @@ function readouts.cached(settings, view, sample)
         if settings.display.enabled[id] then
             local condition = (settings.display.conditions or {})[id];
             append_key(parts, id); append_key(parts, settings.display.labels[id]); append_key(parts, condition);
-            for _, field in ipairs(dependencies[id] or {}) do append_dependency(parts, view, id, field, settings.display.short); end
+            for _, field in ipairs(dependencies[id] or {}) do append_dependency(parts, view, id, field, settings.display.short, settings); end
             for _, field in ipairs(condition_fields[condition] or {}) do append_key(parts, view[field], field); end
         end
     end
@@ -346,6 +442,7 @@ function readouts.sample(scenario)
         best_chain = 5, paused = false, collecting = false, capped = false, dedication = true,
         dedication_seconds = 1830, buffer_current = 12450, buffer_needed = 20000, goal_remaining = nil, goal_eta = nil,
         gil = { current = 125400, gained = 15800, spent = 5800, net = 10000, rate = 13333 },
+        events = { active = false, zone_elapsed = 1845, zone_partial = false, zone_name = 'West Ronfaure', cooldowns = {}, currencies = {}, history = {} },
     };
     if scenario == 'Merits' or scenario == 'Capped' then
         sample.level, sample.effective_level, sample.mode = 75, 75, 'lp';
@@ -389,6 +486,23 @@ function readouts.sample(scenario)
             loot = { { item_id = 15132, name = 'Warrior\'s Calligae', kind = 'af2', job = 'WAR', found = 1, received = 1, lost = 0, awarded = 1, pending = 0 } },
             pool = { { name = 'Ordelle Bronzepiece', item_id = 1452, remaining = 185 }, { name = 'Warrior\'s Calligae', item_id = 15132, remaining = 92 } },
             history = {},
+        };
+    end
+    local event_kinds = { Assault = 'assault', Limbus = 'limbus', BCNM = 'bcnm', KSNM = 'ksnm', ENM = 'enm' };
+    if event_kinds[scenario] then
+        local kind = event_kinds[scenario];
+        local event_names = { assault = 'Leujaoam Cleansing', limbus = 'NW Apollyon', bcnm = 'Under Observation', ksnm = 'Royale Ramble', enm = 'Fire in the Sky' };
+        sample.events = {
+            active = true, kind = kind, name = event_names[kind], remaining = 1124, time_limit = 1800, elapsed = 676,
+            time_estimated = kind == 'assault' or kind == 'limbus', status = 'Fighting',
+            objective = kind == 'assault' and 'Worms seen: 9 / 15' or kind == 'limbus' and 'Open the next vortex' or 'Defeat the required enemies',
+            objectives = { 'Enemy defeats observed during this run.' }, kills = 9, points = 0, exp = 0, lp = 0,
+            floor = kind == 'limbus' and 3 or nil, floors = kind == 'limbus' and 5 or nil,
+            extensions = 1, extension_minutes = 5, coins_found = 12, coins_received = 2, materials_found = 1, materials_received = 0,
+            drops = { { item_id = 1875, name = 'Ancient Beastcoin', count = 12, kind = 'coin' } }, received = {}, entry_items = {},
+            zone_elapsed = 706, zone_partial = false, zone_name = scenario == 'Limbus' and 'Apollyon' or scenario,
+            currencies = { beastmen_seals = { value = 125 }, kindred_seals = { value = 60 }, ancient_beastcoins = { value = 32 }, assault_tags = { value = 2 } },
+            cooldowns = { { key = 'limbus', kind = 'limbus', name = 'Limbus entry', remaining = 71324, source = 'Observed entry' } }, history = {},
         };
     end
     return sample;

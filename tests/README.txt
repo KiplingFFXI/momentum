@@ -38,6 +38,11 @@ For focused checks:
   tests/.venv/Scripts/python tests/test_release.py
   tests/.venv/Scripts/python tests/run.py test_dynamis.lua
   tests/.venv/Scripts/python tests/run.py test_dynamis_ui.lua
+  tests/.venv/Scripts/python tests/run.py test_events.lua test_events_client.lua test_events_runtime.lua test_events_entry.lua
+  tests/.venv/Scripts/python tests/run.py test_event_layouts.lua test_event_readouts.lua test_event_ui.lua test_account_cooldowns.lua
+  tests/.venv/Scripts/python tests/run.py test_event_resets.lua
+  tests/.venv/Scripts/python tests/run.py test_shami_seals.lua test_shami_entry.lua test_startup_events.lua test_chat_center.lua
+  tests/.venv/Scripts/python tests/test_event_rules.py
   tests/.venv/Scripts/python tools/check_repository.py
 
 On Windows, tests/run_tests.bat creates its own .venv, installs requirements, and
@@ -70,24 +75,45 @@ The focused suites cover:
   pause/resume edges, sound throttling, failures, and retries.
 - Sound-folder scans, bundled/custom ordering, duplicate names, bounded native
   filename reads, and search-handle cleanup when enumeration fails.
-- Optional Phoenix reports, freshness, identity, packet bounds, and ring data.
+- Normal client status, observation gaps, identity, packet bounds, and ring data.
 - Character/job session recovery, save failures, file conflicts, profiles,
   sharing, saved folds, search, Undo, layout preservation, and Escape handling.
 - Bounded frame work, cache invalidation, counted alert-header measurements,
   hidden displays, readout fit, and readable colors across the existing skins.
 - Chat visibility choices, retained anchors, temporary free placement, unknown
   chat state, hide-setting precedence, and continued tracking while chat closes.
+- Centered chat placement, content and fixed widths, saved starting points,
+  second-chat protection, snapping, locked movement, profiles, and held anchors.
 - Dynamis hourglass and packet parsing, extensions, pool deduplication, found and
   received drops, observed objectives, partial runs, reloads, history, registration
   timing, separate layouts, wanted drops, and optional alerts. EXP reset and pause
   preserve Dynamis tracking; clearing Dynamis totals preserves the timer.
-- Manual EXP, Merits, and Dynamis selection, saved readout layouts, automatic
-  switching, reloads, profile changes, commands, and unchanged session timers.
+- Manual EXP, Merits, Dynamis, Assault, Limbus, BCNM, KSNM, and ENM selection,
+  independent saved readout layouts, automatic switching, reloads, profile changes,
+  commands, and unchanged session and event timers.
+- Event Display resets restore the selected starter, while Events resets preserve
+  the underlying EXP and Merits readouts across all five new modes.
+- Zone-visit timing, partial visits, event identity, native and estimated countdowns,
+  reloads, objective observation, repeated enemies, waves, crates, outcomes,
+  deduplicated drops, personal awards, confirmed records, and bounded run history.
+  Initial treasure-pool reads must preserve a just-observed drop so a repeated
+  update cannot count it twice.
+- Assault mission records, stored currencies and tags, carried seals and coins,
+  ENM shared key-item groups and acquisition timers, Limbus entry timing, and
+  unknown observations that must not become eligibility claims.
+- Shami dialogue and deposit fields, confirmed orb purchases and seal withdrawals,
+  cancellations and failed purchases, duplicate receipts, older balance updates,
+  packet bounds and identity, and pause/reset without stopping balance updates.
+- Bounded startup event replay, countdown aging, stale zone or character context,
+  and no EXP reward replay during the three-second initialization wait.
+- Local account-group sharing, Dynamis account timers, separate Limbus account
+  reminders, concurrent records, saved-setting migration, and account preferences
+  staying separate from profiles, shared layouts, resets, and appearance Undo.
 
 The archive suite checks the exact runtime manifest, reproducibility, normalized
 line endings, private-path rejection, links, missing or extra files, and sound
-hashes. The public repository
-check validates text, release documents, local Markdown links, and the changelog
+hashes. The public repository check validates text, release documents, local
+Markdown links, and the changelog
 version. Developer files do not enter the runtime ZIP.
 
 The real UI preview uses Dear ImGui 1.92.3 to draw the actual Lua HUD and settings.
@@ -97,9 +123,16 @@ resizing, chat snapping, grouped alerts and counts, sound test controls, profile
 and session actions. A Dynamis scene and dynamis_input.json replay cover the
 compact bar, changing countdown, extensions, drops, and unknown time. Full-entry
 fixtures run the registered addon callbacks. The manual_modes_input.json replay
-switches all three bar modes and returns to Automatic using the settings menu.
+switches the original three bar modes and returns to Automatic using the settings menu.
 gil_readouts_input.json checks the compact gil bar, negative changes and rates,
 and an unready rate using the actual Lua renderer.
+event_modes_input.json clicks all five event modes, edits independent layouts,
+and restores the original EXP layout. Event scenes cover compact bars, narrow
+settings, wanted-drop pagination, cooldown choices, and the local account-group
+field and sharing checkbox. No real account details are used in these fixtures.
+chat_center_input.json selects centered placement and sizing through the actual
+settings controls. chat_center_hold_input.json checks that a centered bar keeps
+its drawn rectangle while chat is closed, then follows chat again when it opens.
 Close and reopen cases include combat, Escape, the title-bar X, a dropdown, an
 active text edit, and pending confirmations.
 Synthetic game data and a marked icon fixture remain separate from live captures.
@@ -116,7 +149,7 @@ Compare against a saved runtime archive when a change needs that evidence:
   tests/.venv/Scripts/python tests/compare_release.py path/to/previous-release.zip
 
 The benchmark counts repeated work in fixed HUD, countdown, settings, packet,
-hidden-display, mature-session, and ring-demand fixtures. It counts layout work,
+hidden-display, mature-session, ring-demand, active-event, and Events-page fixtures. It counts layout work,
 tracker views, rate-bucket visits, chat and inventory reads, profile reads,
 history sorting, and date formatting. It does not measure live FPS.
 
@@ -125,6 +158,9 @@ They count actual slot reads and cover idle/active rates plus 100-packet bursts
 while tracking or paused. Unrelated inventory updates must not cause player or
 inventory sampling. Automatic's idle fixture checks that no layouts are copied
 or reapplied once the matching saved layout is active.
+
+Event fixtures advance the countdown and check that unchanged inventory is not
+scanned again. They also cover idle event tracking and the open Events page.
 
 Closed-chat fixtures cover Hide with chat, both keep-visible choices, and Free
 placement. The HUD holds its last rendered rectangle through failed chat reads;
@@ -148,10 +184,12 @@ tools/README.txt explains the pinned Phoenix rules checks and archive builder:
 
   tests/.venv/Scripts/python tools/export_rules.py --source ../Phoenix --check
   tests/.venv/Scripts/python tools/export_dynamis.py --source ../Phoenix --check
+  tests/.venv/Scripts/python tools/export_events.py --source ../Phoenix --check
 
-Each exporter reads its pinned Git revision. The Dynamis export includes the
-enabled era and Phoenix overlays and needs PyYAML from tools/requirements.txt.
-These checks do not refresh either bundle or change the Phoenix checkout.
+Each exporter reads its pinned Git revision. Dynamis and event exports include
+the applicable enabled era and Phoenix overlays and need PyYAML from
+tools/requirements.txt. These checks do not refresh any bundle or change the
+Phoenix checkout.
 
 docs/RELEASING.md describes the release checklist and manual draft workflow.
 The Verify workflow runs the headless checks on Windows on pull requests or by

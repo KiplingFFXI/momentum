@@ -101,6 +101,32 @@ MOCK.load_addon()
 MOCK.fire('load')
 local settings = MOMENTUM_TEST.settings()
 local gil_case = CASE:find('entry-gil-', 1, true) == 1
+local event_case = CASE:find('entry-events-', 1, true) == 1
+if event_case and not MOMENTUM_TEST.events then return { unsupported = 1 } end
+if event_case then
+    local event_utc, event_tick = os.time(), MOCK.now
+    MOMENTUM_TEST.events.observer.server_clock = function() return event_utc + MOCK.now - event_tick end
+    if CASE == 'entry-events-menu' then settings.window.open, settings.window.tab = true, 'Events' end
+    if CASE == 'entry-events-active' then
+        local rules = require('data.event_rules')
+        for zone, area in pairs(rules.areas) do
+            local selected
+            for index, row in pairs(area.battles or {}) do
+                if row.kind == 'limbus' then selected = index; break end
+            end
+            if selected then
+                MOCK.player.zone = zone
+                MOMENTUM_TEST.sample(MOCK.now)
+                local core = MOMENTUM_TEST.events.core
+                assert(core:begin(zone, selected, MOCK.now, os.time(), false))
+                core:timer(1800, MOCK.now, os.time(), true)
+                assert(MOMENTUM_TEST.services.bar_mode('limbus'))
+                break
+            end
+        end
+        assert(MOMENTUM_TEST.events.core.current, 'Active event benchmark needs Limbus content')
+    end
+end
 if gil_case and not MOMENTUM_TEST.tracker().gil then return { unsupported = 1 } end
 if gil_case then
     settings.display.order = { 'gil', 'gil_gained', 'gil_spent', 'gil_net', 'gil_rate' }
@@ -175,6 +201,12 @@ else
         assert(metrics.inventory_slot_reads == 0, 'Known gil balance was polled again')
         assert(metrics.table_copies == 0 and metrics.directory_checks == 0, 'Idle tracking repeated setup work')
     end
+    if event_case then
+        assert(metrics.inventory_slot_reads == 0, 'Idle event tracking reread unchanged inventory')
+        if CASE == 'entry-events-active' then
+            assert(MOMENTUM_TEST.events:view(MOCK.now, settings).remaining < 1799, 'Event benchmark countdown did not advance')
+        end
+    end
 end
 for _, line in ipairs(MOCK.printed) do assert(not line:find('The bar stopped drawing', 1, true), line) end
 assert(#MOCK.commands == 0, 'Benchmark sent a gameplay command')
@@ -192,7 +224,8 @@ def measure(addon):
                      'entry-mature', 'entry-hidden', 'entry-event-hidden',
                      'entry-chat-hidden', 'entry-chat-kept', 'entry-chat-always', 'entry-chat-free',
                      'entry-rings-unused', 'entry-ring-alert', 'unrelated-combat', 'unrelated-inventory',
-                     'entry-gil-idle', 'entry-gil-active', 'entry-gil-paused', 'entry-gil-packets', 'entry-auto-layout-idle'):
+                     'entry-gil-idle', 'entry-gil-active', 'entry-gil-paused', 'entry-gil-packets', 'entry-auto-layout-idle',
+                     'entry-events-idle', 'entry-events-active', 'entry-events-menu'):
             with tempfile.TemporaryDirectory(prefix='momentum_benchmark_') as folder:
                 lua = run.runtime(folder)
                 lua.globals().CASE = case

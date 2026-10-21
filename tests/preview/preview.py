@@ -58,7 +58,7 @@ def parse_args(argv):
     p.add_argument('--hud', action='store_true', help='show the bar without the settings window')
     p.add_argument('--icon-fixture', action='store_true', help='use a grey test texture to check job-picture layout; not game artwork')
     p.add_argument('--chat-fixture', action='store_true', help='draw the simulated chat rectangles behind the bar; not a game screenshot')
-    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused'])
+    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused'])
     p.add_argument('--input-script', help='JSON mouse input and Lua assertions to replay')
     p.add_argument('--full', action='store_true',
                    help='run the whole addon: dofile momentum.lua, fire load, "/momentum", then d3d_present '

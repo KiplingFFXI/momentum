@@ -2,7 +2,8 @@ Momentum rules and release tools
 ===============================
 
 Run these commands from the project folder with Python 3.12. Packaging uses the
-standard library. Dynamis source export needs PyYAML; offline Lua checks need lupa:
+standard library. Dynamis and event source exports need PyYAML; offline Lua checks
+need lupa:
 
   python -m pip install -r tools/requirements.txt
 
@@ -53,8 +54,38 @@ For an intentional refresh after reviewing the source and loaded modules:
 Omitting --check writes the bundle in place, so inspect that diff and run the
 Dynamis tests before including it in a release. No running server is needed.
 
-Ordinary verification and packaging do not regenerate either rules bundle. There is no
-scheduled data-refresh workflow.
+Phoenix Assault and battlefields
+--------------------------------
+
+export_events.py writes momentum/data/event_rules.lua from one pinned Phoenix
+Git revision. It reads the supported Assault missions, legacy Limbus routes,
+BCNM/KSNM/ENM definitions, objectives, entry items, seals, drops, messages, and
+entry cooldowns. Applicable loaded era and Phoenix overlays are included.
+The output records the revision and input hashes. Source assumptions that need
+review stop the export. It does not change, switch, fetch, or query a running server.
+
+Check the existing bundle:
+
+  python tools/export_events.py --source ../Phoenix --check
+
+For an intentional refresh after reviewing the source and loaded overlays:
+
+  python tools/export_events.py --source ../Phoenix --ref COMMIT
+
+--source is required. The default revision is pinned in export_events.py.
+Omitting --check replaces the bundled data, so inspect the diff and run the event
+rules, runtime, client, layout, and UI tests before including it in a release.
+The catalog is reference data; it does not imply hidden progress or entry eligibility.
+
+ENM key-item waits start on acquisition. Limbus starts its character wait on
+entry, and Dynamis starts its account-wide lockout at successful registration.
+The optional Limbus account group is a local reminder, not a server restriction.
+Normal NPC timestamps take priority over estimated acquisition or entry times.
+Shami event fields and orb costs are source-derived; the client observer still
+waits for a successful normal transaction before changing a stored seal total.
+
+Ordinary verification and packaging do not regenerate any rules bundle. There is
+no scheduled data-refresh workflow.
 
 Offline verification
 --------------------
@@ -93,8 +124,9 @@ Text line endings, ZIP timestamps, file modes, and entry order are normalized.
 Identical reviewed input produces the same archive in the same build environment.
 A temporary archive is verified before replacing an existing output.
 
-Job artwork, player settings, profiles, session and Dynamis files, tests, source notes, and
-developer tools are not copied into the runtime archive.
+Job artwork, player settings, profiles, sessions, event histories, local account
+groups and cooldown records, tests, source notes, and developer tools are not copied
+into the runtime archive.
 
 Momentum is fully client-side. Do not add or package server modules, custom
 server data feeds, or server commands. Rules exporters read source for reference;

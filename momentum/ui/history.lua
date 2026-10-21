@@ -22,10 +22,10 @@ end
 
 function history.layout_equal(a, b)
     for key, value in pairs(a) do
-        if (key ~= 'window' and key ~= 'preview' and not history.equal(value, b[key])) then return false; end
+        if (key ~= 'window' and key ~= 'preview' and key ~= 'account' and not history.equal(value, b[key])) then return false; end
     end
     for key in pairs(b) do
-        if (key ~= 'window' and key ~= 'preview' and a[key] == nil) then return false; end
+        if (key ~= 'window' and key ~= 'preview' and key ~= 'account' and a[key] == nil) then return false; end
     end
     return true;
 end
@@ -39,9 +39,9 @@ function history.new()
     function self:undo(target)
         local previous = table.remove(self.entries);
         if (previous == nil) then return false; end
-        local window, preview = target.window, target.preview;
+        local window, preview, account = target.window, target.preview, target.account;
         history.replace(target, previous);
-        target.window, target.preview = window, preview;
+        target.window, target.preview, target.account = window, preview, account;
         return true;
     end
     function self:clear() self.entries = {}; end

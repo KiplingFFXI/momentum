@@ -1,0 +1,21 @@
+[
+  {"frame": 2, "lua": "assert(settings.bar.chat_alignment=='left'); PREVIEW.start=settings.bar.start; PREVIEW.order=require('ui.history').copy(settings.display.order)"},
+  {"frame": 3, "target": "##Chat alignment"},
+  {"frame": 4, "target": "##Chat alignment", "down": true},
+  {"frame": 5, "down": false},
+  {"frame": 6, "target": "Center"},
+  {"frame": 7, "target": "Center", "down": true},
+  {"frame": 8, "down": false},
+  {"frame": 10, "lua": "assert(settings.bar.chat_alignment=='center','Center choice did not apply'); local x,w=PREVIEW_PY.window_x('##momentum_bar'),PREVIEW_PY.window_width('##momentum_bar'); assert(math.abs(x+w/2-MOCK.chat.x-MOCK.chat.width/2)<=1,'Bar was not centered on chat'); assert(w<=settings.bar.width and w<=MOCK.chat.width,'Centered bar exceeded its width limit'); assert(settings.bar.start==PREVIEW.start,'Center changed the saved starting point'); assert(require('ui.history').equal(settings.display.order,PREVIEW.order),'Center changed readout order')"},
+  {"frame": 11, "target": "Fit width to readouts"},
+  {"frame": 12, "target": "Fit width to readouts", "down": true},
+  {"frame": 13, "down": false},
+  {"frame": 15, "lua": "assert(not settings.bar.auto_width,'Centered fixed width could not be selected'); assert(PREVIEW_PY.window_width('##momentum_bar')==settings.bar.width,'Centered fixed width was not rendered')"},
+  {"frame": 16, "target": "##Chat alignment"},
+  {"frame": 17, "target": "##Chat alignment", "down": true},
+  {"frame": 18, "down": false},
+  {"frame": 19, "target": "Left"},
+  {"frame": 20, "target": "Left", "down": true},
+  {"frame": 21, "down": false},
+  {"frame": 23, "mouse": [-100,-100], "lua": "assert(settings.bar.chat_alignment=='left','Left choice did not apply'); assert(settings.bar.start==PREVIEW.start,'Returning left lost the starting point'); local x,w=PREVIEW_PY.window_x('##momentum_bar'),PREVIEW_PY.window_width('##momentum_bar'); assert(math.abs(x-MOCK.chat.x-PREVIEW.start)<=1,'Left did not restore the starting point'); assert(x+w==MOCK.chat.x+MOCK.chat.width,'Left did not restore chat width'); assert(#MOCK.commands==0)"}
+]

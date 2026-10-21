@@ -165,6 +165,13 @@ local alert_help = {
     dyna_pool = 'Warn when an item has been waiting in the treasure pool this long before its usual expiry. The time is estimated; an item can leave sooner when everyone lots or passes.',
     dyna_clear = 'Notify when you obtain the clear key item for the current Dynamis zone. Owning it from an earlier run does not trigger an alert.',
     dyna_subjob = 'Notify when your support job restriction is removed during a Dynamis run.',
+    event_time = 'Warn when the observed Assault or battlefield timer reaches the time below. Unknown time stays quiet. ~ marks an estimated timer.',
+    event_extension = 'Notify when a Limbus time extension is observed. Loading or rejoining stays quiet.',
+    event_objective = 'Notify when a supported objective is confirmed through normal game updates. Unseen progress stays unknown.',
+    event_clear = 'Notify when an Assault or battlefield win is confirmed. A boss death alone does not always mean a win.',
+    event_failure = 'Notify when an Assault or battlefield loss is confirmed.',
+    event_drop = 'Notify when a chosen drop enters the treasure pool. Choose items under Events > Wanted event drops.',
+    event_ready = 'Notify when an observed entry or key-item wait ends. Other entry requirements still apply.',
 };
 
 local alert_groups = {
@@ -175,6 +182,7 @@ local alert_groups = {
     { 'Levels and merit points', 'Levels, merit points, nearly full merits, and your tracking goal.', { 'level', 'merit', 'cap', 'goal' } },
     { 'Missed EXP', 'Reasons the game gives for missed EXP.', { 'no_exp' } },
     { 'Dynamis', 'Time, time extensions, wanted drops, the treasure pool, clears, and support job unlocks.', { 'dyna_time', 'dyna_extension', 'dyna_wanted', 'dyna_pool', 'dyna_clear', 'dyna_subjob' } },
+    { 'Assault and battlefields', 'Time, objectives, results, wanted drops, and observed entry waits.', { 'event_time', 'event_extension', 'event_objective', 'event_clear', 'event_failure', 'event_drop', 'event_ready' } },
 };
 local alert_names = { food_end = 'Food effect wore off' };
 for _, event in ipairs(defaults.ALERTS) do alert_names[event[1]] = event[2]; end
@@ -239,6 +247,10 @@ local function event_alert(settings, id, services, ui, sound_files)
     elseif id == 'dyna_pool' then
         ui.slider(settings.dynamis, 'pool_warning_seconds', 'Pool warning time', 10, 240, '%.0f seconds',
             'Warn with about this much time left before an item leaves the treasure pool. The item may leave earlier when everyone lots or passes.');
+    elseif id == 'event_time' then
+        ui.slider(settings.events, 'warning_minutes', 'Event warning time', 1, 30, '%.0f minutes',
+            'Warn when the observed event timer reaches this many minutes. Unknown timers stay quiet.');
+        settings.events.warning_minutes = math.floor(settings.events.warning_minutes + 0.5);
     end
     ui.slider(event, 'cooldown', 'Time between alerts', 0, 3600, '%.0f seconds',
         'Wait at least this long before repeating this alert. Other alerts have their own wait times.');

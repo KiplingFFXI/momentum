@@ -1,10 +1,10 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.3.2';
-addon.desc = 'A movable EXP, merit, gil and Dynamis tracking bar for Phoenix.';
+addon.version = '1.4.0';
+addon.desc = 'A compact EXP, merit, gil and event tracking bar for Phoenix.';
 
 local flush_commands;
-local function start_runtime(startup_zone)
+local function start_runtime(startup_zone, startup_events)
 
 require('common');
 local ffi = require('ffi');
@@ -26,7 +26,9 @@ local phoenix = phoenix_status.new();
 local rings = require('core.rings');
 local notifications = require('core.notifications').new();
 local dynamis_notifications = require('core.notifications').new();
+local event_notifications = require('core.notifications').new();
 local dynamis_layout = require('ui.dynamis_layout');
+local event_layout = require('ui.event_layout');
 local modes = require('ui.modes');
 local food = require('core.food').new();
 local sound = require('core.sound');
@@ -41,6 +43,10 @@ pcall(ffi.cdef, 'short __stdcall GetAsyncKeyState(int vKey);');
 
 local folder = AshitaCore:GetInstallPath() .. '\\config\\addons\\momentum\\';
 local dynamis = require('core.dynamis_runtime').new(folder, { utc = player.utc,
+    report = function(message) print('[Momentum] ' .. message); end });
+local events = require('core.events_runtime').new(folder, { utc = player.utc,
+    report = function(message) print('[Momentum] ' .. message); end });
+local account_cooldowns = require('core.cooldowns').new(folder, {
     report = function(message) print('[Momentum] ' .. message); end });
 local shared_file = folder .. 'shared_layout.json';
 local saved_profiles = profiles.new(folder);
@@ -93,7 +99,26 @@ local function current_view(t)
     phoenix:apply_chain(view, t);
     view.rings = state.rings or { available = false, entries = {} };
     view.dynamis = dynamis:view(t, state.settings);
-    view.notice = dynamis_notifications:view(t) or notifications:view(t);
+    view.events = events:view(t, state.settings);
+    view.account_cooldowns = account_cooldowns:view(t, player.utc() or os.time());
+    local account = view.account_cooldowns;
+    if account.dynamis and (not view.dynamis.next_entry_seconds or account.dynamis.remaining > view.dynamis.next_entry_seconds) then
+        local cached = state.account_dynamis;
+        if not cached or cached.base ~= view.dynamis or cached.deadline ~= account.dynamis.deadline
+            or cached.remaining ~= account.dynamis.remaining or cached.shared ~= account.dynamis.shared then
+            local merged = {};
+            for key, value in pairs(view.dynamis) do merged[key] = value; end
+            merged.next_entry_seconds, merged.next_entry_shared = account.dynamis.remaining, account.dynamis.shared;
+            merged.lockouts = { { name = 'Dynamis', remaining = account.dynamis.remaining, end_time = account.dynamis.deadline } };
+            cached = { base = view.dynamis, deadline = account.dynamis.deadline, remaining = account.dynamis.remaining,
+                shared = account.dynamis.shared, view = merged };
+            state.account_dynamis = cached;
+        end
+        view.dynamis = cached.view;
+    else state.account_dynamis = nil; end
+    view.events.account_limbus_remaining = account.limbus and account.limbus.remaining;
+    view.events.account_limbus_shared = account.limbus and account.limbus.shared;
+    view.notice = event_notifications:view(t) or dynamis_notifications:view(t) or notifications:view(t);
     return view;
 end
 
@@ -158,6 +183,7 @@ local function save()
     if (state.retry_at and now() < state.retry_at) then return false; end
     tidy(state.settings);
     state.own.job_links = state.settings.job_links;
+    if state.settings ~= state.own then state.own.account = history.copy(state.settings.account); end
     if (state.settings.shared) then
         local current, err = store.read(shared_file);
         if (current == nil) then say(err); state.retry_at = now() + 10; return false; end
@@ -200,7 +226,7 @@ end
 local function update_auto_layout()
     local s = state.settings;
     if s.modes.selected ~= 'auto' then return; end
-    if s.dynamis.layout_active then return; end
+    if s.dynamis.layout_active or s.events.active_kind then return; end
     if not s.display.auto_layout then state.auto_layout = nil; return; end
     local snapshot = state.snapshot;
     local mode = tracker_module.earning_mode(snapshot);
@@ -221,6 +247,7 @@ end
 
 local function update_dynamis_layout()
     local s, snapshot = state.settings, state.snapshot;
+    if s.events.active_kind then return; end
     local manual = s.modes.selected ~= 'auto';
     if not manual and (not snapshot or not snapshot.valid) then return; end
     local active = manual and s.modes.selected == 'dynamis' or not manual and s.dynamis.enabled
@@ -237,6 +264,24 @@ local function update_dynamis_layout()
             state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job,
                 mode = tracker_module.earning_mode(snapshot) };
         end
+        undo:clear();
+        state.dirty = true;
+        save();
+    end
+end
+
+local function update_event_layout()
+    local s = state.settings;
+    local view = events:view(now(), s);
+    local kind = view.active and view.kind or nil;
+    local expected = s.modes.selected == 'auto' and s.events.enabled and s.events.auto_layout and kind
+        or s.modes.selected ~= 'auto' and event_layout.names[s.modes.selected] and s.modes.selected or nil;
+    if s.events.active_kind == expected then return; end
+    if imgui.IsMouseDown(ImGuiMouseButton_Left) or imgui.IsAnyItemActive() then return; end
+    finish_edit();
+    if state.dirty then return; end
+    if modes.event(s, kind) then
+        state.before, state.edit_baseline, state.auto_layout = nil, nil, nil;
         undo:clear();
         state.dirty = true;
         save();
@@ -260,6 +305,9 @@ local function change(callback)
 end
 
 local services = {};
+services.events_clear = function() return events:clear(now()); end;
+services.events_view = function() return events:view(now(), state.settings); end;
+services.events_history = function() return events:view(now(), state.settings).history or {}; end;
 services.bar_mode = function(selected)
     local result = change(function(s)
         local okay, problem = modes.select(s, selected);
@@ -301,18 +349,20 @@ end;
 services.can_undo = function() return #undo.entries > 0; end;
 services.reset = function()
     return change(function(s)
-        local window_settings, links, shared = s.window, s.job_links, s.shared;
+        local window_settings, links, shared, account = s.window, s.job_links, s.shared, s.account;
         history.replace(s, defaults.make());
-        s.window, s.job_links, s.shared = window_settings, links, shared;
+        s.window, s.job_links, s.shared, s.account = window_settings, links, shared, account;
     end);
 end;
 services.reset_section = function(section)
     return change(function(s)
         local fresh = defaults.make();
+        if section == 'events' and s.events.active_kind then event_layout.switch(s, nil); end
         if section == 'dynamis' and s.dynamis.layout_active then dynamis_layout.switch(s, false); end
         if (fresh[section] ~= nil and section ~= 'window' and section ~= 'job_links') then s[section] = fresh[section]; end
         if section == 'display' then
-            if s.dynamis.layout_active then defaults.apply_starter(s, 'Dynamis');
+            if s.events.active_kind then defaults.apply_starter(s, event_layout.names[s.events.active_kind]);
+            elseif s.dynamis.layout_active then defaults.apply_starter(s, 'Dynamis');
             elseif s.modes.selected == 'merits' then defaults.apply_starter(s, 'Merits'); end
         end
         if (section == 'tracking') then s.visibility, s.display.mode = fresh.visibility, fresh.display.mode; end
@@ -501,7 +551,31 @@ end
 
 local function sample(t)
     local snapshot = player.read();
+    if snapshot.valid then
+        local entity = GetPlayerEntity();
+        local position = entity and entity.Movement and entity.Movement.LocalPosition;
+        if position then snapshot.x, snapshot.y, snapshot.z = position.X, position.Y, position.Z; end
+        if state.zone_name_id ~= snapshot.zone then
+            state.zone_name_id, state.zone_name = snapshot.zone, nil;
+            local ok, name = pcall(function()
+                return AshitaCore:GetResourceManager():GetString('zones.names', snapshot.zone);
+            end);
+            if ok and type(name) == 'string' and #name > 0 then state.zone_name = name:gsub('[%c]', ''); end
+        end
+        snapshot.zone_name = state.zone_name;
+    end
     dynamis:sample(snapshot, t, state.settings);
+    events:sample(snapshot, t, state.settings);
+    if snapshot.valid then
+        account_cooldowns:select(snapshot.id, state.settings.account, t);
+        local utc = snapshot.utc or os.time();
+        local dyna = dynamis:view(t, state.settings);
+        for _, row in ipairs(dyna.lockouts or {}) do account_cooldowns:observe('dynamis', row.end_time, utc, t); end
+        local event_view = events:view(t, state.settings);
+        for _, row in ipairs(event_view.cooldowns or {}) do
+            if row.kind == 'limbus' or row.key == 'limbus' then account_cooldowns:observe('limbus', row.ready_at, utc, t); end
+        end
+    end
     state.award_ready = false;
     if snapshot.valid then
         local selected, _, ready = saved_sessions:select(snapshot, t, state.settings);
@@ -549,6 +623,18 @@ local function prepare_resources()
         sound.refresh();
         state.resources_ready = true;
         sample(t);
+        if startup_events then
+            local queued = startup_events;
+            startup_events = nil;
+            if queued.player_id == id and queued.zone_id == party:GetMemberZone(0) then
+                for _, event in ipairs(queued.packets) do
+                    if t >= event.received_at and t - event.received_at <= 30 then
+                        if event.outgoing then events:outgoing(event, t, state.settings);
+                        else events:packet(event, t, state.settings); end
+                    end
+                end
+            end
+        end
         return true;
     end);
     if not ok then
@@ -568,6 +654,7 @@ local function initialize_resources()
         local party = AshitaCore:GetMemoryManager():GetParty();
         if party:GetMemberServerId(0) == startup_zone.player_id and party:GetMemberZone(0) == startup_zone.zone_id then
             dynamis:packet(startup_zone, startup_zone.received_at, state.settings);
+            events:packet(startup_zone, startup_zone.received_at, state.settings);
         end
         startup_zone = nil;
     end
@@ -585,12 +672,14 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
     if (not packets.valid(event, 4)) then return; end
     local t = now();
     dynamis:packet(event, t, state.settings);
+    events:packet(event, t, state.settings);
     local id = packets.zone_id(event);
     if (id) then
         tracker:discontinuity(t);
         phoenix:discontinuity();
         notifications:discontinuity();
         dynamis_notifications:discontinuity();
+        event_notifications:discontinuity();
         food:discontinuity();
         state.rings, state.rings_at, state.snapshot = nil, nil, nil;
         state.food_pending = nil;
@@ -644,8 +733,13 @@ ashita.events.register('packet_in', 'momentum_packets', function(event)
         for _, award in ipairs(packets.awards(event, state.player_id or player.id())) do
             if state.award_ready then tracker:award(award, t); end
             phoenix:award(award, t);
+            events:award(award, t, state.settings);
         end
     end
+end);
+
+ashita.events.register('packet_out', 'momentum_event_menus', function(event)
+    if packets.valid(event, 4) then events:outgoing(event, now(), state.settings); end
 end);
 
 local function render()
@@ -676,8 +770,12 @@ local function render()
     for _, event in ipairs(dynamis:alerts(t, state.settings)) do
         dynamis_notifications:dynamis(event, t, state.settings, quiet);
     end
+    for _, event in ipairs(events:alerts(t, state.settings)) do
+        event_notifications:dynamis(event, t, state.settings, quiet);
+    end
     local notices = notifications:take(t, quiet);
     for _, event in ipairs(dynamis_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
+    for _, event in ipairs(event_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
     for _, event in ipairs(notices) do
         local row = state.settings.alerts.events[event.id];
         if row and row.sound and event.sound and event.file ~= '' and not quiet_notifications()
@@ -688,6 +786,8 @@ local function render()
     end
     checkpoint(t, false);
     dynamis:save(t, false);
+    events:save(t, false);
+    update_event_layout();
     update_dynamis_layout();
     update_auto_layout();
     local visibility = state.settings.visibility.mode;
@@ -695,6 +795,7 @@ local function render()
     if not always and player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
     local typing = player.typing();
     local hide_idle = not always and state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
+        and not events:view(t, state.settings).active
         and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0;
     local hud_visible = ((not state.hidden and not hide_idle) or state.settings.preview.show)
         and not (not always and state.settings.bar.hide_typing and typing);
@@ -707,8 +808,6 @@ local function render()
     state.chat_windows = context.chat_windows;
     state.chat_width = context.chat and context.chat.width or nil;
     state.chat_fallback = state.settings.bar.docked and context.chat_visible ~= true and (visibility == 'keep' or always);
-    local dock = layout.dock(state.settings.bar, display.x, display.y, context.chat);
-    state.dock_problem = dock.hidden and (chat_problem or dock.reason) or nil;
     if visibility == 'chat' and context.chat_visible == false and not context.preview then hud_visible = false; end
     if not hud_visible then
         hud.cancel_layout_gesture();
@@ -716,6 +815,9 @@ local function render()
     end
     refresh_rings(state.snapshot, t);
     local view = current_view(t);
+    local shown = context.preview and readouts.sample(state.settings.preview.scenario) or view;
+    local dock = hud.bounds(state.settings, shown, context);
+    state.dock_problem = dock.hidden and (chat_problem or dock.reason) or nil;
     local shift = bit.band(ffi.C.GetAsyncKeyState(0x10), 0x8000) ~= 0;
     context.shift = shift;
     local editable = state.settings.window.open or shift;
@@ -724,7 +826,6 @@ local function render()
     state.handled = false;
     local changed = false;
     if hud_visible then
-        local shown = context.preview and readouts.sample(state.settings.preview.scenario) or view;
         changed = hud.draw(state.settings, shown, context) or changed;
     end
     if (state.settings.window.open) then changed = window.draw(state.settings, view, services) or changed; end
@@ -797,13 +898,18 @@ ashita.events.register('unload', 'momentum_unload', function()
     checkpoint(now(), true);
     local saved, issue = dynamis:save(now(), true);
     if not saved then dynamis:report(issue); end
+    saved, issue = events:save(now(), true);
+    if not saved then events:report(issue); end
     sound.close();
     job_icons.destroy();
 end);
 settings.register('settings', 'momentum_settings', function(loaded)
     if (loaded == nil) then return; end
     dynamis:detach(now());
+    events:detach(now());
+    account_cooldowns:detach();
     dynamis_notifications:discontinuity();
+    event_notifications:discontinuity();
     state.dynamis_edit = nil;
     window.close();
     local detached, session_problem = saved_sessions:detach(now());
@@ -837,7 +943,8 @@ end);
 if (MOMENTUM_TEST_MODE) then
     MOMENTUM_TEST = { settings = function() return state.settings; end, tracker = function() return tracker; end,
         state = state, services = services, sample = sample, view = current_view,
-        sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis };
+        sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis,
+        events = events, account_cooldowns = account_cooldowns };
 end
 
 return { load = initialize_resources, command = handle_command,
@@ -850,6 +957,7 @@ local runtime = nil;
 local load_seen, stopped, starting = false, false, false;
 local pending_commands = {};
 local startup_zone = nil;
+local startup_events, startup_overflow = nil, false;
 local checked_at, stable_since, stable_id, stable_zone = nil, nil, nil, nil;
 
 local function clear_stability()
@@ -913,8 +1021,8 @@ ashita.events.register('d3d_beginscene', 'momentum_bootstrap_start', function(re
     if t - stable_since < 3 then return; end
     if startup_zone and (startup_zone.player_id ~= id or startup_zone.zone_id ~= zone) then startup_zone = nil; end
     starting = true;
-    runtime = start_runtime(startup_zone);
-    startup_zone = nil;
+    runtime = start_runtime(startup_zone, startup_events);
+    startup_zone, startup_events = nil, nil;
     runtime.load();
 end);
 
@@ -944,11 +1052,35 @@ local function uint(data, offset, size)
     return value;
 end
 
+local startup_ids = { [0x02A] = true, [0x032] = true, [0x034] = true, [0x05C] = true,
+    [0x075] = true, [0x113] = true, [0x056] = true };
+local function remember_event(event, outgoing)
+    if runtime or stopped or starting or startup_overflow then return; end
+    if event.blocked or event.blocked_original or event.injected or event.is_injected then return; end
+    if outgoing and event.id ~= 0x05B or not outgoing and not startup_ids[event.id] then return; end
+    local data, size, t = event.data, event.size, tick();
+    if not t or type(data) ~= 'string' or not finite(size) or size < 4 or size > 512
+        or size % 1 ~= 0 or #data < size then return; end
+    local id = startup_zone and startup_zone.player_id or stable_id;
+    local zone = startup_zone and startup_zone.zone_id or stable_zone;
+    if not id or not zone then return; end
+    if not startup_events or startup_events.player_id ~= id or startup_events.zone_id ~= zone then
+        startup_events = { player_id = id, zone_id = zone, packets = {} };
+    end
+    if #startup_events.packets >= 64 then
+        -- An incomplete entry sequence cannot identify a run safely.
+        startup_events, startup_overflow = nil, true;
+        return;
+    end
+    startup_events.packets[#startup_events.packets + 1] = {
+        id = event.id, data = data:sub(1, size), size = size, received_at = t, outgoing = outgoing };
+end
+
 ashita.events.register('packet_in', 'momentum_bootstrap_zone', function(event)
     if runtime or stopped or starting then return; end
-    if event.id ~= 0x00A and event.id ~= 0x00B then return; end
+    if event.id ~= 0x00A and event.id ~= 0x00B then remember_event(event, false); return; end
     if event.blocked or event.blocked_original or event.injected or event.is_injected then return; end
-    startup_zone = nil;
+    startup_zone, startup_events, startup_overflow = nil, nil, false;
     clear_stability();
     if event.id ~= 0x00A then return; end
     local data, size = event.data, event.size;
@@ -961,9 +1093,13 @@ ashita.events.register('packet_in', 'momentum_bootstrap_zone', function(event)
         received_at = t, player_id = id, zone_id = zone };
 end);
 
+ashita.events.register('packet_out', 'momentum_bootstrap_menus', function(event)
+    remember_event(event, true);
+end);
+
 ashita.events.register('unload', 'momentum_bootstrap_unload', function()
     stopped = true;
-    pending_commands, startup_zone = {}, nil;
+    pending_commands, startup_zone, startup_events = {}, nil, nil;
     clear_stability();
 end);
 
@@ -971,6 +1107,7 @@ if MOMENTUM_TEST_MODE then
     MOMENTUM_BOOTSTRAP_TEST = { inspect = function()
         return { load_seen = load_seen, stopped = stopped, starting = starting,
             started = runtime ~= nil, queued_commands = #pending_commands, has_zone_packet = startup_zone ~= nil,
+            queued_events = startup_events and #startup_events.packets or 0, event_overflow = startup_overflow,
             stable_since = stable_since, player_id = stable_id, zone_id = stable_zone };
     end };
 end

@@ -158,6 +158,10 @@ def main():
                              '--input-script', str(HERE / 'placement_input.json'), '--frames', '19']),
         ('input-starting-point', ['--full', '--window', 'settings', '--tab', 'Display', '--exec', position_scroll,
                                   '--input-script', str(HERE / 'start_input.json'), '--frames', '8']),
+        ('input-chat-center', ['--full', '--window', 'settings', '--tab', 'Display', '--exec', position_scroll,
+                               '--set', 'bar.start=146', '--input-script', str(HERE / 'chat_center_input.json'), '--frames', '24']),
+        ('settings-chat-center-narrow', ['--window', 'settings', '--tab', 'Display', '--exec', position_scroll,
+                                         '--set', 'bar.chat_alignment=center', '--window-size', '420', '620']),
         ('input-free-placement', ['--full', '--window', 'momentum_bar', '--tab', 'Display', '--exec', position_scroll,
                                   '--set', 'bar.locked=true',
                                   '--input-script', str(HERE / 'free_placement_input.json'), '--frames', '33']),
@@ -283,6 +287,19 @@ def main():
                      '--set', 'bar.docked=false', '--set', 'bar.auto_width=false', '--set', 'bar.width=700',
                      '--set', 'window.compact_navigation=true', '--exec', "dofile('tests/preview/settings_customization_fixture.lua')"]
     cases.extend([
+        ('event-modes-input', ['--window', 'settings', '--tab', 'Display', '--scene', 'Limbus', '--frames', '53',
+                               '--input-script', str(HERE / 'event_modes_input.json')]),
+        ('events-current', ['--window', 'settings', '--tab', 'Events', '--scene', 'Limbus']),
+        ('events-current-narrow', ['--window', 'settings', '--tab', 'Events', '--scene', 'Assault', '--window-size', '420', '660',
+                                    '--set', 'window.compact_navigation=true']),
+        ('events-wanted-narrow', ['--window', 'settings', '--tab', 'Events', '--scene', 'Limbus', '--window-size', '420', '660',
+                                   '--set', 'window.compact_navigation=true', '--exec', heading_scroll('Wanted event drops', 'Events')]),
+        ('events-cooldowns-narrow', ['--window', 'settings', '--tab', 'Events', '--scene', 'ENM', '--window-size', '420', '660',
+                                     '--set', 'window.compact_navigation=true', '--exec', heading_scroll('Entry cooldowns', 'Events')]),
+        ('events-account-input', ['--window', 'settings', '--tab', 'Events', '--scene', 'Limbus', '--window-size', '520', '660',
+                                   '--frames', '15', '--set', 'window.compact_navigation=true',
+                                   '--exec', "PREVIEW.view.account_cooldowns={limbus={remaining=7200},dynamis={remaining=3600}}",
+                                   '--exec', heading_scroll('Account timers', 'Events'), '--input-script', str(HERE / 'event_account_input.json')]),
         ('settings-filtered-order', customization + ['--frames', '23', '--exec',
             "settings.display.enabled.progress=false; settings.display.enabled.chain_time=false; settings.display.enabled.rate=true",
             '--input-script', str(HERE / 'settings_filter_input.json')]),
@@ -298,12 +315,21 @@ def main():
                                  '--exec', "dofile('tests/preview/auto_layout_fixture.lua')",
                                  '--input-script', str(HERE / 'auto_layout_input.json')]),
     ])
+    for kind in ('Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM'):
+        cases.append(('event-bar-' + kind.lower(), ['--hud', '--window', 'momentum', '--scene', kind,
+            '--set', 'bar.docked=false', '--set', 'bar.auto_width=false', '--set', 'bar.width=900',
+            '--exec', "require('ui.modes').select(settings,'%s')" % kind.lower(), '--input-script', str(HERE / 'event_bar_input.json')]))
     for mode in ('keep', 'always'):
         for anchor in ('top', 'bottom'):
             cases.append(('chat-hold-%s-%s' % (mode, anchor), [
                 '--full', '--hud', '--window', 'momentum_bar', '--frames', '18', '--no-crop',
                 '--set', 'visibility.mode=' + mode, '--set', 'bar.anchor=' + anchor,
                 '--exec', 'settings.preview.show=false', '--input-script', str(HERE / 'chat_hold_input.json')]))
+            cases.append(('chat-center-%s-%s' % (mode, anchor), [
+                '--full', '--hud', '--window', 'momentum_bar', '--frames', '18', '--no-crop', '--chat-fixture',
+                '--set', 'visibility.mode=' + mode, '--set', 'bar.anchor=' + anchor,
+                '--set', 'bar.chat_alignment=center', '--exec', 'settings.preview.show=false',
+                '--input-script', str(HERE / 'chat_center_hold_input.json')]))
     if len(sys.argv) > 1:
         selected = set(sys.argv[1:])
         missing = selected - {name for name, _ in cases}

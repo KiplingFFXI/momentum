@@ -46,10 +46,12 @@ local function run_details(dyna, services, ui)
     local identity = tostring(dyna.zone) .. ':' .. tostring(dyna.start_time);
     if clear_run ~= identity then clear_pending, clear_run = nil, identity; end
     if not ui.section('Current Dynamis run', 'Your hourglass, time extensions, drops, and objectives for this run.', true) then return; end
+    if type(dyna.next_entry_seconds) == 'number' then
+        row(ui, 'Next Dynamis entry: ' .. (dyna.next_entry_seconds <= 0 and 'Lockout ended' or readouts.format_time(dyna.next_entry_seconds)),
+            'Phoenix applies a 72-hour account lockout from successful registration. Events > Account timers can include registrations recorded on your grouped characters on this computer. Unobserved entries and other requirements cannot be checked.');
+    end
     if not dyna.active then
         ui.note('Enter Dynamis to track a run.');
-        if dyna.next_entry_seconds then row(ui, 'Next entry: ' .. (dyna.next_entry_seconds <= 0 and 'Lockout ended' or readouts.format_time(dyna.next_entry_seconds)),
-            'Based on this character\'s observed registration. Phoenix uses a 72-hour account lockout. Other characters\' registrations and entry requirements are not checked.'); end
         return;
     end
     row(ui, (dyna.name or 'Dynamis') .. '   |   Time left ' .. time(dyna.remaining),

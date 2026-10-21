@@ -17,12 +17,18 @@ local function chat_bounds(chat, screen_width, screen_height)
     return { x = left, y = top, width = right - left, height = bottom - top };
 end
 
-function layout.dock(bar, screen_width, screen_height, chat, anchor)
+function layout.dock(bar, screen_width, screen_height, chat, anchor, content_width)
     local bounds = chat_bounds(chat, screen_width, screen_height);
     if not bounds then return { hidden = true, reason = 'Waiting for the chat window.' }; end
     anchor = (anchor or bar.anchor) == 'top' and 'top' or 'bottom';
     local start = layout.clamp(finite(bar.start) and bar.start or 0, 0, math.max(0, bounds.width - 120));
     local left, right = bounds.x + start, bounds.x + bounds.width;
+    if bar.chat_alignment == 'center' then
+        local width = math.min(bounds.width, math.max(1, math.floor(finite(bar.width) and bar.width or bounds.width)));
+        if bar.auto_width and finite(content_width) then width = math.min(width, math.max(1, math.ceil(content_width))); end
+        left = bounds.x + math.floor((bounds.width - width) / 2);
+        right = left + width;
+    end
     local top, bottom = bounds.y, bounds.y + bounds.height;
     for _, other in ipairs(chat.windows or {}) do
         local area = chat_bounds(other, screen_width, screen_height);
@@ -46,7 +52,7 @@ end
 function layout.rect(bar, screen_width, screen_height, chat, content_width, keep_visible)
     screen_width = math.max(1, screen_width);
     screen_height = math.max(1, screen_height);
-    if bar.docked and (chat or not keep_visible) then return layout.dock(bar, screen_width, screen_height, chat); end
+    if bar.docked and (chat or not keep_visible) then return layout.dock(bar, screen_width, screen_height, chat, nil, content_width); end
     local width = math.min(bar.width, screen_width);
     if bar.auto_width and finite(content_width) then width = math.min(width, math.max(1, math.ceil(content_width))); end
     local height = math.min(bar.height, screen_height);
@@ -64,7 +70,7 @@ function layout.move(bar, x, y, screen_width, screen_height, release, rendered_w
         local preferred = bar.anchor == 'top' and 'top' or 'bottom';
         local selected, distance;
         for _, anchor in ipairs({ preferred, preferred == 'top' and 'bottom' or 'top' }) do
-            local dock = layout.dock(bar, screen_width, screen_height, chat, anchor);
+            local dock = layout.dock(bar, screen_width, screen_height, chat, anchor, rendered_width);
             if not dock.hidden and bar.x < dock.x + dock.width and bar.x + rect.width > dock.x then
                 local delta = math.abs(bar.y - dock.y);
                 if delta <= 18 and (not distance or delta < distance) then selected, distance = dock, delta; end

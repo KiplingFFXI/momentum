@@ -1,7 +1,7 @@
 local store = require('core.file_store');
 local history = require('ui.history');
 local profiles = {};
-local excluded = { window = true, job_links = true, shared = true, preview = true, sessions = true, planner = true };
+local excluded = { window = true, job_links = true, shared = true, preview = true, sessions = true, planner = true, account = true };
 
 function profiles.capture(settings)
     local result = {};
@@ -12,6 +12,7 @@ function profiles.capture(settings)
 end
 
 function profiles.apply(settings, profile)
+    if settings.events and settings.events.active_kind then require('ui.event_layout').switch(settings, nil); end
     if profile.modes == nil and type(profile.display) == 'table' and settings.modes then
         if settings.modes.selected ~= 'auto' then require('ui.modes').select(settings, 'auto'); end
         settings.modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, previous_display = {} };

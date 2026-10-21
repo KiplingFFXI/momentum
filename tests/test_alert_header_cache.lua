@@ -28,6 +28,9 @@ end;
 local function draw() window.draw(settings, readouts.sample(), {}); end
 draw();
 local initial = measured;
+local headings = 0;
+for title in pairs(labels) do if title ~= 'Quiet conditions' then headings = headings + 1; end end
+eq(headings, 8, 'Every alert type, including Assault and battlefields, has a counted heading');
 eq(markers, 1, 'All help markers share one text measurement');
 eq(initial > 6, true, 'Narrow alert headings are measured and shortened initially');
 eq(labels['Levels and merit points']:find('...', 1, true) ~= nil, true, 'Long heading is shortened');
@@ -42,16 +45,16 @@ eq(measured, initial + 1, 'Changing one count measures only that heading');
 local before = measured;
 width = 900;
 draw();
-eq(measured, before + 7, 'Wider available space recalculates all counted headings once');
+eq(measured, before + headings, 'Wider available space recalculates all counted headings once');
 eq(markers, 1, 'Window width does not change the help marker width');
 eq(labels['Levels and merit points'], 'Levels and merit points (0 on) (?)###section_Alerts/Levels and merit points', 'Wider space restores the full title');
 before, font = measured, 'Font B';
 draw();
-eq(measured, before + 7, 'Font identity changes invalidate all seven headings');
+eq(measured, before + headings, 'Font identity changes invalidate all counted headings');
 eq(markers, 2, 'Changing fonts remeasures the help marker');
 before, size = measured, 18;
 draw();
-eq(measured, before + 7, 'Font size changes invalidate all seven headings');
+eq(measured, before + headings, 'Font size changes invalidate all counted headings');
 eq(markers, 3, 'Changing font size remeasures the help marker');
 before = measured;
 for _ = 1, 120 do draw(); end

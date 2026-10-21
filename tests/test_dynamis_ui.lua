@@ -9,11 +9,11 @@ local function eq(actual, expected, label)
     assert(actual == expected, label .. ': expected ' .. tostring(expected) .. ', got ' .. tostring(actual));
 end
 local function controls(opened)
-    local seen = { text = {}, buttons = {}, sections = {}, checks = {}, combos = {}, changed = 0 };
+    local seen = { text = {}, help = {}, buttons = {}, sections = {}, checks = {}, combos = {}, changed = 0 };
     local ui = {};
     function ui.note(text) seen.text[#seen.text + 1] = text; end
     function ui.tip() end
-    ui.help = ui.tip;
+    function ui.help(text) seen.help[#seen.help + 1] = text; end
     function ui.section(title, _, default, summary)
         seen.sections[title] = summary;
         if opened[title] ~= nil then return opened[title]; end
@@ -99,6 +99,10 @@ local services = {
 };
 local ui, seen = controls({ ['Dynamis options'] = true });
 dynamis.draw(settings, view, services, ui);
+local next_entry_shown = false;
+for _, text in ipairs(seen.text) do if text:find('Next Dynamis entry:', 1, true) then next_entry_shown = true; end end
+eq(next_entry_shown, true, 'Observed account lockout is available during an active run');
+eq(table.concat(seen.help, '\n'):find('grouped characters on this computer', 1, true) ~= nil, true, 'Entry help explains locally observed account sharing');
 seen.buttons['Copy run summary']();
 eq(copied:find('Currency found: 247', 1, true) ~= nil, true, 'Run summary includes found currency');
 eq(copied:find('Received: 12', 1, true) ~= nil, true, 'Run summary separates personal currency');
@@ -155,4 +159,10 @@ eq(seen.combos['Saved run'].current:find('Dynamis - Windurst', 1, true) ~= nil, 
 eq(seen.combos['Saved run'].choices[2].name:find('Dynamis - San d\'Oria', 1, true) ~= nil, true, 'Full history refreshes older run labels after eviction');
 seen.buttons['Copy saved run summary']();
 eq(copied:find('Dynamis - Windurst', 1, true) ~= nil, true, 'Copied history matches the displayed run label');
+view.dynamis.active, view.dynamis.next_entry_seconds = false, 0;
+ui, seen = controls({}); dynamis.draw(settings, view, services, ui);
+eq(table.concat(seen.text, '\n'):find('Next Dynamis entry: Lockout ended', 1, true) ~= nil, true, 'Expired observed account timer is not called guaranteed readiness');
+view.dynamis.next_entry_seconds = nil;
+ui, seen = controls({}); dynamis.draw(settings, view, services, ui);
+eq(table.concat(seen.text, '\n'):find('Next Dynamis entry:', 1, true), nil, 'Unknown entry timer does not invent a date');
 return { count = count };

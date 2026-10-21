@@ -23,6 +23,8 @@ Run individual cases:
   python tests/preview/preview.py --hud --out tests/out/bar.png
   python tests/preview/preview.py --tab Display --out tests/out/display.png
   python tests/preview/preview.py --scene Merits --hud --out tests/out/merits.png
+  python tests/preview/verify_preview.py event-modes-input events-account-input events-current-narrow
+  python tests/preview/verify_preview.py input-chat-center settings-chat-center-narrow
   python tests/preview/preview.py --full --out tests/out/entry.png
   python tests/preview/preview.py --set bar.docked=false --set bar.auto_width=false --set bar.width=240 --hud --out tests/out/narrow.png
 
@@ -96,6 +98,10 @@ chat_hold_input.json checks that Keep visible and Always visible hold the actual
 position and size above and below chat, including failed or unknown chat reads and
 changed retained bounds. Reopening chat follows its current edges without changing
 saved placement. These cases inspect the real drawn window, not just a layout result.
+chat_center_input.json chooses Chat alignment Center through the actual dropdown,
+changes automatic/custom sizing, and returns to Left with the saved Starting point.
+chat_center_hold_input.json checks centered bars above and below chat, with both
+keep-visible choices, through closed, unreadable, resized, and reopened chat states.
 The constrained-width case starts with a saved height of 24 and a visible height of 14;
 horizontal resizing must keep the visible height. width_return_input.json moves the
 right edge away and back to the exact mouse origin, checking that its size is restored.
@@ -103,6 +109,15 @@ resize_input.json and top_resize_input.json check the outer height edge on each 
 chat-facing edge and width stay fixed. top_snap_input.json checks that a body drag
 preserves the drawn width and can snap to the top edge. overflow_input.json checks the visible
 overflow marker at a deliberately narrow custom width.
+
+Event scenes include Assault, Limbus, BCNM, KSNM, and ENM. The five event-bar
+cases select each compact starter and check the actual drawn name and countdown.
+event_modes_input.json clicks every event choice through the Bar mode dropdown,
+keeps edits in separate layout banks, and restores the EXP setup afterward.
+event_account_input.json edits a sample local account-group nickname and toggles
+the Limbus reminder with real input. The Events cases also render narrow current
+run, wanted-drop, and entry-cooldown sections. All data is simulated; no real
+account details are entered or read.
 
 Each invocation uses its own temporary settings and ImGui ini folder. It reads the
 addon but does not modify it. The Agave font is extracted from the installed Ashita.dll

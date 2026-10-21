@@ -67,7 +67,38 @@ defaults.READOUTS = {
     { id = 'dyna_pool', name = 'Dynamis treasure pool', label = 'Pool', enabled = false, help = 'Shows how many items are waiting in the treasure pool. Open Dynamis to see them.' },
     { id = 'dyna_subjob', name = 'Dynamis support job', label = 'Support job', enabled = false, help = 'Shows whether your support job is restricted. This follows your actual status effect.' },
     { id = 'dyna_weakness', name = 'Dynamis Weakness timer', label = 'Weakness', enabled = false, help = 'Shows your current Weakness timer. Re-entering an active Phoenix Dynamis run applies 10 minutes of Weakness.' },
-    { id = 'dyna_next_entry', name = 'Next Dynamis entry', label = 'Next entry', enabled = false, help = 'Time left from this character\'s observed registration. Phoenix uses a 72-hour account lockout. Other characters\' registrations and entry requirements are not checked. -- means no registration was observed.' },
+    { id = 'dyna_next_entry', name = 'Next Dynamis entry', label = 'Next entry', enabled = false, help = 'Shows the observed 72-hour Phoenix account lockout. Account timers can include entries recorded on your grouped characters on this computer. Unobserved entries and other requirements cannot be checked.' },
+    { id = 'zone_time', name = 'Time in zone', label = 'In zone', enabled = false, help = 'Counts time since you entered this zone. ~ means Momentum loaded during this visit and only knows the time observed. Session pause and reset do not stop it.' },
+    { id = 'zone_name', name = 'Current zone', label = '', enabled = false, help = 'Shows the name of your current zone.' },
+    { id = 'event_name', name = 'Assault or battlefield name', label = '', enabled = false, help = 'Shows the current Assault, Limbus route, BCNM, KSNM, or ENM. A manual layout does not start a run.' },
+    { id = 'event_time', name = 'Assault or battlefield time left', label = 'Time', enabled = false, help = 'Shows the time left from normal game updates. ~ means the timer is estimated. -- means the time is unknown. Session pause and reset leave this running.' },
+    { id = 'event_elapsed', name = 'Assault or battlefield time spent', label = 'Elapsed', enabled = false, help = 'Counts the part of this run Momentum has observed. Loading partway through a fight cannot recover unseen time.' },
+    { id = 'event_objective', name = 'Assault or battlefield objective', label = '', enabled = false, help = 'Shows the current objective and progress seen by Momentum. Unseen enemies and hidden objectives are not counted as complete. Open Events for the full list.' },
+    { id = 'event_status', name = 'Assault or battlefield status', label = '', enabled = false, help = 'Shows whether this run is fighting, ready to finish, won, lost, or only partly observed. Defeating a boss does not always mean the run is won.' },
+    { id = 'event_kills', name = 'Assault or battlefield deaths seen', label = 'Defeated', enabled = false, help = 'Counts enemy deaths seen during this run. Repeated deaths and enemies out of range mean this is not a universal enemies remaining count.' },
+    { id = 'event_points', name = 'Assault points earned', label = 'Points', enabled = false, help = 'Shows Assault points confirmed during this run. Last observed balances for each area are listed under Events.' },
+    { id = 'event_exp', name = 'Battlefield EXP received', label = 'EXP', enabled = false, help = 'Adds EXP awards seen during this run. This is what you received, not the possible reward listed for the fight.' },
+    { id = 'event_lp', name = 'Battlefield LP received', label = 'LP', enabled = false, help = 'Adds limit point awards seen during this run. This stays separate from the EXP session.' },
+    { id = 'event_floor', name = 'Limbus floor', label = 'Floor', enabled = false, help = 'Shows the last floor identified from your position or an enemy death seen by Momentum. A single-floor route shows 1. It can lag behind after you move. -- means the floor is not known yet.' },
+    { id = 'event_extensions', name = 'Limbus time extensions', label = 'TE', enabled = false, help = 'Shows the number of time extensions seen and minutes added during this run. Loading late can miss earlier extensions.' },
+    { id = 'event_coins', name = 'Ancient Beastcoins found', label = 'Coins', enabled = false, help = 'Counts Ancient Beastcoins seen in the treasure pool during this Limbus run.' },
+    { id = 'event_coins_received', name = 'Ancient Beastcoins received', label = 'My coins', enabled = false, help = 'Counts Ancient Beastcoins awarded to you during this Limbus run. Moving coins between bags does not add to this.' },
+    { id = 'event_materials', name = 'Limbus upgrade materials found', label = 'Materials', enabled = false, help = 'Counts AF upgrade materials seen in the treasure pool. Open Events for item names and jobs.' },
+    { id = 'event_materials_received', name = 'Limbus upgrade materials received', label = 'My materials', enabled = false, help = 'Counts AF upgrade materials awarded to you during this Limbus run.' },
+    { id = 'event_drops', name = 'Assault or battlefield drops found', label = 'Drops', enabled = false, help = 'Counts items seen in the treasure pool during this run. Events keeps the item list separate from items awarded to you.' },
+    { id = 'event_received', name = 'Assault or battlefield drops received', label = 'Mine', enabled = false, help = 'Counts items awarded to you during this run. Items found in the pool are tracked separately.' },
+    { id = 'event_best', name = 'Personal best clear time', label = 'Best', enabled = false, help = 'Shows your fastest confirmed clear recorded for this fight. It is separate from the battlefield record reported by the game.' },
+    { id = 'limbus_next_entry', name = 'Next Limbus entry', label = 'Limbus entry', enabled = false, help = 'Shows this character\'s observed Limbus entry cooldown. Phoenix starts the 20-hour wait when Cosmo-Cleanse is consumed on entry. This is separate from your optional account reminder.' },
+    { id = 'limbus_account_entry', name = 'Limbus account reminder', label = 'Account wait', enabled = false, help = 'Shows the latest Limbus entry recorded for your local account group. This is a shared reminder, not a server-enforced account lockout. Unobserved entries cannot be checked.' },
+    { id = 'enm_next_entry', name = 'Next ENM key item', label = 'Next ENM', enabled = false, help = 'Shows the observed wait for the current ENM key-item group. Phoenix starts this cooldown when the key item is obtained. Fights sharing that key item share this wait. Events lists each known group.' },
+    { id = 'assault_tags', name = 'Stored Imperial Army I.D. tags', label = 'Tags', enabled = false, help = 'Shows the last stored Imperial Army I.D. tag count sent by Rytaal. Your carried tag is listed separately under Events. The stored count is not guessed between visits.' },
+    { id = 'assault_next_tag', name = 'Next Imperial Army I.D. tag', label = 'Next tag', enabled = false, help = 'Shows the next tag refill observed through Rytaal\'s normal menu. -- means Momentum has not seen a refill time.' },
+    { id = 'beastmen_seals', name = 'Stored Beastmen\'s Seals', label = 'B. seals', enabled = false, help = 'Shows your last confirmed Beastmen\'s Seal balance with Shami. Seals in Inventory are counted separately. Talk to Shami, deposit seals, or buy an orb to refresh it. -- means no balance has been seen yet.' },
+    { id = 'kindred_seals', name = 'Stored Kindred\'s Seals', label = 'K. seals', enabled = false, help = 'Shows your last confirmed Kindred\'s Seal balance with Shami. Seals in Inventory are counted separately. Talk to Shami, deposit seals, or buy an orb to refresh it. -- means no balance has been seen yet.' },
+    { id = 'beastcoins_stored', name = 'Stored Ancient Beastcoins', label = 'Stored coins', enabled = false, help = 'Shows your last observed Ancient Beastcoin balance stored with Sagheera. This is separate from coins carried or found during a run.' },
+    { id = 'beastcoins_carried', name = 'Ancient Beastcoins in Inventory', label = 'Carried coins', enabled = false, help = 'Counts Ancient Beastcoins in your Inventory bag. Other bags and stored coins are separate. -- means Inventory has not been read yet.' },
+    { id = 'beastmen_carried', name = 'Beastmen\'s Seals in Inventory', label = 'Carried B. seals', enabled = false, help = 'Counts Beastmen\'s Seals in your Inventory bag only. Seals in other bags or stored with Shami are not included. -- means Inventory has not been read yet.' },
+    { id = 'kindred_carried', name = 'Kindred\'s Seals in Inventory', label = 'Carried K. seals', enabled = false, help = 'Counts Kindred\'s Seals in your Inventory bag only. Seals in other bags or stored with Shami are not included. -- means Inventory has not been read yet.' },
 };
 
 defaults.ALERTS = {
@@ -77,6 +108,10 @@ defaults.ALERTS = {
     { 'dyna_time', 'Dynamis time running low' }, { 'dyna_extension', 'Dynamis time extended' },
     { 'dyna_wanted', 'Wanted Dynamis drop' }, { 'dyna_pool', 'Treasure pool item expiring' },
     { 'dyna_clear', 'Dynamis clear obtained' }, { 'dyna_subjob', 'Support job unlocked' },
+    { 'event_time', 'Assault or battlefield time running low' }, { 'event_extension', 'Limbus time extended' },
+    { 'event_objective', 'Assault or battlefield objective completed' }, { 'event_clear', 'Assault or battlefield won' },
+    { 'event_failure', 'Assault or battlefield lost' }, { 'event_drop', 'Wanted Assault or battlefield drop' },
+    { 'event_ready', 'Observed entry cooldown ended' },
 };
 
 defaults.STARTER_LAYOUTS = {
@@ -84,6 +119,11 @@ defaults.STARTER_LAYOUTS = {
     Leveling = { 'job', 'progress', 'remaining', 'rate', 'chain' },
     Merits = { 'lp_rate', 'merits', 'lp_remaining', 'merit_eta' },
     Dynamis = { 'dyna_zone', 'dyna_time', 'dyna_extensions', 'dyna_currency', 'dyna_af2' },
+    Assault = { 'event_name', 'event_time', 'event_objective', 'event_status' },
+    Limbus = { 'event_name', 'event_time', 'event_floor', 'event_coins' },
+    BCNM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
+    KSNM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
+    ENM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
 };
 
 function defaults.apply_starter(settings, name)
@@ -111,7 +151,7 @@ defaults.copy = copy;
 function defaults.make()
     local settings = {
         appearance_version = 0,
-        bar = { docked = true, anchor = 'bottom', start = 0, auto_width = true, hide_typing = true,
+        bar = { docked = true, anchor = 'bottom', chat_alignment = 'left', start = 0, auto_width = true, hide_typing = true,
             x = 0, y = 500, width = 640, height = 18, bottom = 2, locked = false, snap = true },
         display = { mode = 'auto', alignment = 'left', label_position = 'before', order = {}, enabled = {}, labels = {}, dividers = {}, colors = {}, divider = ' ', label_divider = ' ',
             groups_enabled = false, groups = {}, priority_overflow = false, priorities = {}, pinned = {}, conditions = {},
@@ -122,6 +162,8 @@ function defaults.make()
         modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, previous_display = {} },
         dynamis = { enabled = true, auto_layout = true, layout_active = false, wanted_jobs = {}, wanted_items = {}, retention = 30,
             warning_minutes = { 10, 5, 1 }, pool_warning_seconds = 60 },
+        events = { enabled = true, auto_layout = true, history_limit = 30, wanted = {}, warning_minutes = 5, enm_group = 0, layouts = {} },
+        account = { group = '', share_dynamis = true, share_limbus = true },
         planner = { level = 50, population = 0 },
         alerts = { food_enabled = false, food_sound = 'FF VII Save.mp3', food_volume = 100, events = {},
             food_soon_seconds = 60, chain_soon_seconds = 10, cap_headroom = 1,
@@ -150,6 +192,12 @@ function defaults.make()
     settings.dynamis.layout = copy(settings.display);
     defaults.apply_starter({ display = settings.dynamis.layout }, 'Dynamis');
     settings.dynamis.layout.divider = ' | ';
+    for kind, name in pairs(require('ui.event_layout').names) do
+        local display = copy(settings.display);
+        defaults.apply_starter({ display = display }, name);
+        display.divider = ' | ';
+        settings.events.layouts[kind] = display;
+    end
     return settings;
 end
 
@@ -267,7 +315,7 @@ function defaults.tidy(settings)
     settings.window.sections[old_section] = nil;
     local known, seen = {}, {};
     for _, item in ipairs(defaults.READOUTS) do known[item.id] = true; end
-    settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis' }, 'auto');
+    settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' }, 'auto');
     settings.modes.active = choice(settings.modes.active, { 'exp', 'merits' }, 'exp');
     settings.modes.layout_version = settings.modes.layout_version == 1 and 1 or 0;
     settings.modes.auto.mode = choice(settings.modes.auto.mode, { 'auto', 'exp', 'lp' }, 'auto');
@@ -277,6 +325,19 @@ function defaults.tidy(settings)
     end
     if type(settings.modes.legacy_auto_display) == 'table' then tidy_saved_display(settings.modes.legacy_auto_display, fresh.display, known); end
     if type(settings.dynamis.previous_display) == 'table' then tidy_saved_display(settings.dynamis.previous_display, fresh.display, known); end
+    for kind in pairs(require('ui.event_layout').names) do tidy_saved_display(settings.events.layouts[kind], fresh.events.layouts[kind], known); end
+    if type(settings.events.previous_display) == 'table' then tidy_saved_display(settings.events.previous_display, fresh.display, known); end
+    settings.events.active_kind = choice(settings.events.active_kind, { 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' }, nil);
+    settings.events.history_limit = math.floor(number(settings.events.history_limit, 1, 100, 30));
+    settings.events.warning_minutes = math.floor(number(settings.events.warning_minutes, 1, 30, 5));
+    settings.events.enm_group = math.floor(number(settings.events.enm_group, 0, 100, 0));
+    local wanted = {};
+    for id, enabled in pairs(settings.events.wanted) do
+        local item = tonumber(id);
+        if enabled == true and item and item % 1 == 0 and item > 0 and item <= 65535 then wanted[tostring(item)] = true; end
+    end
+    settings.events.wanted = wanted;
+    settings.account.group = plain(settings.account.group, 80):match('^%s*(.-)%s*$');
     settings.display.order = {};
     for _, id in ipairs(saved_order) do
         if known[id] and not seen[id] then
@@ -299,6 +360,7 @@ function defaults.tidy(settings)
     bar.height = number(bar.height, 12, 120, fresh.bar.height);
     bar.bottom = number(bar.bottom, 2, 2000, fresh.bar.bottom);
     bar.anchor = choice(bar.anchor, { 'bottom', 'top' }, 'bottom');
+    bar.chat_alignment = choice(bar.chat_alignment, { 'left', 'center' }, 'left');
     bar.start = math.floor(number(bar.start, 0, 16384, 0));
     if visibility == 'placement' then visibility = bar.docked and 'chat' or 'keep'; end
     settings.visibility.mode = choice(visibility, { 'chat', 'keep', 'always' }, fresh.visibility.mode);
@@ -306,7 +368,7 @@ function defaults.tidy(settings)
     settings.display.divider = plain(settings.display.divider, 16);
     settings.display.label_divider = plain(settings.display.label_divider, 8);
     settings.display.mode = choice(settings.display.mode, { 'auto', 'exp', 'lp' }, 'auto');
-    if not settings.dynamis.layout_active then
+    if not settings.dynamis.layout_active and not settings.events.active_kind then
         if settings.modes.selected == 'exp' then settings.display.mode = 'exp';
         elseif settings.modes.selected == 'merits' then settings.display.mode = 'lp'; end
     end
@@ -390,8 +452,8 @@ function defaults.tidy(settings)
     settings.window.x = number(settings.window.x, -100000, 100000, 80);
     settings.window.y = number(settings.window.y, -100000, 100000, 60);
     settings.window.font_size = number(settings.window.font_size, 12, 28, 18);
-    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Dynamis', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
-    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Dynamis', 'Capped', 'No data', 'Paused' }, 'Leveling');
+    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
+    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }, 'Leveling');
     for key, color in pairs(settings.style.colors) do
         if fresh.style.colors[key] then
             for i = 1, 4 do color[i] = number(color[i], 0, 1, fresh.style.colors[key][i]); end
