@@ -54,7 +54,12 @@ def toolchain(architecture):
         'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath'], text=True).strip())
     version = sorted((install / 'VC/Tools/MSVC').iterdir(), key=lambda path: tuple(map(int, path.name.split('.'))))[-1]
     kits = Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Windows Kits/10'
-    sdk = sorted((path.name for path in (kits / 'Include').iterdir() if path.is_dir()), key=lambda value: tuple(map(int, value.split('.'))))[-1]
+    include = kits / 'Include'
+    sdks = [path.name for path in include.iterdir()
+            if path.is_dir() and re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', path.name)] if include.is_dir() else []
+    if not sdks:
+        raise RuntimeError('A Windows SDK with a four-part version is required.')
+    sdk = max(sdks, key=lambda value: tuple(map(int, value.split('.'))))
     env = os.environ.copy()
     for name in ('CL', '_CL_', 'LINK', '_LINK_'):
         env.pop(name, None)

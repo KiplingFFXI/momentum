@@ -1,5 +1,6 @@
 """Exercise the isolated sound worker without audible playback or a game client."""
 import ctypes
+from functools import wraps
 import importlib.util
 import json
 import os
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 import wave
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +21,52 @@ builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 WORKER = ROOT / 'momentum/bin/momentum-sound.exe'
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+
+
+def wave_output_count():
+    if os.name != 'nt':
+        return 0
+    query = ctypes.WinDLL('winmm', use_last_error=True).waveOutGetNumDevs
+    query.argtypes, query.restype = [], ctypes.c_uint
+    return query()
+
+
+def requires_audio_output(test):
+    @wraps(test)
+    def checked(self):
+        count = wave_output_count()
+        if count == 0:
+            self.skipTest('Successful playback needs an audio output; waveOutGetNumDevs returned 0.')
+        return test(self)
+    return checked
+
+
+class PlaybackPrerequisiteTests(unittest.TestCase):
+    def test_output_gate_keeps_containment_and_failures_visible(self):
+        for count, probe_error, playback_error in ((0, None, False), (2, None, False),
+                                                  (None, OSError('Output query failed'), False), (2, None, True)):
+            with self.subTest(count=count, probe_error=probe_error is not None, playback_error=playback_error):
+                ran = []
+
+                class Checks(unittest.TestCase):
+                    @requires_audio_output
+                    def test_playback(self):
+                        ran.append('playback')
+                        self.assertFalse(playback_error, 'Playback errors must remain failures.')
+
+                    def test_containment(self):
+                        ran.append('containment')
+
+                result = unittest.TestResult()
+                suite = unittest.TestSuite((Checks('test_playback'), Checks('test_containment')))
+                with mock.patch(__name__ + '.wave_output_count', return_value=count, side_effect=probe_error):
+                    suite.run(result)
+                self.assertEqual(result.testsRun, 2)
+                self.assertIn('containment', ran)
+                self.assertEqual(len(result.skipped), int(count == 0))
+                self.assertEqual(len(result.errors), int(probe_error is not None))
+                self.assertEqual(len(result.failures), int(playback_error))
+                self.assertEqual('playback' in ran, count != 0 and probe_error is None)
 
 
 def imports(data):
@@ -124,10 +172,12 @@ class SoundWorkerRuntimeTests(unittest.TestCase):
         print('  silent playback:', sound.name.encode('ascii', 'backslashreplace').decode('ascii'), '%.3fs' % elapsed,
               'playing=%dms' % (completed[0]['elapsed_ms'] - started[0]['elapsed_ms']))
 
+    @requires_audio_output
     def test_bundled_mp3s_play_sequentially_in_separate_workers_at_zero_volume(self):
         self.silent_play(ROOT / 'momentum/sounds/FF VII Save.mp3', 1.3)
         self.silent_play(ROOT / 'momentum/sounds/FF IX Moogle.mp3', 1.7)
 
+    @requires_audio_output
     def test_custom_wav_unicode_path_plays_at_zero_volume(self):
         sound = self.folder / 'Custom \u97f3\u91cf test.wav'
         with wave.open(str(sound), 'wb') as file:
@@ -137,6 +187,7 @@ class SoundWorkerRuntimeTests(unittest.TestCase):
             file.writeframes(bytes(22050 * 2))
         self.silent_play(sound, 0.8)
 
+    @requires_audio_output
     def test_very_short_custom_wav_completes_at_zero_volume(self):
         sound = self.folder / 'short.wav'
         with wave.open(str(sound), 'wb') as file:
@@ -146,6 +197,7 @@ class SoundWorkerRuntimeTests(unittest.TestCase):
             file.writeframes(bytes(110 * 2))
         self.silent_play(sound, 0)
 
+    @requires_audio_output
     def test_long_custom_wav_is_not_cut_off_by_native_call_watchdog(self):
         sound = self.folder / 'long.wav'
         with wave.open(str(sound), 'wb') as file:

@@ -121,6 +121,13 @@ hashes. The public repository check validates text, release documents, local
 Markdown links, and the changelog
 version. Developer files do not enter the runtime ZIP.
 
+Native success-playback checks need a Windows audio output, even at zero volume.
+The MP3, Unicode WAV, short WAV, and long WAV cases check waveOutGetNumDevs and
+skip only when it reports zero outputs. Query errors and playback errors still
+fail. Binary checks, invalid inputs and files, cancellation, parent-death cleanup,
+and the stalled-call watchdog still run without an output device. On a Windows
+desktop with an output available, all four playback cases run normally.
+
 The sound player and launcher are the only executable and DLL allowed in the
 runtime archive. Package checks reject a missing or stale component, another
 executable or DLL, the wrong machine, DLL flag or subsystem, malformed PE sections,
@@ -191,7 +198,7 @@ compares tracking views and readouts, including pauses, resets, recovery, rates,
 goals, and saved resumes. Compare only versions with compatible behavior; an
 intentional change needs its own focused expectations.
 
-Use --exclude-readout ID only for an intentionally retired reading. For example,
+Use --exclude-readout ID only for an intentionally added or retired reading. For example,
 the 1.3.2 comparison with 1.3.1 excludes dedication_budget. The default comparison
 stays strict; every tracking view and every other readout must still match.
 
