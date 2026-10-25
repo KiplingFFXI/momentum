@@ -1,0 +1,6 @@
+[
+  {"frame":1,"lua":"settings.display.alignment='left'"},
+  {"frame":2,"lua":"PREVIEW.capture_storage_left(); PREVIEW.expect_storage({'Inventory 60 / 80','Inventory free 20','Satchel 35 / 80','Satchel free 45'}); settings.display.alignment='center'"},
+  {"frame":4,"lua":"PREVIEW.check_storage_center(true); settings.bar.width=1400"},
+  {"frame":6,"lua":"PREVIEW.check_storage_center(false); assert(settings.bar.width==1400 and not settings.bar.docked,'Center moved or resized the saved bar')"}
+]

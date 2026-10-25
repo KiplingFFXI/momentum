@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.0
+
+- Added optional Inventory and Mog Satchel slot readouts in every bar mode. Choose used slots and capacity, free slots, or both. Only your current character's Inventory and Mog Satchel are tracked.
+- Added Center to Readout alignment. The full row stays centered inside a custom-width bar while preserving its order, labels, icons, and dividers. Left remains the default, and Chat alignment still controls the bar's position separately.
+- Slot counts keep updating during session pause and reset. Loading or unavailable counts stay unknown, and character changes clear the previous character's values. Only selected bags are read, using cached client slot counts rather than item scans.
+- Choosing a sound no longer opens an audio decoder. Sounds load only when an alert or Play requests them.
+- Sound playback runs in a separate hidden player so a decoder crash cannot close the game. MP3, WAV, custom sounds, volume controls, and the Linux directory scan are kept.
+- The sound player starts in the background so process creation does not hold up the game's drawing thread on the first Play.
+- Returning to a character keeps the latest saved bar layout and placement instead of reloading an older job profile. Job profiles still apply when you change main jobs on that character.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the whole `momentum` folder in your Phoenix `addons` folder, including `bin`, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, recorded cooldowns, and custom sounds. The bar appears about three seconds after your character is ready.
+
+Add slot readings under **Display > Add readout > Storage**. To center the whole row, choose **Display > Position and size > Readout alignment > Center**. Turn off separate alignment groups if you want one alignment for all readouts. Chat alignment still positions the bar separately.
+
 ## 1.4.0
 
 Track Assault, Limbus, BCNM, KSNM, and ENM alongside EXP, merits, gil, and Dynamis. Each mode keeps its own layout, and Automatic can follow the event you enter.

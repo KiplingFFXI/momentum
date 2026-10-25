@@ -319,6 +319,18 @@ def main():
         cases.append(('event-bar-' + kind.lower(), ['--hud', '--window', 'momentum', '--scene', kind,
             '--set', 'bar.docked=false', '--set', 'bar.auto_width=false', '--set', 'bar.width=900',
             '--exec', "require('ui.modes').select(settings,'%s')" % kind.lower(), '--input-script', str(HERE / 'event_bar_input.json')]))
+    storage_fixture = "dofile('tests/preview/center_storage_fixture.lua')"
+    cases.extend([
+        ('center-storage-wide', ['--hud', '--window', 'momentum', '--icon-fixture', '--frames', '7',
+                                 '--exec', "PREVIEW.center_storage_case='wide'; " + storage_fixture,
+                                 '--input-script', str(HERE / 'center_storage_wide_input.json')]),
+        ('center-storage-overflow', ['--hud', '--window', 'momentum', '--icon-fixture', '--frames', '7',
+                                     '--exec', "PREVIEW.center_storage_case='overflow'; " + storage_fixture,
+                                     '--input-script', str(HERE / 'center_storage_overflow_input.json')]),
+        ('storage-current-values', ['--hud', '--window', 'momentum', '--frames', '11',
+                                    '--exec', "PREVIEW.center_storage_case='values'; " + storage_fixture,
+                                    '--input-script', str(HERE / 'storage_values_input.json')]),
+    ])
     for mode in ('keep', 'always'):
         for anchor in ('top', 'bottom'):
             cases.append(('chat-hold-%s-%s' % (mode, anchor), [

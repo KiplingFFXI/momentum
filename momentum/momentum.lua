@@ -1,7 +1,7 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.4.0';
-addon.desc = 'A compact EXP, merit, gil and event tracking bar for Phoenix.';
+addon.version = '1.5.0';
+addon.desc = 'A compact EXP, merit, gil, inventory and event tracking bar for Phoenix.';
 
 local flush_commands;
 local function start_runtime(startup_zone, startup_events)
@@ -16,6 +16,7 @@ local history = require('ui.history');
 local profiles = require('ui.profiles');
 local store = require('core.file_store');
 local player = require('core.player');
+local storage = require('core.storage').new();
 local chat_window = require('core.chat');
 local packets = require('core.packets');
 local tracker_module = require('core.tracker');
@@ -98,6 +99,7 @@ local function current_view(t)
     for key, value in pairs(phoenix:view(t)) do view[key] = value; end
     phoenix:apply_chain(view, t);
     view.rings = state.rings or { available = false, entries = {} };
+    view.storage = storage:view();
     view.dynamis = dynamis:view(t, state.settings);
     view.events = events:view(t, state.settings);
     view.account_cooldowns = account_cooldowns:view(t, player.utc() or os.time());
@@ -146,6 +148,14 @@ end
 
 local function quiet_notifications()
     return state.settings.alerts.quiet_events ~= false and player.hidden({ event = true });
+end
+
+local storage_demand = {};
+local function refresh_storage(snapshot, t)
+    local enabled = state.settings.display.enabled;
+    storage_demand.inventory = enabled.inventory_slots == true or enabled.inventory_free == true;
+    storage_demand.satchel = enabled.satchel_slots == true or enabled.satchel_free == true;
+    storage:observe(snapshot, t, storage_demand);
 end
 
 local function apply_shared(data)
@@ -541,8 +551,7 @@ local function apply_alerts()
     if not state.resources_ready then return; end
     local alerts = state.settings.alerts;
     if (state.food_enabled ~= alerts.food_enabled or state.food_sound ~= alerts.food_sound) then
-        sound.close();
-        if (state.food_enabled ~= alerts.food_enabled) then food:discontinuity(); end
+        if (state.food_enabled ~= alerts.food_enabled) then sound.close(); food:discontinuity(); end
         state.food_pending = nil;
         state.food_enabled, state.food_sound = alerts.food_enabled, alerts.food_sound;
         if (alerts.food_enabled) then sound.use(alerts.food_sound, true); end
@@ -551,6 +560,7 @@ end
 
 local function sample(t)
     local snapshot = player.read();
+    refresh_storage(snapshot, t);
     if snapshot.valid then
         local entity = GetPlayerEntity();
         local position = entity and entity.Movement and entity.Movement.LocalPosition;
@@ -591,8 +601,9 @@ local function sample(t)
     food:observe(snapshot, t, state.settings.alerts.food_enabled);
     if (not snapshot.valid) then state.food_pending = nil; end
     if (snapshot.valid) then
-        if (state.last_job ~= snapshot.job) then
-            state.last_job = snapshot.job;
+        local changed_job = state.last_job_id == snapshot.id and state.last_job ~= snapshot.job;
+        state.last_job_id, state.last_job = snapshot.id, snapshot.job;
+        if (changed_job) then
             local linked = state.settings.job_links[tostring(snapshot.job)];
             if (linked and not state.settings.shared) then services.load_profile(linked, true); end
         end
@@ -670,6 +681,7 @@ end);
 
 ashita.events.register('packet_in', 'momentum_packets', function(event)
     if (not packets.valid(event, 4)) then return; end
+    storage:packet(event);
     local t = now();
     dynamis:packet(event, t, state.settings);
     events:packet(event, t, state.settings);
@@ -743,6 +755,7 @@ ashita.events.register('packet_out', 'momentum_event_menus', function(event)
 end);
 
 local function render()
+    sound.update(now());
     if not flush_commands() then return; end
     if state.settings.window.open and bit.band(ffi.C.GetAsyncKeyState(0x1B), 0x8000) ~= 0 then
         close_window();
@@ -790,6 +803,7 @@ local function render()
     update_event_layout();
     update_dynamis_layout();
     update_auto_layout();
+    refresh_storage(state.snapshot, t);
     local visibility = state.settings.visibility.mode;
     local always = visibility == 'always';
     if not always and player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
@@ -900,11 +914,13 @@ ashita.events.register('unload', 'momentum_unload', function()
     if not saved then dynamis:report(issue); end
     saved, issue = events:save(now(), true);
     if not saved then events:report(issue); end
-    sound.close();
+    sound.close(true);
+    storage:reset();
     job_icons.destroy();
 end);
 settings.register('settings', 'momentum_settings', function(loaded)
     if (loaded == nil) then return; end
+    storage:observe(nil, now(), {});
     dynamis:detach(now());
     events:detach(now());
     account_cooldowns:detach();
@@ -931,7 +947,7 @@ settings.register('settings', 'momentum_settings', function(loaded)
     state.own = own_settings(loaded);
     state.settings = state.own;
     state.before, state.edit_baseline, state.dirty, state.last_job, state.shared_data = nil, nil, migration_pending, nil, nil;
-    state.player_id, state.sampled = nil, -1;
+    state.player_id, state.sampled, state.last_job_id = nil, -1, nil;
     chat_window.reset();
     hud.reset_chat_anchor();
     state.chat, state.chat_visible, state.chat_width, state.chat_fallback, state.dock_problem = nil, nil, nil, nil, nil;
@@ -944,7 +960,7 @@ if (MOMENTUM_TEST_MODE) then
     MOMENTUM_TEST = { settings = function() return state.settings; end, tracker = function() return tracker; end,
         state = state, services = services, sample = sample, view = current_view,
         sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis,
-        events = events, account_cooldowns = account_cooldowns };
+        events = events, account_cooldowns = account_cooldowns, storage = storage };
 end
 
 return { load = initialize_resources, command = handle_command,

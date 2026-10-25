@@ -95,6 +95,22 @@ class RepositoryTests(unittest.TestCase):
         })
         self.assertEqual(links, 1)
 
+    def test_only_the_checked_sound_executable_is_allowed(self):
+        folder = self.root / 'momentum/bin'
+        folder.mkdir()
+        for name in ('momentum-sound.exe', 'momentum-sound-launch.dll'):
+            binary = folder / name
+            binary.write_bytes(b'not the reviewed sound component')
+            problems, _ = check_repository.check(self.root)
+            self.assertTrue(any('PE executable' in item for item in problems), problems)
+            binary.unlink()
+        for suffix in ('.exe', '.dll'):
+            binary = folder / ('other' + suffix)
+            binary.write_bytes(b'MZ')
+            problems, _ = check_repository.check(self.root)
+            self.assertEqual(problems, ['momentum/bin/other' + suffix + ': unexpected public file type'])
+            binary.unlink()
+
     def test_release_notes_stop_at_next_version(self):
         text = '# Changelog\n\n## 1.0.1\n\n- New.\n\n## 1.0.0\n\n- Old.\n'
         self.assertEqual(release_notes.notes(text, '1.0.1'), '- New.\n')

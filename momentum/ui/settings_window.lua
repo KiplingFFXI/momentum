@@ -266,8 +266,8 @@ local function position(settings, services)
     slider(settings.bar, 'height', 'Bar height', 12, 120, '%.0f px');
     tip('Choose a height from 12 to 120 pixels. When attached to chat, the bar fits the available space outside the chat border.');
     imgui.BeginDisabled(settings.display.groups_enabled);
-    pick(settings.display, 'alignment', 'Readout alignment', { { name = 'Left', value = 'left' }, { name = 'Right', value = 'right' } },
-        'Align the readouts to either end of the bar. Their chosen order stays left to right.');
+    pick(settings.display, 'alignment', 'Readout alignment', { { name = 'Left', value = 'left' }, { name = 'Center', value = 'center' }, { name = 'Right', value = 'right' } },
+        'Line up your readouts on the left, in the center, or on the right of the bar. Their chosen order stays left to right.');
     imgui.EndDisabled();
     if settings.display.groups_enabled then note('Alignment is set by each readout group.'); end
     pick(settings.display, 'label_position', 'Label position', {
@@ -336,6 +336,7 @@ local catalog_groups = {
     { 'Merit points and LP', 'merits merit_rate lp_progress lp_rate merits_session merit_headroom lp_remaining merit_eta' },
     { 'Session', 'last session net elapsed best_chain exp_session lp_session zone_time zone_name' },
     { 'Gil', 'gil gil_gained gil_spent gil_net gil_rate' },
+    { 'Storage', 'inventory_slots inventory_free satchel_slots satchel_free' },
     { 'Buffs', 'dedication food ring' },
     { 'Dynamis', 'dyna_zone dyna_time dyna_extensions dyna_currency dyna_af2 dyna_currency_received dyna_currency_rate dyna_af2_received dyna_bynes dyna_bronze dyna_shells dyna_bynes_received dyna_bronze_received dyna_shells_received dyna_kills dyna_objectives dyna_pool dyna_subjob dyna_weakness dyna_next_entry' },
     { 'Assault and battlefields', 'event_name event_time event_elapsed event_objective event_status event_kills event_points event_exp event_lp event_floor event_extensions event_coins event_coins_received event_materials event_materials_received event_drops event_received event_best limbus_next_entry limbus_account_entry enm_next_entry assault_tags assault_next_tag beastmen_seals kindred_seals beastcoins_stored beastcoins_carried beastmen_carried kindred_carried' },
@@ -982,7 +983,7 @@ local function toolbar(settings, view, services)
         { view.paused and 'Resume session' or 'Pause session', function()
             if services.session_pause then services.session_pause(not view.paused); end
         end, (view.paused and 'Resume counting EXP, LP, merit points, gil changes, and session time.'
-            or 'Stop counting EXP, LP, merit points, gil changes, and session time. Current gil keeps updating.')
+            or 'Stop counting EXP, LP, merit points, gil changes, and session time. Current gil and bag space keep updating.')
             .. ' EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count.' },
         { 'Reset session', function()
             local current = services.session_current and services.session_current();
@@ -999,7 +1000,7 @@ local function toolbar(settings, view, services)
                     status = problem or 'The session could not be saved and reset. Wait for your EXP and LP to load, then try again.';
                 end
             end
-        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil stays the same. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event totals stay as they are.' },
+        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil and bag space stay live. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event totals stay as they are.' },
         { 'Undo', function() if services.undo then services.undo(); end end, 'Undo one of the last eight saved settings changes. This does not undo a session reset.' },
     });
     beside(108);

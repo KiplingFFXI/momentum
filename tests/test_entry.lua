@@ -47,9 +47,7 @@ local function food_end(actor, target, effect, message)
     return MOCK.packet(0x029, bytes);
 end
 local function play_count()
-    local total = 0;
-    for _, value in ipairs(MOCK.mci or {}) do if value:match('^play ') then total = total + 1; end end
-    return total;
+    return #(MOCK.sound_workers or {});
 end
 
 local packets = require('core.packets');
@@ -256,7 +254,7 @@ MOCK.frame(0.05);
 equal(play_count(), 2, 'Unrelated and injected status messages stay quiet');
 app.settings().alerts.food_enabled = false;
 MOCK.frame(0.25);
-equal(require('core.sound').is_open(app.settings().alerts.food_sound), false, 'Disabling closes the audio handle');
+equal(require('core.sound').is_open(app.settings().alerts.food_sound), false, 'Disabling clears the selected sound');
 MOCK.fire('packet_in', food_end());
 MOCK.frame(0.05);
 equal(play_count(), 2, 'Disabled food-end notification stays quiet');

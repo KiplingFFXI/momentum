@@ -87,6 +87,42 @@ waits for a successful normal transaction before changing a stored seal total.
 Ordinary verification and packaging do not regenerate any rules bundle. There is
 no scheduled data-refresh workflow.
 
+Sound helper
+------------
+
+The runtime includes bin/momentum-sound.exe, bin/momentum-sound-launch.dll, and
+core/sound_worker.lua. The player handles sounds in a separate process. The small
+launcher starts that process from its own native thread; it does not call Lua or
+load a decoder in the game. Native source lives in native/sound_player.cpp and
+native/sound_launcher.cpp. Their Windows builds and source verification are in
+tools/build_sound_player.py and tools/build_sound_launcher.py. Bundled and custom
+MP3/WAV files and per-alert volume remain supported. The Linux-safe sound-directory
+scan is separate and must not be replaced by the old shared directory helper.
+
+Check the shipped helper without compiling or playing a sound:
+
+  python tools/build_sound_player.py --check
+  python tools/build_sound_launcher.py --check
+
+After a reviewed native-source change, rebuild on Windows with the Visual Studio
+x86 C++ tools and Windows SDK installed:
+
+  python tools/build_sound_player.py
+  python tools/build_sound_launcher.py
+
+--out PATH selects another output. The player uses a static C++ runtime and the
+Windows subsystem. The launcher uses only Kernel32 imports, with no C++ runtime,
+WinMM, or COM. Ordinary release packaging verifies the existing binaries; it does
+not compile native code or require Visual Studio on the packaging machine.
+
+The release builder accepts only the named x86 PE32 Windows executable and DLL.
+It checks their DLL flags, section bounds, embedded source digests, and private
+paths and credential markers in plain and UTF-16 text. Each source digest covers
+its native source and build script, so changes need a fresh binary before
+packaging. Launcher builds with forced test delays or cancellation failures carry
+a separate marker and cannot be packaged. No source files, build reports, or extra
+executables or DLLs are copied into the runtime archive.
+
 Offline verification
 --------------------
 
@@ -117,8 +153,9 @@ build prints its file count and SHA-256.
 --out chooses a different output directory for CI or a local build. Output must
 stay outside the runtime addon folder.
 
-The builder permits only the reviewed runtime manifest, LICENSE, the sound notice,
-and the bundled sounds. It rejects unknown or linked files, missing
+The builder permits only the reviewed runtime manifest, including the checked
+sound helper, LICENSE, the sound notice, and the bundled sounds. It rejects
+unknown or linked files, missing
 files, private-path or credential markers, and sound files with changed hashes.
 Text line endings, ZIP timestamps, file modes, and entry order are normalized.
 Identical reviewed input produces the same archive in the same build environment.

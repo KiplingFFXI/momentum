@@ -23,9 +23,7 @@ local function effect(effect_id, message)
     return MOCK.packet(0x029, bytes)
 end
 local function plays()
-    local count = 0
-    for _, command in ipairs(MOCK.mci or {}) do if command:match('^play ') then count = count + 1 end end
-    return count
+    return #(MOCK.sound_workers or {})
 end
 local function load()
     MOCK.load_addon()

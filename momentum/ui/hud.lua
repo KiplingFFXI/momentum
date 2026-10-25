@@ -298,7 +298,7 @@ local function tooltip(settings, view, id, info)
     elseif id == 'sample' then
         return 'Preview', 'Example values', 'These example values let you try the layout before using it for your session.';
     elseif id == 'paused' then
-        return 'Session paused', 'Paused', 'Session gains, gil changes, and session time are paused. Current gil keeps updating. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count. Choose Resume session to keep counting.';
+        return 'Session paused', 'Paused', 'Session gains, gil changes, and session time are paused. Current gil and bag space keep updating. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count. Choose Resume session to keep counting.';
     end
     if id == 'progress' and not settings.display.show_text then
         if settings.events and settings.events.active_kind then id = 'event_time';

@@ -1,0 +1,45 @@
+local count = 0;
+local function check(value, message)
+    count = count + 1;
+    assert(value, message);
+end
+local defaults, imgui = require('ui.defaults'), require('imgui');
+local saved = defaults.make();
+saved.alerts.food_enabled, saved.alerts.food_sound = true, 'FF VII Save.mp3';
+saved.visibility.mode = 'always';
+saved.bar.docked, saved.bar.auto_width = false, false;
+MOCK.settings_file = saved;
+local sound = require('core.sound');
+MOCK.fs[sound.BUILT_IN], MOCK.fs[sound.WORKER] = true, true;
+MOCK.dirs = { [sound.BUILT_IN] = { 'FF VII Save.mp3', 'FF IX Moogle.mp3' } };
+for _, name in ipairs(MOCK.dirs[sound.BUILT_IN]) do MOCK.fs[sound.BUILT_IN .. name] = true; end
+MOCK.load_addon();
+local app = MOMENTUM_TEST;
+MOCK.frame(0.3);
+check(#(MOCK.sound_workers or {}) == 0, 'Enabled sound alerts do not launch a decoder on login');
+check(#(MOCK.mci or {}) == 0, 'Login never calls MCI in the game');
+app.settings().window.open, app.settings().window.tab = true, 'Alerts';
+local choose = true;
+imgui.BeginCombo = function(label) return choose and label == '##Sound'; end;
+imgui.Selectable = function(label) return choose and label == 'FF IX Moogle.mp3'; end;
+MOCK.frame(0.3);
+choose = false;
+MOCK.frame(0.3);
+check(app.settings().alerts.food_sound == 'FF IX Moogle.mp3', 'The real sound dropdown changes the saved choice');
+check(#(MOCK.sound_workers or {}) == 0, 'Changing the dropdown never launches a decoder');
+check(#(MOCK.mci or {}) == 0, 'Changing the dropdown never calls in-game MCI');
+MOCK.clicks['Play##food_sound'] = true;
+MOCK.frame(0.3);
+check(#MOCK.sound_workers == 1, 'Play launches exactly one isolated player');
+check(#(MOCK.mci or {}) == 0, 'Play never calls in-game MCI');
+MOCK.login_status = 0;
+MOCK.settings.switch_character(saved);
+local launched = #MOCK.sound_workers;
+MOCK.frame(0.3);
+check(app.state.snapshot.valid == false, 'The logout sample is invalid');
+check(#MOCK.sound_workers == launched, 'Logged-out settings do not reopen audio');
+MOCK.login_status = 2;
+MOCK.frame(0.3);
+check(#MOCK.sound_workers == launched, 'Returning to the character does not reopen audio');
+MOCK.fire('unload');
+return { count = count };

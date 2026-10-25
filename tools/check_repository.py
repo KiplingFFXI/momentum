@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote, urlsplit
 
-from build_release import PRIVATE, ROOT, addon_version
+from build_release import NATIVE, PRIVATE, ROOT, addon_version, checked_bytes
 
 SKIP = {'.git', '.ci', '.venv', '__pycache__', 'dist'}
 TEXT = {'.lua', '.py', '.md', '.txt', '.yml', '.json', '.cpp', '.bat'}
@@ -36,6 +36,12 @@ def check(root=ROOT):
         relative = path.relative_to(root).as_posix()
         if path.is_symlink():
             problems.append(relative + ': linked source file')
+        if relative.removeprefix('momentum/') in NATIVE and relative.startswith('momentum/'):
+            try:
+                checked_bytes(path, relative, source_root=root)
+            except RuntimeError as error:
+                problems.append(str(error))
+            continue
         if path.suffix not in TEXT and path.name not in {'LICENSE', '.gitignore', '.gitattributes'}:
             documentation_image = path.suffix == '.png' and relative.startswith('docs/images/')
             if path.suffix != '.mp3' and not documentation_image:

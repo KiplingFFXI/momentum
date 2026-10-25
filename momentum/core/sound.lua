@@ -1,20 +1,32 @@
 -- Optional local playback. The bundled Square Enix sounds are not covered by the GPL.
 local ffi = require('ffi');
 local bit = require('bit');
-pcall(ffi.cdef, 'unsigned long __stdcall mciSendStringA(const char *command, char *answer, unsigned int size, void *window);');
-local loaded, winmm;
 local directory_library;
 local sound = {};
 sound.BUILT_IN = addon.path:gsub('[\\/]+$', '') .. '\\sounds\\';
 sound.FOLDER = AshitaCore:GetInstallPath() .. '\\config\\addons\\momentum\\sounds\\';
-local alias = 'momentum_food_sound';
-local files, opened, level, failed, problem = {}, nil, nil, nil, nil;
+sound.WORKER = addon.path:gsub('[\\/]+$', '') .. '\\bin\\momentum-sound.exe';
+sound.LAUNCHER = addon.path:gsub('[\\/]+$', '') .. '\\bin\\momentum-sound-launch.dll';
+local playback = require('core.sound_worker').new(sound.WORKER);
+local files, opened, failed, problem, playing = {}, nil, nil, nil, nil;
+local trace;
 
-local function mci(command)
-    if loaded == nil then loaded, winmm = pcall(ffi.load, 'winmm'); end
-    if (not loaded) then return false; end
-    local ok, result = pcall(winmm.mciSendStringA, command, nil, 0, nil);
-    return ok and result == 0;
+local function file_label(name)
+    if name == nil or name == '' then return '<none>'; end
+    if name == 'FF VII Save.mp3' or name == 'FF IX Moogle.mp3' then return name; end
+    return '<custom sound>';
+end
+
+local function log(event, fields)
+    if not trace then return; end
+    fields = fields or {};
+    fields.selected, fields.opened, fields.failed = file_label(opened), file_label(opened), file_label(failed);
+    pcall(trace, event, fields);
+end
+
+function sound.set_trace(callback, path)
+    trace = type(callback) == 'function' and callback or nil;
+    playback:set_trace(trace, path);
 end
 
 local function valid(name)
@@ -68,6 +80,7 @@ local function directory_files(folder)
 end
 
 function sound.refresh()
+    log('sound.refresh.before');
     sound.make_folder();
     files = {};
     local taken = {};
@@ -81,6 +94,7 @@ function sound.refresh()
         table.sort(found, function(a, b) return a:lower() < b:lower(); end);
         for _, name in ipairs(found) do files[#files + 1] = name; end
     end
+    log('sound.refresh.after', { count = #files });
 end
 
 function sound.files() return files; end
@@ -93,43 +107,41 @@ function sound.find(word)
     end
 end
 
-function sound.close()
-    if (opened ~= nil) then mci('close ' .. alias); end
-    opened, level = nil, nil;
+function sound.close(final)
+    log('sound.close.before');
+    local stopped, issue = playback:stop();
+    if final then stopped = playback:shutdown(); end
+    if not stopped then failed, problem = playing or opened, issue; end
+    opened, playing = nil, nil;
+    log('sound.close.after', { ok = stopped });
 end
 
 local function give_up(name)
-    sound.close();
+    opened = nil;
     failed = name;
     problem = tostring(name) .. " won't play. Pick a .mp3 or .wav file from the sound list.";
+    log('sound.failure');
     return false;
 end
 
-local function open(name)
-    if (not valid(name)) then return give_up(name); end
+local function path_of(name)
     local path = sound.BUILT_IN .. name;
     if (not ashita.fs.exists(path)) then path = sound.FOLDER .. name; end
-    if (not ashita.fs.exists(path)) then return give_up(name); end
-    mci('close ' .. alias);
-    opened, level = nil, nil;
-    if (not mci(('open "%s" type mpegvideo alias %s'):format(path, alias))) then return give_up(name); end
-    opened, failed, problem = name, nil, nil;
-    return true;
+    return ashita.fs.exists(path) and path or nil;
 end
 
 function sound.use(name, retry)
-    if (name == '') then sound.close(); failed, problem = nil, nil; return true; end
-    if (name == opened) then return true; end
+    log('sound.use', { retry = retry == true });
+    if (name == '') then opened, failed, problem = nil, nil, nil; return true; end
     if (name == failed and not retry) then return false; end
-    return open(name);
-end
-
-local function start(volume)
-    if (volume ~= level) then
-        if (not mci(('setaudio %s volume to %d'):format(alias, volume))) then return false; end
-        level = volume;
+    if (name == opened) then
+        if retry then failed, problem = nil, nil; end
+        return true;
     end
-    return mci('play ' .. alias .. ' from 0');
+    if not valid(name) or not path_of(name) then return give_up(name); end
+    opened, failed, problem = name, nil, nil;
+    log('sound.use.after', { ok = true });
+    return true;
 end
 
 function sound.play(volume)
@@ -137,10 +149,27 @@ function sound.play(volume)
     volume = tonumber(volume) or 100;
     if (volume ~= volume) then volume = 100; end
     volume = math.floor(math.max(0, math.min(100, volume)) * 10 + 0.5);
-    local name = opened;
-    if (start(volume)) then return true; end
-    -- A changed sound device or callback thread can require one fresh handle.
-    return open(name) and (start(volume) or give_up(name));
+    log('sound.play.before', { volume = volume });
+    local path = path_of(opened);
+    if not path then return give_up(opened); end
+    if not ashita.fs.exists(sound.WORKER) or not ashita.fs.exists(sound.LAUNCHER) then
+        failed, problem = opened, 'The sound player is missing. Reinstall Momentum and try again.';
+        log('sound.play.after', { ok = false });
+        return false;
+    end
+    local launched, issue = playback:start(path, volume);
+    if launched then playing, failed, problem = opened, nil, nil;
+    else failed, problem = opened, issue or 'That sound could not play. Try another file.'; end
+    log('sound.play.after', { ok = launched });
+    return launched;
+end
+
+function sound.update(now)
+    local result = playback:update(now);
+    if result then
+        if result.problem then failed, problem = playing or opened, result.problem; end
+        if not result.launched then playing = nil; end
+    end
 end
 
 function sound.is_open(name) return opened ~= nil and opened == name; end

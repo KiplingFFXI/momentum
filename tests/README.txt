@@ -84,6 +84,11 @@ The focused suites cover:
   chat state, hide-setting precedence, and continued tracking while chat closes.
 - Centered chat placement, content and fixed widths, saved starting points,
   second-chat protection, snapping, locked movement, profiles, and held anchors.
+- Whole-row Center alignment, icons and dividers, overflow, priority fitting,
+  alignment-group precedence, cached positioning, saved layouts, and profiles.
+- Current-character Inventory and Mog Satchel used/capacity and free slots,
+  loading and character changes, malformed data, bounded refreshes, and zero
+  storage count reads when those readouts are off. Pause and reset leave them live.
 - Dynamis hourglass and packet parsing, extensions, pool deduplication, found and
   received drops, observed objectives, partial runs, reloads, history, registration
   timing, separate layouts, wanted drops, and optional alerts. EXP reset and pause
@@ -115,6 +120,19 @@ line endings, private-path rejection, links, missing or extra files, and sound
 hashes. The public repository check validates text, release documents, local
 Markdown links, and the changelog
 version. Developer files do not enter the runtime ZIP.
+
+The sound player and launcher are the only executable and DLL allowed in the
+runtime archive. Package checks reject a missing or stale component, another
+executable or DLL, the wrong machine, DLL flag or subsystem, malformed PE sections,
+and private paths in plain or UTF-16 text. Each binary is kept byte-for-byte. Its
+embedded digest must match its native source and build script. Launcher builds
+with test hooks cannot be packaged. These checks do not play audio or establish
+Proton support. Run these to check the shipped files:
+
+  python tools/build_sound_player.py --check
+  python tools/build_sound_launcher.py --check
+
+See tools/README.txt before rebuilding after a native-source change.
 
 The real UI preview uses Dear ImGui 1.92.3 to draw the actual Lua HUD and settings.
 It covers narrow/default/wide bars, all settings pages, larger fonts, skins,

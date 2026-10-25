@@ -37,11 +37,13 @@ local currency_family = {
 local gil_fields = { gil = 'current', gil_gained = 'gained', gil_spent = 'spent', gil_net = 'net', gil_rate = 'rate' };
 local currency_fields = { assault_tags = 'assault_tags', beastmen_seals = 'beastmen_seals', kindred_seals = 'kindred_seals', beastcoins_stored = 'ancient_beastcoins' };
 local inventory_fields = { beastcoins_carried = 1875, beastmen_carried = 1126, kindred_carried = 1127 };
+local storage_fields = { inventory_slots = 'inventory', inventory_free = 'inventory', satchel_slots = 'satchel', satchel_free = 'satchel' };
 local independent = {};
 for _, item in ipairs(defaults.READOUTS) do
     local id = item.id;
     independent[id] = id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_'
-        or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil or inventory_fields[id] ~= nil or gil_fields[id] ~= nil;
+        or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil
+        or inventory_fields[id] ~= nil or gil_fields[id] ~= nil or storage_fields[id] ~= nil;
 end
 
 function readouts.needs_character(id)
@@ -139,6 +141,13 @@ end
 
 local function value_for(id, view, settings)
     if not definitions[id] then return nil; end
+    if storage_fields[id] then
+        local bag = view.storage and view.storage[storage_fields[id]];
+        if type(bag) ~= 'table' then return '--'; end
+        if id == 'inventory_free' or id == 'satchel_free' then return readouts.format_number(bag.free, false); end
+        if bag.used == nil or bag.capacity == nil then return '--'; end
+        return readouts.format_number(bag.used, false) .. ' / ' .. readouts.format_number(bag.capacity, false);
+    end
     if id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_' or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or currency_fields[id] or inventory_fields[id] then
         return event_value(id, view, settings);
     end
@@ -271,6 +280,8 @@ local dependencies = {
     sample_count = 'recent.count recent.requested', minimum = 'recent.min', maximum = 'recent.max', median = 'recent.median',
     food = 'food food_name food_seconds', ring = 'rings',
     gil = 'gil.current', gil_gained = 'gil.gained', gil_spent = 'gil.spent', gil_net = 'gil.net', gil_rate = 'gil.rate',
+    inventory_slots = 'storage.inventory.used storage.inventory.capacity', inventory_free = 'storage.inventory.free',
+    satchel_slots = 'storage.satchel.used storage.satchel.capacity', satchel_free = 'storage.satchel.free',
     dyna_zone = 'dynamis.active dynamis.name dynamis.short_name', dyna_time = 'dynamis.active dynamis.remaining dynamis.clock_estimated',
     dyna_extensions = 'dynamis.active dynamis.extension_minutes', dyna_currency = 'dynamis.active dynamis.currency_found',
     dyna_currency_received = 'dynamis.active dynamis.currency_received', dyna_currency_rate = 'dynamis.active dynamis.currency_rate',
@@ -442,6 +453,7 @@ function readouts.sample(scenario)
         best_chain = 5, paused = false, collecting = false, capped = false, dedication = true,
         dedication_seconds = 1830, buffer_current = 12450, buffer_needed = 20000, goal_remaining = nil, goal_eta = nil,
         gil = { current = 125400, gained = 15800, spent = 5800, net = 10000, rate = 13333 },
+        storage = { inventory = { used = 60, capacity = 80, free = 20 }, satchel = { used = 35, capacity = 80, free = 45 } },
         events = { active = false, zone_elapsed = 1845, zone_partial = false, zone_name = 'West Ronfaure', cooldowns = {}, currencies = {}, history = {} },
     };
     if scenario == 'Merits' or scenario == 'Capped' then

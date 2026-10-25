@@ -23,6 +23,7 @@ check(imports == 0, 'Waiting imports no addon or shared Lua libraries');
 check(reads == 0, 'Waiting does not read job memory');
 check(writes == 0, 'Waiting never opens settings, logs or other files');
 check(#(MOCK.mci or {}) == 0, 'Waiting never opens audio');
+check(#(MOCK.sound_workers or {}) == 0, 'Waiting never launches a sound player');
 local other = { command = '/something_else', blocked = false };
 MOCK.fire('command', other);
 check(not other.blocked, 'Other addon commands are left alone');

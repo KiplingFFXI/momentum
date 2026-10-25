@@ -1,0 +1,7 @@
+[
+  {"frame":2,"lua":"PREVIEW.expect_storage({'Inventory 60 / 80','Inventory free 20','Satchel 35 / 80','Satchel free 45'}); PREVIEW.storage_before=PREVIEW.storage_cached(); PREVIEW.view.paused=true; PREVIEW.view.elapsed=0; PREVIEW.view.storage.inventory.used=61; PREVIEW.view.storage.inventory.free=19; PREVIEW.view.storage.satchel.used=80; PREVIEW.view.storage.satchel.free=0"},
+  {"frame":4,"lua":"PREVIEW.expect_storage({'Inventory 61 / 80','Inventory free 19','Satchel 80 / 80','Satchel free 0'}); assert(PREVIEW.storage_cached()~=PREVIEW.storage_before,'Live slot changes reused stale cached readings'); PREVIEW.view.storage.inventory=nil"},
+  {"frame":6,"lua":"PREVIEW.expect_storage({'Inventory --','Inventory free --','Satchel 80 / 80','Satchel free 0'}); PREVIEW.view.valid=false; PREVIEW.view.storage={}"},
+  {"frame":8,"lua":"PREVIEW.expect_storage({'Inventory --','Inventory free --','Satchel --','Satchel free --'}); PREVIEW.view.storage={inventory={used=0,capacity=30,free=30}}"},
+  {"frame":10,"lua":"PREVIEW.expect_storage({'Inventory 0 / 30','Inventory free 30','Satchel --','Satchel free --'}); assert(PREVIEW.view.paused and PREVIEW.view.elapsed==0,'Storage preview changed paused or reset EXP state'); PREVIEW.check_storage_center(false)"}
+]

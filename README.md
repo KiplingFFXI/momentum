@@ -1,6 +1,6 @@
 # Momentum
 
-Momentum is an Ashita v4 addon for Phoenix. It puts EXP, merit points, gil, zone time, and event progress in a compact bar above or below chat, or anywhere you want to drag it. Choose the readings, arrange them, and change the labels, dividers, and colors.
+Momentum is an Ashita v4 addon for Phoenix. It puts EXP, merit points, gil, Inventory and Mog Satchel space, zone time, and event progress in a compact bar above or below chat, or anywhere you want to drag it. Choose the readings, arrange them, and change the labels, dividers, and colors.
 
 Author: **Kipling**.
 
@@ -28,12 +28,13 @@ Type `/momentum` to open settings. Use **Bar mode** at the top to choose **EXP**
 - **Display** holds starter layouts, readouts, ordering, labels, dividers, and alignment. Every mode keeps its own readout setup. **Switch saved EXP / Merits layouts** lets Automatic use the same EXP and Merits layouts you arrange manually. **Position and size** attaches the bar above or below chat, with an optional compact centered bar under **Chat alignment**. Choose **Free placement**, then hold Shift to drag or resize it.
 - **Visibility** offers **Hide with chat**, **Keep visible when chat closes**, and **Always visible** under **Tracking > Visibility > Bar visibility**. Keep visible when chat closes is the default. Saved choices are kept, and changing placement does not change your choice. [Visibility and placement](docs/GUIDE.md#place-the-bar).
 - **Appearance** holds eight skins, colors, fonts, and text sizes. Job pictures come from your client, with the abbreviation and level beside them, such as `(WAR) 32`.
+- **Readout alignment** offers Left, Center, and Right inside the bar. Center keeps the whole row together in the middle when you change the bar width. Left is the default.
 - **Live/Sample** previews let you try a layout. Search finds settings, and hover help explains controls and readings. **Undo** restores recent edits; **Profiles** saves setups for different jobs or shared use.
 - **Alerts** groups notices and sounds by purpose and shows how many are on. All start off. For a food wear-off sound, open **Food** and check **Play sound** under **Food effect wore off**. [Set up alerts](docs/GUIDE.md#alerts).
 - **Dynamis** follows your Perpetual Hourglass, time extensions, currency, and relic armor. With Bar mode set to Automatic, **Switch layouts in Dynamis** uses its compact layout in Dynamis and restores your regular layout afterward. Tracking keeps running when you select another bar mode. [Dynamis tracking and limits](docs/GUIDE.md#dynamis).
 - **Events** covers Assault, Limbus, BCNM, KSNM, and ENM runs, objectives, treasure, entry items, cooldowns, wanted drops, fight references, and history. **Switch event layouts in Automatic** follows an observed event and restores the previous layout afterward. Time in zone works in every mode. [Event tracking](docs/GUIDE.md#assault-limbus-and-battlefields).
 
-**Pause session** excludes session gains, gil changes, and time while current balances keep updating. **Reset session** saves the old record and clears session totals, EXP/HR, LP/HR, Gil/HR, and Next until new data is collected. Neither action clears or restarts active EXP chain, food, Dedication, or EXP ring recast timers. Zone visits, event timers, objectives, drops, and entry waits keep running too. Paused alerts follow **When to mute alerts**. Your current points, gil, and layout stay the same. [Sessions and saving](docs/GUIDE.md#sessions).
+**Pause session** excludes session gains, gil changes, and time while current balances and bag space keep updating. **Reset session** saves the old record and clears session totals, EXP/HR, LP/HR, Gil/HR, and Next until new data is collected. Neither action clears or restarts active EXP chain, food, Dedication, or EXP ring recast timers. Zone visits, event timers, objectives, drops, and entry waits keep running too. Paused alerts follow **When to mute alerts**. Your current points, gil, bag counts, and layout are kept. [Sessions and saving](docs/GUIDE.md#sessions).
 
 In Automatic, **Readouts and order** identifies the saved layout you are editing. **Current session** and **Copy summary** include your gil gained, gil spent, net change, and Gil/HR.
 
@@ -46,6 +47,7 @@ To track the Dedication buff, choose **Display > Add readout > Buffs > Dedicatio
 - EXP chain numbers, bonuses, and a countdown with a configurable warning color.
 - Session gains, losses, recovery, recent averages, goals, and saved history.
 - Current gil, gil gained and spent this session, their difference, and Gil/HR. These optional readouts work in every mode. [Gil tracking](docs/GUIDE.md#gil).
+- Your Inventory and Mog Satchel slots, shown as used/capacity or free slots. Add either under **Display > Add readout > Storage** in any mode. [Inventory and Mog Satchel](docs/GUIDE.md#inventory-and-mog-satchel).
 - Food and Dedication timers, EXP ring charges and recast, and optional notices or sounds.
 - Level Sync details and a separate Phoenix penalty calculator.
 - Dynamis time left, time extensions, currency, relic armor, observed objectives, and saved runs.
@@ -60,6 +62,8 @@ EXP/HR and LP/HR need one minute of session time. Gil/HR uses gil gained minus g
 Unknown values stay `--`; estimates use `~`. The local EXP chain timer follows Phoenix's rules, but the chain may stay open longer when the monster's EXP level is unknown. Level Sync shows your actual level, synced level, and level gap. Its manual calculator estimates a possible penalty; it cannot show the stored penalty currently applied to your character. [Tracking limits](docs/GUIDE.md#exp-lp-and-rates) | [Phoenix status and planning](docs/GUIDE.md#phoenix-status-and-planning).
 
 Momentum is fully client-side. It reads client state and observes normal game packets. It sends no gameplay commands and uses no items. It will never require a server module or custom server data feed. Settings and run records stay local.
+
+Sounds use a small bundled player that runs separately from the game, with a launcher that starts it in the background. Keep the whole `momentum` folder together when installing or updating. Bundled MP3s, custom MP3/WAV files, and each alert's volume settings stay available.
 
 ## Source and license
 

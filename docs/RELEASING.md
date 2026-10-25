@@ -86,6 +86,12 @@ Check visibility and placement in the live client, and record those results sepa
 
 ## Build and inspect
 
+For Inventory and Mog Satchel readouts, check used/capacity and free slots in each mode, including Automatic. Move, stack, split, buy, sell, and drop items, then check both bags against the game menu. Confirm zero used slots and a full bag display correctly, unavailable counts stay unknown, and capacity follows unlocked space. Test a reload, zoning, and main-to-alt-to-main without showing the previous character's amounts. Pause and Reset session must leave live slot counts updating. With all four readouts off, there must be no storage count reads or item scans.
+
+For centered readouts, check a wide fixed-width bar and a narrow bar with overflow. Keep icons, labels, dividers, and the chosen order together. Check both priority fitting and separate alignment groups, the HUD and inline preview, profiles, shared settings, and every Bar mode. The saved Center choice must survive reloads. Left remains the default; Chat alignment moves the bar separately.
+
+For sounds, check both bundled MP3s and a custom WAV, volumes, repeated Play, chosen alerts, character changes, and unload while playback is starting. File selection must not open an audio decoder. The first Play must leave the game responsive while the player starts. Record actual Windows and Proton results separately from standalone and offline tests.
+
 ```powershell
 python tools/build_release.py
 ```

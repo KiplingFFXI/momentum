@@ -110,7 +110,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('baseline', type=Path)
     parser.add_argument('--exclude-readout', action='append', default=[], metavar='ID',
-                        help='Explicitly omit a retired readout from both traces; views and all other readouts stay strict.')
+                        help='Explicitly omit an added or retired readout from both traces; views and all other readouts stay strict.')
     args = parser.parse_args()
     current = trace(run.ADDON)
     with tempfile.TemporaryDirectory(prefix='momentum_previous_') as folder:
@@ -130,7 +130,7 @@ def main():
     assert len(current) == len(baseline)
     print('PASS: %d tracking views and readout sets match the previous release.' % len(current))
     if args.exclude_readout:
-        print('Explicitly excluded retired readouts: ' + ', '.join(sorted(set(args.exclude_readout))))
+        print('Explicitly excluded readouts: ' + ', '.join(sorted(set(args.exclude_readout))))
 
 
 if __name__ == '__main__':

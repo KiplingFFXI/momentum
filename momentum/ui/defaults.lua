@@ -99,6 +99,10 @@ defaults.READOUTS = {
     { id = 'beastcoins_carried', name = 'Ancient Beastcoins in Inventory', label = 'Carried coins', enabled = false, help = 'Counts Ancient Beastcoins in your Inventory bag. Other bags and stored coins are separate. -- means Inventory has not been read yet.' },
     { id = 'beastmen_carried', name = 'Beastmen\'s Seals in Inventory', label = 'Carried B. seals', enabled = false, help = 'Counts Beastmen\'s Seals in your Inventory bag only. Seals in other bags or stored with Shami are not included. -- means Inventory has not been read yet.' },
     { id = 'kindred_carried', name = 'Kindred\'s Seals in Inventory', label = 'Carried K. seals', enabled = false, help = 'Counts Kindred\'s Seals in your Inventory bag only. Seals in other bags or stored with Shami are not included. -- means Inventory has not been read yet.' },
+    { id = 'inventory_slots', name = 'Inventory slots', label = 'Inventory', enabled = false, help = 'Shows used Inventory slots and total slots, such as 60 / 80. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means Inventory is not known yet.' },
+    { id = 'inventory_free', name = 'Inventory free slots', label = 'Inventory free', enabled = false, help = 'Shows empty slots in your Inventory. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means Inventory is not known yet.' },
+    { id = 'satchel_slots', name = 'Mog Satchel slots', label = 'Satchel', enabled = false, help = 'Shows used Mog Satchel slots and total slots, such as 35 / 80. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means your Mog Satchel is not known yet.' },
+    { id = 'satchel_free', name = 'Mog Satchel free slots', label = 'Satchel free', enabled = false, help = 'Shows empty slots in your Mog Satchel. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means your Mog Satchel is not known yet.' },
 };
 
 defaults.ALERTS = {
@@ -282,7 +286,7 @@ local function tidy_saved_display(display, fresh, known)
     display.spacing = number(display.spacing, 0, 24, 8);
     display.divider, display.label_divider = plain(display.divider, 16), plain(display.label_divider, 8);
     display.mode = choice(display.mode, { 'auto', 'exp', 'lp' }, 'auto');
-    display.alignment = choice(display.alignment, { 'left', 'right' }, 'left');
+    display.alignment = choice(display.alignment, { 'left', 'center', 'right' }, 'left');
     display.label_position = choice(display.label_position, { 'before', 'after' }, 'before');
     for id, color in pairs(display.colors) do
         if not known[id] or type(color) ~= 'table' then display.colors[id] = nil;
@@ -372,7 +376,7 @@ function defaults.tidy(settings)
         if settings.modes.selected == 'exp' then settings.display.mode = 'exp';
         elseif settings.modes.selected == 'merits' then settings.display.mode = 'lp'; end
     end
-    settings.display.alignment = choice(settings.display.alignment, { 'left', 'right' }, 'left');
+    settings.display.alignment = choice(settings.display.alignment, { 'left', 'center', 'right' }, 'left');
     settings.display.label_position = choice(settings.display.label_position, { 'before', 'after' }, 'before');
     settings.style.font = plain(settings.style.font, 64);
     settings.style.font_size = number(settings.style.font_size, 8, 48, 13);
@@ -430,7 +434,7 @@ function defaults.tidy(settings)
     dyna.spacing = number(dyna.spacing, 0, 24, 8);
     dyna.divider, dyna.label_divider = plain(dyna.divider, 16), plain(dyna.label_divider, 8);
     dyna.mode = choice(dyna.mode, { 'auto', 'exp', 'lp' }, 'auto');
-    dyna.alignment = choice(dyna.alignment, { 'left', 'right' }, 'left');
+    dyna.alignment = choice(dyna.alignment, { 'left', 'center', 'right' }, 'left');
     dyna.label_position = choice(dyna.label_position, { 'before', 'after' }, 'before');
     settings.planner.level = math.floor(number(settings.planner.level, 10, 75, 50));
     settings.planner.population = math.floor(number(settings.planner.population, 0, 100000, 0));

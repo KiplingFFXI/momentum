@@ -32,13 +32,13 @@ You can also use `/momentum mode exp`, `/momentum mode merits`, `/momentum mode 
 
 Open **Display** and drag a readout's handle to another position, or select it and use **Up**, **Down**, **First**, or **Last**. The checkboxes control visibility. Hidden readouts keep their place in the order.
 
-**Readout alignment** chooses Left or Right inside the bar. The whole row, including icons and dividers, moves together. Readouts keep their selected order from left to right. This also applies to the inline preview and saved profiles.
+**Readout alignment** chooses Left, Center, or Right inside the bar. The whole row, including icons and dividers, moves together. Center keeps the row in the middle as the bar width changes. Readouts keep their selected order from left to right. This also applies to the inline preview and saved profiles. If separate alignment groups are enabled, each readout's group takes precedence; turn groups off to align the whole row together.
 
-**Label position** chooses Before value or After value. Before value is the default: `EXP/HR 8,500` and `TNL 7,550`. After value shows `8,500 EXP/HR` and `7,550 TNL`. This changes the text within each readout; Readout alignment still chooses which end of the bar holds the row.
+**Label position** chooses Before value or After value. Before value is the default: `EXP/HR 8,500` and `TNL 7,550`. After value shows `8,500 EXP/HR` and `7,550 TNL`. This changes the text within each readout; Readout alignment still chooses where the row sits in the bar.
 
 Independent alignment groups can place selected readouts on the left, center, or right of the same bar. **Keep visible first** and **Display priority** choose which fields stay visible when space is short, without rearranging the remaining fields. A very narrow bar can still run out of space. **Show when** can limit a readout to EXP, LP, a running EXP chain timer, a food effect, Dedication, Level Sync, or a known value. Hidden fields do not leave stray dividers.
 
-Each row in **Readouts and order** has Show and Divider checkboxes. The list starts with your chosen readouts. Use **Add readout** to browse Progress, Merit points and LP, Session, Gil, Buffs, Dynamis, Assault and battlefields, or Detailed statistics, or switch to **All readouts**. Filtering does not change the bar's order or visibility. The divider follows its readout when you change the order. The first visible readout in each alignment group never starts with a divider. The selected readout puts its label, divider, and colors first, with conditions and overflow controls under **More options**. Clear a label to show only its value and any built-in EXP or LP unit. Selecting **EXP chain timer** also gives you the **Below 10 seconds** text color, which defaults to red.
+Each row in **Readouts and order** has Show and Divider checkboxes. The list starts with your chosen readouts. Use **Add readout** to browse Progress, Merit points and LP, Session, Gil, Storage, Buffs, Dynamis, Assault and battlefields, or Detailed statistics, or switch to **All readouts**. Filtering does not change the bar's order or visibility. The divider follows its readout when you change the order. The first visible readout in each alignment group never starts with a divider. The selected readout puts its label, divider, and colors first, with conditions and overflow controls under **More options**. Clear a label to show only its value and any built-in EXP or LP unit. Selecting **EXP chain timer** also gives you the **Below 10 seconds** text color, which defaults to red.
 
 The **Divider style** choice sits beside the readout list. Choose a line, slash, dash, dot, asterisk, spaces, or no divider. **Add dividers to all** enables a divider between every visible readout; **Remove all dividers** turns them off. Adding a divider when the style is blank chooses a visible line. Hidden readouts never leave stray dividers. Under **Dividers and formatting**, enter custom text or change the gap and divider color; **Label separator** controls the separator inside a readout.
 
@@ -146,6 +146,16 @@ Gil tracking uses changes in the gil you carry. Trades, delivery box transfers, 
 
 Pause keeps your current gil up to date but leaves paused changes out of session totals. Reset clears gil gained, spent, change, and Gil/HR while keeping your current gil. Gil totals are saved with your EXP/LP session. On reload or after an inventory reload, Momentum starts from the newly loaded balance without counting it as a gain or loss. It does not reconstruct changes it missed. Unknown current gil shows `--`.
 
+## Inventory and Mog Satchel
+
+Open **Display > Add readout > Storage** to add **Inventory slots**, **Inventory free slots**, **Mog Satchel slots**, or **Mog Satchel free slots**. They start off and work in every bar mode. Arrange them and choose labels, dividers, and colors like any other readout.
+
+The slots reading shows used space and capacity, such as `Inventory 56 / 80`. The free reading shows how many slots are left. Each stack takes one slot, regardless of how many items are in it. Capacity follows your character's unlocked space.
+
+Only your current character's Inventory and Mog Satchel are tracked. Unknown or loading amounts show `--`. Counts keep updating through session pause and reset, and changing characters clears the old values before reading the new character's bags. These are current slot counts, not session totals or item lists.
+
+To center these and your other readouts in a long bar, choose **Display > Position and size > Readout alignment > Center**. For a fixed width, choose **Free placement** or set **Chat alignment** to **Center**, then turn off **Fit width to readouts** and adjust **Custom bar width**. Chat alignment controls where the bar sits above or below chat separately.
+
 ## Dynamis
 
 Open **Dynamis** for the current run, options, objectives, drops, treasure pool, wanted drops, and saved runs. **Track Dynamis runs** and **Switch layouts in Dynamis** start on. With **Bar mode** set to **Automatic**, entering any of Phoenix's ten Dynamis zones uses your Dynamis layout and leaving restores your regular layout. Manual modes stay selected across zone changes.
@@ -214,7 +224,7 @@ These are recorded timers, not an account query. Another character's unobserved 
 
 The **Session** page separates reported EXP and LP, net progress, EXP lost, recovery, and other adjustments. It also includes gil gained, gil spent, net gil change, and Gil/HR in **Current session** and **Copy summary**. Unknown values show `--`, and zero remains zero. Recovery is tracked from observed death and revival; a gain that cannot be matched to a reward or recovery remains an adjustment.
 
-**Pause session** stops collecting session rewards, progress, gil changes, and elapsed time until you resume. Current EXP, LP, stored merits, and gil keep updating. **Reset session** is always available at the top of settings. One click saves the previous record and starts a new session. EXP/HR, LP/HR, Gil/HR, and Next clear until the new session has enough data. Reset also clears gil gained and spent and switches sample previews back to live readings. Your current EXP, LP, stored merits, gil, and layout stay the same. **Copy summary** on Session copies the displayed breakdown to the clipboard.
+**Pause session** stops collecting session rewards, progress, gil changes, and elapsed time until you resume. Current EXP, LP, stored merits, and gil keep updating. Inventory and Mog Satchel space stay live too. **Reset session** is always available at the top of settings. One click saves the previous record and starts a new session. EXP/HR, LP/HR, Gil/HR, and Next clear until the new session has enough data. Reset also clears gil gained and spent and switches sample previews back to live readings. Your current EXP, LP, stored merits, gil, bag counts, and layout are kept. **Copy summary** on Session copies the displayed breakdown to the clipboard.
 
 Pause and reset leave active EXP chain, food, Dedication, and EXP ring recast timers running toward their original end times. They also leave zone visits, event timing, objectives, drops, and entry waits alone. They do not restart expired timers. The current chain can advance when another qualifying reward arrives, including while paused; the session's best chain starts over on reset and does not increase while paused. Warnings keep following their timers, subject to **When to mute alerts**. Pausing does not stop an effect from wearing off or a ring from becoming ready in the game. Death, zoning, missing data, and other real observation gaps can still clear or hide a timer when it is no longer reliable.
 
@@ -273,6 +283,8 @@ The notification plays once after the server reports that your active food ended
 
 Sound playback stays local. A file that cannot open or play leaves a message in settings; it does not stop EXP tracking. Pick a different file or press Play to retry.
 
+Momentum's bundled sound player handles playback outside the game. A small launcher starts it in the background. Choosing a file does not open it; playback starts when you press **Play** or a chosen sound alert fires. Keep both sound components with the addon, so replace the whole `momentum` folder when updating. Your MP3/WAV files and volume choices stay in the same settings.
+
 ## Appearance and previews
 
 Choose Phoenix, Classic FFXI, Minimal, High contrast, Ember, Mint, Lavender, or Colorblind safe. Changing a skin preserves your readout order, labels, and placement. Fonts use the client's default face or installed Windows fonts. If a selected Windows font is unavailable, the client font is used.
@@ -291,7 +303,7 @@ Save a profile to keep the bar layout, tracking choices, and appearance. Profile
 
 Loading a profile also restores its saved Bar mode. Job profiles keep the manual Bar mode you selected.
 
-**Job profiles** applies a saved profile when the main job changes. **Use one layout for all characters** uses a common appearance file; job profiles are inactive while sharing is enabled. Session records stay separate. Turning sharing off copies the current shared appearance to the active character's own settings.
+**Job profiles** applies a saved profile when you change main jobs on that character. Logging back in or returning from another character keeps your latest saved layout instead of reloading an older job profile. **Use one layout for all characters** uses a common appearance file; job profiles are inactive while sharing is enabled. Session records stay separate. Turning sharing off copies the current shared appearance to the active character's own settings.
 
 All persistent files are under `config/addons/momentum/`:
 

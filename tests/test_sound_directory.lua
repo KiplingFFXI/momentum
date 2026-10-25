@@ -55,11 +55,12 @@ check(bounded_reads > 0, 'The scanner read filenames');
 equal(sound.find('b.wav'), 'B.wav', 'The bundled duplicate remains selectable');
 MOCK.fs[sound.FOLDER .. ansi_name] = true;
 check(sound.use(ansi_name, true), 'An ANSI filename remains playable');
-check(MOCK.mci[#MOCK.mci]:find(sound.FOLDER .. ansi_name, 1, true), 'Playback keeps the selected filename bytes');
+equal(#(MOCK.sound_workers or {}), 0, 'Selecting an ANSI filename does not launch a player');
+equal(#(MOCK.mci or {}), 0, 'Selecting an ANSI filename never enters MCI');
 sound.refresh();
 equal(libraries.kernel32, 1, 'Later scans reuse the library');
-equal(libraries.winmm, 1, 'Refreshing an open sound does not reopen audio');
-check(sound.is_open(ansi_name), 'Refreshing keeps the selected sound open');
+equal(libraries.winmm, nil, 'Refreshing a selected sound never loads WinMM');
+check(sound.is_open(ansi_name), 'Refreshing keeps the selected sound');
 sound.close();
 
 MOCK.dirs = { [sound.BUILT_IN] = {}, [sound.FOLDER] = {} };

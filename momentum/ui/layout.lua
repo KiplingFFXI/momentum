@@ -157,6 +157,11 @@ function layout.arrange(segments, width, measure, display)
         local value = 0; for _, part in ipairs(parts) do value = value + size(part); end
         return value;
     end
+    local function aligned(used)
+        local room = math.max(0, width - used);
+        if display.alignment == 'center' then return room / 2; end
+        return display.alignment == 'right' and room or 0;
+    end
     local function finish(parts, overflow)
         local counts, shown, order = {}, {}, {};
         for _, part in ipairs(segments) do
@@ -174,7 +179,7 @@ function layout.arrange(segments, width, measure, display)
     for _, pinned in pairs(display.pinned or {}) do advanced = advanced or pinned; end
     if not advanced then
         local parts, overflow = layout.fit(segments, width, measure);
-        local x = display.alignment == 'right' and math.max(0, width - total(parts)) or 0;
+        local x = aligned(total(parts));
         local placed = {};
         for _, part in ipairs(parts) do
             local copy = {}; for key, value in pairs(part) do copy[key] = value; end
@@ -252,7 +257,7 @@ function layout.arrange(segments, width, measure, display)
                 local high = width - widths.center - (widths.right > 0 and widths.right + 8 or 0);
                 x = layout.clamp((width - widths.center) / 2, low, high);
             end
-        elseif display.alignment == 'right' then x = math.max(0, width - widths.left); end
+        else x = aligned(widths.left); end
         for _, part in ipairs(grouped[name]) do
             local copy = {}; for key, value in pairs(part) do copy[key] = value; end
             copy.offset = x; result[#result + 1] = copy; x = x + size(part);

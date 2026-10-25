@@ -15,6 +15,7 @@ os.clock = function () return MOCK.now; end
 -- Use the client's table wrapper so settings defaults must support :copy(true).
 assert(loadfile((ASHITA_LIBS or 'C:/Games/PhoenixXI/addons/libs') .. '/sugar/table.lua'))();
 addon = { path = ADDON_DIR or '.' };
+MOCK.fs[addon.path:gsub('[\\/]+$', '') .. '\\bin\\momentum-sound-launch.dll'] = true;
 function string.args(value)
     local result, state, start = {}, 'none', 1;
     for i = 1, #value do
@@ -169,8 +170,15 @@ end
 package.loaded.ffi = {
     os = 'Windows', cdef = function () end,
     new = function(kind)
-        assert(kind == 'momentum_find_data_a[1]', 'Unexpected mock FFI allocation: ' .. tostring(kind));
+        if kind == 'uint16_t[?]' then return {}; end
+        if kind == 'uint32_t[1]' then return { [0] = 0 }; end
+        assert(kind == 'momentum_find_data_a[1]' or kind == 'momentum_sound_startup_w[1]'
+            or kind == 'momentum_sound_process_info[1]', 'Unexpected mock FFI allocation: ' .. tostring(kind));
         return { [0] = {} };
+    end,
+    sizeof = function(kind)
+        if kind == 'momentum_sound_startup_w' then return 68; end
+        error('Unexpected mock FFI size: ' .. tostring(kind));
     end,
     cast = function(kind, value)
         assert(kind == 'void*', 'Unexpected mock FFI cast: ' .. tostring(kind));
@@ -178,6 +186,54 @@ package.loaded.ffi = {
     end,
     string = function(value, size) return value:sub(1, size); end,
     load = function (name)
+        if name:match('momentum%-sound%-launch%.dll$') then
+            if MOCK.no_sound_launcher then error('Sound launcher unavailable'); end
+            local function complete(request)
+                if request.done or MOCK.sound_launch_pending then return; end
+                request.done = true;
+                if request.cancelled then request.code = 1223; return; end
+                local library = package.loaded.ffi.load('kernel32');
+                local info = { [0] = {} };
+                local startup = { [0] = { cb = 68, dwFlags = 1, wShowWindow = 0 } };
+                local created = library.momentum_sound_create_process_w(request.application, request.command,
+                    nil, nil, 0, 0x08000000, nil, nil, startup, info);
+                request.code = created == 0 and (MOCK.sound_last_error or 5) or 0;
+                request.info = created ~= 0 and info[0] or nil;
+            end
+            return {
+                momentum_launch_begin = function(application, command)
+                    if MOCK.sound_submit_error then return nil; end
+                    local request = { application = application, command = command };
+                    MOCK.sound_requests = MOCK.sound_requests or {};
+                    MOCK.sound_requests[#MOCK.sound_requests + 1] = request;
+                    complete(request);
+                    return request;
+                end,
+                momentum_launch_cancel = function(request) request.cancelled = true; end,
+                momentum_launch_poll = function(request, info, code, elapsed)
+                    MOCK.sound_launch_polls = (MOCK.sound_launch_polls or 0) + 1;
+                    complete(request);
+                    if not request.done then return 0; end
+                    code[0], elapsed[0] = request.code, MOCK.sound_launch_ms or 6;
+                    if code[0] ~= 0 then return -1; end
+                    assert(not request.taken, 'Duplicate sound launch transfer');
+                    request.taken = true;
+                    info[0], request.info = request.info, nil;
+                    return 1;
+                end,
+                momentum_launch_release = function(request)
+                    assert(not request.released, 'Duplicate sound launch release');
+                    request.cancelled, request.released = true, true;
+                    if request.info then
+                        local library = package.loaded.ffi.load('kernel32');
+                        library.momentum_sound_terminate(request.info.hProcess);
+                        library.momentum_sound_close_handle(request.info.hThread);
+                        library.momentum_sound_close_handle(request.info.hProcess);
+                        request.info = nil;
+                    end
+                end,
+            };
+        end
         if name == 'kernel32' then
             if MOCK.no_kernel32 then error('Directory library unavailable'); end
             local function fill(data, entry)
@@ -187,6 +243,49 @@ package.loaded.ffi = {
                 data[0].cFileName = (value .. string.rep('\0', 260)):sub(1, 260);
             end
             return {
+                momentum_sound_multibyte_to_wide = function(_, _, input, _, output)
+                    if MOCK.sound_conversion_error then return 0; end
+                    if output then output.text = input; end
+                    return #input + 1;
+                end,
+                momentum_sound_current_process_id = function() return 1234; end,
+                momentum_sound_last_error = function() return MOCK.sound_last_error or 5; end,
+                momentum_sound_create_process_w = function(application, command, _, _, inherit, flags, _, _, startup, info)
+                    if MOCK.sound_create_error then return 0; end
+                    local process, thread = { code = 259 }, {};
+                    local path, volume = command.text:match('^"[^"]*" "([^"]*)" (%d+) ');
+                    local row = { application = application.text, cmd = command.text, path = path,
+                        volume = tonumber(volume), process = process, thread = thread, inherit = inherit,
+                        flags = flags, startup = startup[0] };
+                    MOCK.sound_workers = MOCK.sound_workers or {};
+                    MOCK.sound_workers[#MOCK.sound_workers + 1] = row;
+                    MOCK.sound_launches = MOCK.sound_workers;
+                    info[0].hProcess, info[0].hThread = process, thread;
+                    return 1;
+                end,
+                momentum_sound_exit_code = function(process, output)
+                    MOCK.sound_polls = (MOCK.sound_polls or 0) + 1;
+                    if MOCK.sound_poll_error then return 0; end
+                    output[0] = process.code;
+                    return 1;
+                end,
+                momentum_sound_terminate = function(process)
+                    MOCK.sound_terminations = (MOCK.sound_terminations or 0) + 1;
+                    if MOCK.sound_terminate_error then return 0; end
+                    if not MOCK.sound_terminate_pending then process.code = 1; end
+                    return 1;
+                end,
+                momentum_sound_wait = function(process)
+                    MOCK.sound_waits = (MOCK.sound_waits or 0) + 1;
+                    return process.code == 259 and 258 or 0;
+                end,
+                momentum_sound_close_handle = function(handle)
+                    MOCK.sound_close_attempts = (MOCK.sound_close_attempts or 0) + 1;
+                    if MOCK.sound_close_error then return 0; end
+                    assert(not handle.closed, 'Duplicate worker handle close');
+                    handle.closed = true;
+                    return 1;
+                end,
                 momentum_find_first_file_a = function(pattern, data)
                     MOCK.find_calls = MOCK.find_calls or {};
                     MOCK.find_calls[#MOCK.find_calls + 1] = pattern;

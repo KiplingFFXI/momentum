@@ -1,0 +1,6 @@
+[
+  {"frame":1,"lua":"settings.display.alignment='left'"},
+  {"frame":2,"lua":"PREVIEW.capture_storage_left(); settings.display.alignment='center'"},
+  {"frame":4,"lua":"PREVIEW.check_storage_center(true); settings.display.priority_overflow=true; settings.display.pinned.job=true; settings.display.priorities.inventory_slots=90; settings.display.priorities.inventory_free=0; settings.display.priorities.satchel_slots=0; settings.display.priorities.satchel_free=0"},
+  {"frame":6,"lua":"PREVIEW.check_storage_center(false); assert(settings.display.pinned.job,'Center changed the pinned job readout')"}
+]
