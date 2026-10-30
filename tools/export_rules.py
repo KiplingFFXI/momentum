@@ -4,14 +4,15 @@ import argparse
 import hashlib
 from pathlib import Path
 import re
-import subprocess
+
+from export_dynamis import Source, data_roots, merged_dataset
 
 
-PINNED_REF = "071c401048bdb97bcbe12ad93651574fcf867407"
+PINNED_REF = "ed41f351f63b24e015059c5a58f1c29eb3f198ac"
 SOURCES = (
     "modules/era/lua/globals/toau_experience_points.lua",
     "scripts/globals/experience_points.lua",
-    "sql/exp_base.sql",
+    "data/experience.yaml",
     "src/map/merit.cpp",
     "src/map/utils/charutils.cpp",
     "modules/init.txt",
@@ -43,21 +44,59 @@ SOURCES = (
     "scripts/globals/player.lua",
     "scripts/effects/level_sync.lua",
     "scripts/effects/dedication.lua",
+    "src/map/data/datasets/experience/dataset.h",
+    "src/map/data/datasets/experience/dataset.cpp",
+    "src/map/data/datasets/experience/yaml.h",
+    "src/map/data/datasets/stats/dataset.h",
+    "src/map/utils/dataset_loader.h",
+    "src/map/data/loader.h",
+    "src/map/data/yaml/merge.cpp",
 )
 
 
-def read_source(repo, ref, path):
-    return subprocess.check_output(
-        ["git", "-C", str(repo), "show", f"{ref}:{path}"]
-    ).decode("utf-8").replace("\r\n", "\n")
+def experience_rows(source, roots):
+    if "data/experience.yaml" not in source.paths:
+        raise ValueError("The pinned source is missing data/experience.yaml.")
+    document = merged_dataset(source, roots, "experience")
+    experience = document.get("experience") if isinstance(document, dict) else None
+    rows = experience.get("next_level") if isinstance(experience, dict) else None
+    if not isinstance(rows, dict) or any(type(level) is not int for level in rows) or set(rows) != set(range(1, 100)):
+        raise ValueError("Expected next_level EXP thresholds for every level from 1 to 99.")
+    if any(type(value) is not int or value < 0 or value > 4294967295 for value in rows.values()):
+        raise ValueError("EXP thresholds must be unsigned 32-bit integers.")
+    return rows
+
+
+def validate_experience_loader(texts):
+    contracts = {
+        "src/map/utils/charutils.cpp": (
+            "loadDataset<xi::data::datasets::experience::Dataset>()",
+            "return experience().NextLevel[charlvl];",
+        ),
+        "src/map/data/datasets/experience/dataset.h": ('kDataPath{ "experience" }',),
+        "src/map/data/datasets/experience/dataset.cpp": (
+            "yaml::read<YamlDocument>(text).experience",
+            "experience.NextLevel[level] = exp;",
+            "source.next_level.size() != kGrowthLevels - 1",
+        ),
+        "src/map/data/datasets/experience/yaml.h": ("std::map<uint8, uint32> next_level;",),
+        "src/map/data/datasets/stats/dataset.h": ("kGrowthLevels = 100;",),
+        "src/map/utils/dataset_loader.h": (
+            'getDataModulePaths(dataPath, ".yaml")',
+            "Dataset::decode(loadMergedYaml(corePath, modules))",
+        ),
+    }
+    for path, values in contracts.items():
+        text = re.sub(r"\s+", " ", texts[path])
+        if any(value not in text for value in values):
+            raise ValueError("The EXP dataset loader contract changed: " + path)
 
 
 def render(repo, ref):
-    revision = subprocess.check_output(
-        ["git", "-C", str(repo), "rev-parse", f"{ref}^{{commit}}"], text=True
-    ).strip()
-    texts = {path: read_source(repo, revision, path) for path in SOURCES}
-    era, base, sql, merit, charutils, init = (texts[path] for path in SOURCES[:6])
+    source = Source(repo, ref)
+    revision = source.ref
+    texts = {path: source.read(path) for path in SOURCES}
+    era, base, _, merit, _, init = (texts[path] for path in SOURCES[:6])
     if not re.search(r"^era/lua/?$", init, re.M):
         raise ValueError("The pinned module list does not load era/lua.")
     if "xi.pre(xi.expansion.WOTG)" not in era:
@@ -66,8 +105,7 @@ def render(repo, ref):
         raise ValueError("The chain level source changed.")
     if "data.mobDifficulty > xi.mobDifficulty.DECENT_CHALLENGE" not in base:
         raise ValueError("The chain eligibility rule changed.")
-    if "g_ExpPerLevel[level] = rset->get<uint16>(\"exp\")" not in charutils:
-        raise ValueError("The EXP table loader changed.")
+    validate_experience_loader(texts)
     status_data = texts["data/status_effects.yaml"]
     food_block = re.search(r"^  food:\n(.*?)(?=^  \S|\Z)", status_data, re.M | re.S)
     if food_block is None or not re.search(r"^    id: 251$", food_block.group(1), re.M):
@@ -105,11 +143,7 @@ def render(repo, ref):
     multipliers = re.findall(r"^\s*(\d+(?:\.\d+)?)\s*,?\s*-- Chain", multiplier_block, re.M)
     if len(multipliers) != 6:
         raise ValueError("Expected six chain multipliers.")
-    rows = dict((int(a), int(b)) for a, b in re.findall(
-        r"INSERT INTO `exp_base` VALUES \((\d+),(\d+)\);", sql
-    ))
-    if set(rows) != set(range(1, 101)):
-        raise ValueError("Expected all 100 EXP threshold rows.")
+    rows = experience_rows(source, data_roots(init))
     lp = int(re.search(r"#define MAX_LIMIT_POINTS (\d+)", merit).group(1))
     sync = texts["modules/phoenix/lua/custom/level_sync_penalty.lua"]
     for contract in ("local graceLevels = 10", "local maxPenalty = 50", "(levelDiff * penaltyPerLevel) / 10",
@@ -145,12 +179,12 @@ def render(repo, ref):
         "    dedication_effect = 249,",
         "    source_sha256 = {",
     ]
-    for path in SOURCES:
-        digest = hashlib.sha256(texts[path].encode("utf-8")).hexdigest()
+    for path, text in sorted(source.texts.items()):
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         lines.append(f"        ['{path}'] = '{digest}',")
     lines.extend(["    },", "    tnl = {"])
     for level in range(1, 100):
-        lines.append(f"        [{level}] = {rows[level + 1]},")
+        lines.append(f"        [{level}] = {rows[level]},")
     lines.extend(["    },", "    chain_multipliers = { " + ", ".join(multipliers) + " },", "    chain_windows = {"])
     for maximum, initial, values in windows:
         nums = [int(value.strip()) for value in values.split(",") if value.strip()]

@@ -2,7 +2,7 @@ Momentum rules and release tools
 ===============================
 
 Run these commands from the project folder with Python 3.12. Packaging uses the
-standard library. Dynamis and event source exports need PyYAML; offline Lua checks
+standard library. Phoenix source exports need PyYAML; offline Lua checks
 need lupa:
 
   python -m pip install -r tools/requirements.txt
@@ -17,8 +17,9 @@ bundle loaded by the addon:
 
   momentum/data/phoenix_rules.lua
 
-It reads the server's EXP and chain rules, merit conversion, Level Sync penalty
-tiers, effect/message definitions, EXP ring values, and the module list. The output
+It reads data/experience.yaml with the enabled module overlays, chain rules,
+merit conversion, Level Sync penalty tiers, effect/message definitions, EXP ring
+values, and the module list. It also checks the EXP dataset and loader. The output
 records the source revision and hashes. Assertions stop the export when a reviewed
 source assumption changes. It does not edit the Phoenix checkout or contact the
 running server.
@@ -39,6 +40,8 @@ Phoenix Dynamis
 export_dynamis.py writes momentum/data/dynamis_rules.lua from one pinned Phoenix
 Git revision. It reads the active era and Phoenix overlays in module order, along
 with hourglass timing, extensions, objectives, boss weakening, currency, and drops.
+The current Phoenix zone overlays live directly under modules/phoenix/data/zones.
+The exporter checks that the enabled era spawn data is present before using it.
 The output records the source revision and input hashes. Assertions reject source
 changes that need review. It does not edit, switch, or fetch the Phoenix checkout.
 
@@ -83,6 +86,17 @@ The optional Limbus account group is a local reminder, not a server restriction.
 Normal NPC timestamps take priority over estimated acquisition or entry times.
 Shami event fields and orb costs are source-derived; the client observer still
 waits for a successful normal transaction before changing a stored seal total.
+
+All three exporters are pinned to Phoenix live commit
+ed41f351f63b24e015059c5a58f1c29eb3f198ac, reviewed October 30, 2026. Each generated
+bundle records that revision and the hashes of its source inputs. A passing
+--check confirms that recorded source, not that Phoenix live has not changed.
+
+Before a release, compare the pins with the published live branch as described
+in docs/RELEASING.md. For a deliberate refresh, update PINNED_REF in all three
+tools to the reviewed commit and regenerate the bundles. --ref COMMIT selects a
+revision for one invocation only; it does not change PINNED_REF. Keep each tool's
+default pin and the generated source_ref in sync.
 
 Ordinary verification and packaging do not regenerate any rules bundle. There is
 no scheduled data-refresh workflow.

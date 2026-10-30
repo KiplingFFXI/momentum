@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.1
+
+- Refreshed the EXP, Dynamis, and event source references to Phoenix's October 30 live code.
+- Updated the refresh tools for Phoenix's YAML EXP table and current module data folders, including the enabled era and Phoenix overlays.
+- Added source checks for invalid EXP data and missing era Dynamis data. The tracked values remain the same as 1.6.0.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the whole `momentum` folder in your Phoenix `addons` folder, including `bin`, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, recorded cooldowns, and custom sounds.
+
 ## 1.6.0
 
 Farming mode adds personal drop counts, item rates, goals, and optional item values alongside your gil. This update also adds subjob text and reduces work during startup, reloads, and normal tracking.

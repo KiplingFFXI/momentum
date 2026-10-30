@@ -10,7 +10,7 @@ import subprocess
 import yaml
 
 
-PINNED_REF = '071c401048bdb97bcbe12ad93651574fcf867407'
+PINNED_REF = 'ed41f351f63b24e015059c5a58f1c29eb3f198ac'
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'momentum/data/dynamis_rules.lua'
 ZONES = (
@@ -102,11 +102,11 @@ def merge_patch(target, patch):
 def data_roots(init):
     roots = []
     for line in init.splitlines():
-        entry = line.split('#', 1)[0].strip().rstrip('/')
-        parts = entry.split('/')
-        if not entry or ('data' not in parts and len(parts) != 1):
+        entry = line.strip().rstrip('/')
+        if not entry or entry.startswith('#'):
             continue
-        root = 'modules/' + entry + ('' if 'data' in parts else '/data')
+        parts = entry.split('/')
+        root = 'modules/' + (entry if 'data' in parts else parts[0] + '/data')
         if root not in roots:
             roots.append(root)
     return roots
@@ -119,6 +119,18 @@ def merged_dataset(source, roots, name):
         if path in source.paths:
             result = merge_patch(result, source.yaml(path))
     return result
+
+
+def dynamis_dataset(source, roots, zone):
+    name = 'zones/dynamis_' + zone + '/mobs'
+    root = 'modules/phoenix/data'
+    path = root + '/' + name + '.yaml'
+    if root not in roots or path not in source.paths:
+        raise ValueError('Phoenix era Dynamis spawn data is not enabled for ' + zone + '.')
+    patch = source.yaml(path)
+    if not isinstance(patch, dict) or not isinstance(patch.get('spawns'), dict) or not patch['spawns']:
+        raise ValueError('Phoenix era Dynamis spawn data is missing for ' + zone + '.')
+    return merged_dataset(source, roots, name)
 
 
 def without_comments(text):
@@ -265,8 +277,8 @@ def build(source):
     roots = data_roots(init)
     if not re.search(r'^phoenix/dynamis/lua/?\s*$', init, re.M):
         raise ValueError('Phoenix era Dynamis is not enabled.')
-    if 'modules/phoenix/data/dynazones' not in roots:
-        raise ValueError('Phoenix era Dynamis spawn data is not enabled.')
+    source.read('src/map/data/yaml/merge.cpp')
+    source.read('src/map/data/loader.h')
     zone_ids = source.yaml('data/enums/zone.yaml')['values']
     key_items = source.yaml('data/enums/key_item.yaml')['values']
     config = source.read('scripts/globals/dynamis/zone_config.lua')
@@ -287,7 +299,7 @@ def build(source):
     all_mobs = {}
     for key, folder, prefix, boss in ZONES:
         zid = zone_ids['dynamis_' + key]
-        data = merged_dataset(source, roots, 'zones/dynamis_' + key + '/mobs')
+        data = dynamis_dataset(source, roots, key)
         item_names.update(loot_names(data))
         mob_names = {int(mid): pretty_name(spawn['template']) for mid, spawn in data['spawns'].items()}
         filename = MOB_FILE.get(prefix, prefix)

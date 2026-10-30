@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.6.0';
+addon.version = '1.6.1';
 addon.desc = 'A compact EXP, merit, gil, inventory and event tracking bar for Phoenix.';
 
 local flush_commands;

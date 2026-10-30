@@ -9,7 +9,7 @@ import re
 from export_dynamis import Source, data_roots, lua, merge_patch, table_after, without_comments
 
 
-PINNED_REF = '11c6ee57720a8c6fd79c0fd46ff38ea8e074bf5e'
+PINNED_REF = 'ed41f351f63b24e015059c5a58f1c29eb3f198ac'
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'momentum/data/event_rules.lua'
 ASSAULTS = ('leujaoam_cleansing', 'imperial_agent_rescue', 'excavation_duty', 'seagull_grounded', 'golden_salvage')

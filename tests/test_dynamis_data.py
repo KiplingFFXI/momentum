@@ -3,6 +3,7 @@
 from pathlib import Path
 import re
 import sys
+from types import SimpleNamespace
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,60 @@ class DynamisExportTests(unittest.TestCase):
         self.assertEqual(exporter.data_roots(
             '# skipped\nera/lua\nera/data/\nphoenix/data\nphoenix/data/dynazones/\nphoenix/data\nbare\n'),
             ['modules/era/data', 'modules/phoenix/data', 'modules/phoenix/data/dynazones', 'modules/bare/data'])
+
+    def test_lua_sql_and_specific_file_entries_enable_their_top_level_data_root(self):
+        self.assertEqual(exporter.data_roots(
+            'phoenix/sql\nera/lua\ncustom/lua/test.lua\nphoenix/data\nera/data/wotg/\nphoenix/cpp\n'),
+            ['modules/phoenix/data', 'modules/era/data', 'modules/custom/data', 'modules/era/data/wotg'])
+
+    def test_root_order_uses_first_implicit_or_explicit_entry(self):
+        self.assertEqual(exporter.data_roots('phoenix/lua\nera/data\nphoenix/data\nera/data/wotg\nera/sql/wotg\n'),
+                         ['modules/phoenix/data', 'modules/era/data', 'modules/era/data/wotg'])
+
+    def test_inline_hash_is_not_a_native_init_comment(self):
+        self.assertEqual(exporter.data_roots('  # skipped\nphoenix/data/disabled # still part of the path\n'),
+                         ['modules/phoenix/data/disabled # still part of the path'])
+
+    def test_dataset_merges_only_enabled_roots_in_native_order(self):
+        name = 'zones/dynamis_jeuno/mobs'
+        files = {
+            'data/' + name + '.yaml': {'spawns': {1: {'template': 'Base'}, 2: {'template': 'Base'}}, 'drops': ['base']},
+            'modules/era/data/' + name + '.yaml': {'spawns': {2: None}, 'drops': ['era']},
+            'modules/phoenix/data/' + name + '.yaml': {'spawns': {1: {'template': 'Era'}}, 'drops': ['phoenix']},
+            'modules/phoenix/data/unselected/' + name + '.yaml': {'drops': ['unselected']},
+        }
+        read = []
+        def load(path):
+            read.append(path)
+            return files[path]
+        source = SimpleNamespace(paths=set(files), yaml=load)
+        value = exporter.merged_dataset(source, exporter.data_roots('era/lua\nphoenix/sql\n'), name)
+        self.assertEqual(value, {'spawns': {1: {'template': 'Era'}}, 'drops': ['phoenix']})
+        self.assertEqual(read, ['data/' + name + '.yaml', 'modules/era/data/' + name + '.yaml',
+                                'modules/phoenix/data/' + name + '.yaml'])
+        self.assertEqual(files['data/' + name + '.yaml']['drops'], ['base'])
+
+    def test_flattened_dynamis_overlay_is_required_and_applied(self):
+        name = 'zones/dynamis_jeuno/mobs'
+        overlay = 'modules/phoenix/data/' + name + '.yaml'
+        files = {'data/' + name + '.yaml': {'spawns': {1: {'template': 'Modern'}}},
+                 overlay: {'spawns': {1: None, 2: {'template': 'Era'}}}}
+        source = SimpleNamespace(paths=set(files), yaml=files.__getitem__)
+        self.assertEqual(exporter.dynamis_dataset(source, exporter.data_roots('phoenix/dynamis/lua\n'), 'jeuno'),
+                         {'spawns': {2: {'template': 'Era'}}})
+        with self.assertRaisesRegex(ValueError, 'not enabled for jeuno'):
+            exporter.dynamis_dataset(source, exporter.data_roots('era/lua\n'), 'jeuno')
+        source.paths.remove(overlay)
+        with self.assertRaisesRegex(ValueError, 'not enabled for jeuno'):
+            exporter.dynamis_dataset(source, exporter.data_roots('phoenix/data\n'), 'jeuno')
+
+    def test_empty_or_unrelated_dynamis_overlay_cannot_fall_back_to_modern_spawns(self):
+        path = 'modules/phoenix/data/zones/dynamis_jeuno/mobs.yaml'
+        for patch in ({}, None, {'templates': {'Era': {}}}, {'spawns': {}}, {'spawns': []}, {'spawns': None}):
+            with self.subTest(patch=patch):
+                source = SimpleNamespace(paths={path}, yaml=lambda _, value=patch: value)
+                with self.assertRaisesRegex(ValueError, 'spawn data is missing for jeuno'):
+                    exporter.dynamis_dataset(source, ['modules/phoenix/data'], 'jeuno')
 
     def test_source_table_parser_ignores_commented_rules_and_quoted_braces(self):
         text = "-- rules = { fake = 9 }\nrules = { help = 'Keep } -- this', row = { 1, 2 } }\nother = {}"
@@ -144,7 +199,10 @@ class ExportedDynamisDataTests(unittest.TestCase):
         self.assertIn("name = 'Voidsong'", weakening)
         hashes = exporter.table_after(self.text, 'source_sha256')
         self.assertIn('modules/init.txt', hashes)
-        self.assertIn('modules/phoenix/data/dynazones/zones/dynamis_jeuno/mobs.yaml', hashes)
+        self.assertIn('modules/phoenix/data/zones/dynamis_jeuno/mobs.yaml', hashes)
+        self.assertIn('src/map/data/yaml/merge.cpp', hashes)
+        self.assertIn('src/map/data/loader.h', hashes)
+        self.assertNotIn('modules/phoenix/data/dynazones/', hashes)
 
 
 if __name__ == '__main__':

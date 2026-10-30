@@ -50,6 +50,8 @@ For focused checks:
   tests/.venv/Scripts/python tests/run.py test_event_resets.lua
   tests/.venv/Scripts/python tests/run.py test_shami_seals.lua test_shami_entry.lua test_startup_events.lua test_chat_center.lua
   tests/.venv/Scripts/python tests/test_event_rules.py
+  tests/.venv/Scripts/python tests/test_phoenix_rules.py
+  tests/.venv/Scripts/python tests/test_dynamis_data.py
   tests/.venv/Scripts/python tools/check_repository.py
 
 On Windows, tests/run_tests.bat creates its own .venv, installs requirements, and
@@ -249,10 +251,11 @@ tools/README.txt explains the pinned Phoenix rules checks and archive builder:
   tests/.venv/Scripts/python tools/export_dynamis.py --source ../Phoenix --check
   tests/.venv/Scripts/python tools/export_events.py --source ../Phoenix --check
 
-Each exporter reads its pinned Git revision. Dynamis and event exports include
-the applicable enabled era and Phoenix overlays and need PyYAML from
+Each exporter reads its pinned Git revision. All three include the applicable
+enabled era and Phoenix overlays and need PyYAML from
 tools/requirements.txt. These checks do not refresh any bundle or change the
-Phoenix checkout.
+Phoenix checkout. Checking the current live revision before a release is a
+separate step described in docs/RELEASING.md.
 
 docs/RELEASING.md describes the release checklist and manual draft workflow.
 The Verify workflow runs the headless checks on Windows on pull requests or by

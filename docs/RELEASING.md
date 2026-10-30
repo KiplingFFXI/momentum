@@ -7,7 +7,7 @@ This checklist prepares a reviewable release. It does not publish one or establi
 1. Choose the next `major.minor.patch` version, then set `addon.version` in `momentum/momentum.lua` to match.
 2. Move the **Unreleased** notes in [CHANGELOG.md](../CHANGELOG.md) into that version's entry. Review them against the final changes and preserve the notes for previous releases.
 3. Update installation examples and the [guide](GUIDE.md) when names or behavior change. Preserve saved settings, profiles, and session compatibility.
-4. For game-rule changes, review the pinned Phoenix revision and loaded modules, regenerate the rules deliberately, and run the source check. A release build does not refresh them.
+4. Check the published Phoenix live revision against all three source pins. Review changed rules and loaded modules, refresh deliberately when needed, and run the source checks. A release build does not refresh them.
 
 Keep new work under **Unreleased** until a release version is assigned. Assign the version and promote those notes before building the release archive or generating release notes. An Unreleased entry does not change the installed version or publish an update.
 
@@ -16,6 +16,30 @@ To review the pending notes without assigning a release version:
 ```powershell
 python tools/release_notes.py --unreleased --out tests/out/next-release-notes.md
 ```
+
+## Check the Phoenix source
+
+Check Phoenix's published live revision before every release, even when no game-rule change is planned. A passing exporter `--check` confirms the bundle matches its pinned revision; it does not confirm that revision is still current.
+
+With the Phoenix checkout next to this project and its `phoenix` remote pointing to the Phoenix repository:
+
+```powershell
+git -C ../Phoenix ls-remote phoenix refs/heads/live
+git -C ../Phoenix fetch --no-tags phoenix refs/heads/live:refs/remotes/phoenix/live
+git -C ../Phoenix rev-parse refs/remotes/phoenix/live
+```
+
+These commands refresh the remote source reference without switching the Phoenix working branch. Record the full commit hash. Compare it with `PINNED_REF` in `tools/export_rules.py`, `tools/export_dynamis.py`, and `tools/export_events.py`, and review the relevant changes and enabled overlays.
+
+For an intentional source refresh, update each tool's `PINNED_REF` to the reviewed commit, then regenerate all three bundles:
+
+```powershell
+python tools/export_rules.py --source ../Phoenix
+python tools/export_dynamis.py --source ../Phoenix
+python tools/export_events.py --source ../Phoenix
+```
+
+An explicit `--ref COMMIT` changes only that export run. It does not update the tool's default pin. Keep each default pin and generated `source_ref` together, then run the matching `--check` commands below. Review actual tracked-value changes separately from source hashes and moved files, and record when a refresh changes only those source records.
 
 ## Check an upgrade
 

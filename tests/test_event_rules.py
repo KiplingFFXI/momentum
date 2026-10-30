@@ -134,7 +134,8 @@ class EventRuleTests(unittest.TestCase):
         for path in ('modules/init.txt', 'modules/phoenix/lua/custom/limbus_text_ids.lua',
                      'modules/phoenix/lua/quests/assault_limits.lua',
                      'modules/phoenix/lua/battlefields/up_in_arms_kraken_club.lua',
-                     'modules/phoenix/data/limbus/zones/apollyon/mobs.yaml',
+                     'modules/phoenix/data/zones/apollyon/mobs.yaml',
+                     'modules/phoenix/data/zones/temenos/mobs.yaml',
                      'scripts/globals/limbus.lua', 'scripts/globals/dynamis/dyna_lockout.lua',
                      'scripts/enum/msg.lua',
                      'scripts/zones/Uleguerand_Range/npcs/Zebada.lua'):
