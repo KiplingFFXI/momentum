@@ -1,0 +1,8 @@
+[
+  {"frame":2,"lua":"PREVIEW.subjob_row('(WAR) 61 / NIN 30',1,false); settings.display.alignment='center'"},
+  {"frame":4,"lua":"PREVIEW.subjob_row('(WAR) 61 / NIN 30',1,true); PREVIEW.view.level=75; PREVIEW.view.effective_level=30; PREVIEW.view.subjob_level=15"},
+  {"frame":6,"lua":"PREVIEW.subjob_row('(WAR) 75 (sync 30) / NIN 15',1,true); PREVIEW.subjob_icon(false)"},
+  {"frame":8,"lua":"PREVIEW.subjob_row('WAR 75 (sync 30) / NIN 15',0,true); settings.display.show_subjob=false"},
+  {"frame":10,"lua":"local text=PREVIEW.subjob_row('WAR 75 (sync 30)',0,true); assert(not text:find('NIN',1,true),'Turning off the toggle left subjob text on the bar'); PREVIEW.subjob_icon(true); settings.display.show_subjob=true; PREVIEW.view.effective_level=75; PREVIEW.view.subjob_level=37"},
+  {"frame":12,"lua":"PREVIEW.subjob_row('(WAR) 75 / NIN 37',1,true)"}
+]

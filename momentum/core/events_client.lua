@@ -281,7 +281,8 @@ function methods:outgoing(event, now)
         local balance = chosen and menu.seals and menu.seals[chosen.field];
         if balance and balance >= chosen.cost then
             self.shami_pending = { item = chosen.item, field = chosen.field, count = chosen.count,
-                before = balance, balance = balance - chosen.cost, id = self.id, at = event.received_at or now };
+                before = balance, balance = balance - chosen.cost, id = self.id,
+                at = type(event) == 'table' and event.received_at or now };
         end
     end
     local npc = (rules.enm_npcs[self.zone] or {})[menu.target];
@@ -358,7 +359,8 @@ function methods:packet(event, now, settings)
         and not (event.id == 0x02A and self.shami_pending) and not self.core.current and not rules.areas[self.zone] then return; end
     local kind, value = client.parse(event);
     if not kind then return; end
-    local delay = type(event.received_at) == 'number' and now - event.received_at or 0;
+    local received_at = type(event) == 'table' and event.received_at;
+    local delay = type(received_at) == 'number' and now - received_at or 0;
     if delay < 0 or delay > 30 then return; end
     if kind == 'zone' then
         if value.utc > EPOCH then self.server_utc, self.server_at = value.utc, now - delay; end

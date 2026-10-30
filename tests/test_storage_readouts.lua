@@ -10,8 +10,10 @@ local function eq(actual, expected, title)
 end
 local ids = { 'inventory_slots', 'inventory_free', 'satchel_slots', 'satchel_free' };
 local settings = defaults.make();
+local first;
+for index, row in ipairs(defaults.READOUTS) do if row.id == 'inventory_slots' then first = index; break; end end
 for index, id in ipairs(ids) do
-    eq(defaults.READOUTS[#defaults.READOUTS - 4 + index].id, id, 'Storage readouts append after existing IDs');
+    eq(defaults.READOUTS[first + index - 1].id, id, 'Storage readouts keep their saved order');
     eq(settings.display.enabled[id], false, id .. ' starts off');
     eq(readouts.needs_character(id), false, id .. ' does not depend on EXP state');
     local help = readouts.definition(id).help;
@@ -19,7 +21,7 @@ for index, id in ipairs(ids) do
     eq(help:find('pause or reset your session', 1, true) ~= nil, true, id .. ' explains live counts');
     eq(help:find('-- means', 1, true) ~= nil, true, id .. ' explains unknowns');
 end
-eq(defaults.READOUTS[#defaults.READOUTS - 4].id, 'kindred_carried', 'Existing last readout keeps its position');
+eq(defaults.READOUTS[first - 1].id, 'kindred_carried', 'Existing readouts stay before storage');
 settings.display.order = defaults.copy(ids);
 for _, id in ipairs(ids) do settings.display.enabled[id] = true; end
 local view = { valid = true, mode = 'exp', storage = {

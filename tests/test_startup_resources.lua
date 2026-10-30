@@ -59,45 +59,77 @@ imgui.GetIO = function()
 end;
 ashita.fs.exists = function(path)
     font_checks = font_checks + 1;
-    return path:match('segoeui%.ttf$') ~= nil or path:match('arial%.ttf$') ~= nil;
+    return path:match('tahoma%.ttf$') == nil;
 end;
 imgui.AddFontFromFileTTF = function(path)
     font_loads = font_loads + 1;
     if path:match('arial%.ttf$') then error('Test font unavailable'); end
-    return 'loaded-segoeui';
+    if path:match('verdana%.ttf$') then return nil; end
+    return 'loaded-' .. path:match('([^\\]+)%.ttf$');
 end;
 imgui.PushFont = function(face) pushed = face; end;
 package.loaded['ui.fonts'] = nil;
 local fonts = require('ui.fonts');
 equal(font_loads, 0, 'Import does not register fonts');
-equal(fonts.load(), false, 'A locked atlas leaves font loading pending');
+equal(fonts.load(), true, 'Default Ashita needs no custom font');
+equal(fonts.load('Ashita'), true, 'Ashita is available while the atlas is locked');
+equal(fonts.load('Unknown font'), true, 'Unknown font choices use the fallback');
+equal(io_reads, 0, 'Default and unknown fonts do not read the atlas');
+equal(font_checks, 0, 'Default and unknown fonts do not check files');
+equal(fonts.load('Segoe UI'), false, 'A locked atlas leaves the selected font pending');
 equal(font_checks, 0, 'Pending fonts do not scan files during drawing');
 equal(font_loads, 0, 'Pending fonts do not modify the locked atlas');
 locked = false;
-equal(fonts.load(), true, 'An unlocked atlas completes font loading');
-equal(font_checks, 6, 'Available font files are checked once');
-equal(font_loads, 2, 'Only present font files are registered');
+equal(fonts.load('Segoe UI'), true, 'An unlocked atlas loads the selected font');
+equal(font_checks, 1, 'Only the selected font file is checked');
+equal(font_loads, 1, 'Only the selected font is registered');
 equal(fonts.failed('Segoe UI'), false, 'A loaded font remains available');
-equal(fonts.failed('Arial'), true, 'A failed font retains its fallback');
-equal(fonts.failed('Tahoma'), true, 'A missing font retains its fallback');
 fonts.push('Segoe UI', 18);
 equal(pushed, 'loaded-segoeui', 'A loaded font is selected normally');
 fonts.push('Arial', 18);
-equal(pushed, 'default', 'A failed font uses the Ashita font');
+equal(pushed, 'default', 'An unloaded font uses the Ashita font');
+equal(font_checks, 1, 'Drawing does not check another font file');
+equal(font_loads, 1, 'Drawing does not register another font');
 local reads = io_reads;
 locked = true;
-for _ = 1, 5 do equal(fonts.load(), true, 'Completed loading remains complete during drawing'); end
-equal(io_reads, reads, 'Completed loading does not poll the atlas');
-equal(font_checks, 6, 'Completed loading does not scan fonts again');
-equal(font_loads, 2, 'Completed loading does not add duplicate fonts');
+for _ = 1, 5 do equal(fonts.load('Segoe UI'), true, 'An already loaded font remains available during drawing'); end
+equal(io_reads, reads, 'Cached loading does not poll the atlas');
+equal(font_checks, 1, 'Cached loading does not check font files');
+equal(font_loads, 1, 'Cached loading does not add duplicate fonts');
+equal(fonts.load('Arial'), false, 'A newly selected font still waits for an unlocked atlas');
+equal(font_checks, 1, 'A new locked selection does not scan files');
 
 locked = false;
-ashita.fs.exists = function() return false; end;
-package.loaded['ui.fonts'] = nil;
-local missing = require('ui.fonts');
-equal(missing.load(), true, 'No installed fonts still completes with fallback');
-equal(missing.failed('Segoe UI'), true, 'No installed fonts keeps the fallback visible');
-equal(font_loads, 2, 'No installed fonts creates no new font objects');
+equal(fonts.load('Arial'), true, 'A registration error completes with fallback');
+equal(fonts.failed('Arial'), true, 'A registration error keeps the fallback');
+equal(fonts.load('Tahoma'), true, 'A missing selected font completes with fallback');
+equal(fonts.failed('Tahoma'), true, 'A missing font keeps the fallback');
+equal(fonts.load('Verdana'), true, 'An empty font result completes with fallback');
+equal(fonts.failed('Verdana'), true, 'An empty font result keeps the fallback');
+equal(font_checks, 4, 'Each new selected font is checked once');
+equal(font_loads, 3, 'The missing font is not registered');
+reads = io_reads;
+locked = true;
+for _, name in ipairs({ 'Arial', 'Tahoma', 'Verdana' }) do
+    equal(fonts.load(name), true, 'A failed font is not retried during drawing');
+    fonts.push(name, 18);
+    equal(pushed, 'default', 'A failed selection uses the Ashita font');
+end
+equal(io_reads, reads, 'Failed cached selections do not poll the atlas');
+equal(font_checks, 4, 'Failed cached selections do not check files again');
+equal(font_loads, 3, 'Failed cached selections do not retry registration');
+local names = fonts.names();
+equal(#names, 7, 'All font choices remain in the menu');
+for index, name in ipairs({ 'Ashita', 'Segoe UI', 'Arial', 'Tahoma', 'Verdana', 'Calibri', 'Consolas' }) do
+    equal(names[index], name, 'The font menu keeps its existing order');
+end
+locked = false;
+equal(fonts.load('Calibri'), true, 'Another font can be selected later');
+equal(fonts.load('Consolas'), true, 'The final font choice can also be selected');
+equal(font_checks, 6, 'All six custom fonts are checked only after being selected');
+equal(font_loads, 5, 'All present selected fonts receive one registration attempt');
+fonts.push('Calibri', 18);
+equal(pushed, 'loaded-calibri', 'A later font selection uses its registered face');
 imgui.GetIO, imgui.AddFontFromFileTTF, imgui.PushFont = get_io, add_font, push_font;
 ashita.fs.exists = exists;
 return count .. ' startup resource checks';

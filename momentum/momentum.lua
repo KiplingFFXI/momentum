@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.5.0';
+addon.version = '1.6.0';
 addon.desc = 'A compact EXP, merit, gil, inventory and event tracking bar for Phoenix.';
 
 local flush_commands;
@@ -17,6 +17,7 @@ local profiles = require('ui.profiles');
 local store = require('core.file_store');
 local player = require('core.player');
 local storage = require('core.storage').new();
+local farming_client = require('core.farming_client').new();
 local chat_window = require('core.chat');
 local packets = require('core.packets');
 local tracker_module = require('core.tracker');
@@ -28,6 +29,7 @@ local rings = require('core.rings');
 local notifications = require('core.notifications').new();
 local dynamis_notifications = require('core.notifications').new();
 local event_notifications = require('core.notifications').new();
+local farming_notifications = require('core.notifications').new();
 local dynamis_layout = require('ui.dynamis_layout');
 local event_layout = require('ui.event_layout');
 local modes = require('ui.modes');
@@ -76,7 +78,7 @@ local function own_settings(loaded)
 end
 
 local state = { own = own_settings(settings.load(T(defaults.make()))), hidden = false, broken = false, dirty = false,
-    sampled = -1, shared_at = -1, last_job = nil, shared_data = nil };
+    sampled = -1, last_job = nil };
 state.settings = state.own;
 state.dirty = migration_pending;
 
@@ -100,6 +102,22 @@ local function current_view(t)
     phoenix:apply_chain(view, t);
     view.rings = state.rings or { available = false, entries = {} };
     view.storage = storage:view();
+    local selected = view.farming and view.farming.selected;
+    if selected and selected.id > 0 then
+        local info = farming_client:item(selected.id);
+        if info then
+            local cached = state.farming_named;
+            if not cached or cached.base ~= view.farming or cached.info ~= info then
+                local summary, item = {}, {};
+                for key, value in pairs(view.farming) do summary[key] = value; end
+                for key, value in pairs(selected) do item[key] = value; end
+                item.name, summary.selected = info.name, item;
+                cached = { base = view.farming, info = info, value = summary };
+                state.farming_named = cached;
+            end
+            view.farming = cached.value;
+        end
+    end
     view.dynamis = dynamis:view(t, state.settings);
     view.events = events:view(t, state.settings);
     view.account_cooldowns = account_cooldowns:view(t, player.utc() or os.time());
@@ -120,7 +138,7 @@ local function current_view(t)
     else state.account_dynamis = nil; end
     view.events.account_limbus_remaining = account.limbus and account.limbus.remaining;
     view.events.account_limbus_shared = account.limbus and account.limbus.shared;
-    view.notice = event_notifications:view(t) or dynamis_notifications:view(t) or notifications:view(t);
+    view.notice = event_notifications:view(t) or dynamis_notifications:view(t) or farming_notifications:view(t) or notifications:view(t);
     return view;
 end
 
@@ -152,9 +170,18 @@ end
 
 local storage_demand = {};
 local function refresh_storage(snapshot, t)
+    if not state.settings.window.open or state.settings.window.tab ~= 'Farming' then state.farming_storage_details = false; end
     local enabled = state.settings.display.enabled;
     storage_demand.inventory = enabled.inventory_slots == true or enabled.inventory_free == true;
     storage_demand.satchel = enabled.satchel_slots == true or enabled.satchel_free == true;
+    storage_demand.inventory = storage_demand.inventory or state.farming_storage_details == true;
+    storage_demand.satchel = storage_demand.satchel or state.farming_storage_details == true;
+    local alert = state.settings.alerts.events.farm_space;
+    if alert and (alert.visual or alert.sound) then
+        local bag = state.settings.farming.space_bag;
+        storage_demand.inventory = storage_demand.inventory or bag == 'inventory' or bag == 'both';
+        storage_demand.satchel = storage_demand.satchel or bag == 'satchel' or bag == 'both';
+    end
     storage:observe(snapshot, t, storage_demand);
 end
 
@@ -173,7 +200,6 @@ local function apply_shared(data)
         state.settings.shared = false;
     end
     state.settings.window.open = old.window.open;
-    state.shared_data = history.copy(data);
     state.edit_baseline = nil;
     undo:clear();
 end
@@ -186,7 +212,14 @@ local function refresh_shared()
         return;
     end
     state.shared_error = false;
-    if (not history.equal(data, state.shared_data)) then apply_shared(data); end
+    apply_shared(data);
+end
+
+local function write_shared(data)
+    local current, err = store.read(shared_file);
+    if not current then return false, err; end
+    ashita.fs.create_dir(folder);
+    return store.write(shared_file, data);
 end
 
 local function save()
@@ -195,14 +228,8 @@ local function save()
     state.own.job_links = state.settings.job_links;
     if state.settings ~= state.own then state.own.account = history.copy(state.settings.account); end
     if (state.settings.shared) then
-        local current, err = store.read(shared_file);
-        if (current == nil) then say(err); state.retry_at = now() + 10; return false; end
-        local data = { enabled = true, layout = profiles.capture(state.settings) };
-        ashita.fs.create_dir(folder);
-        local ok;
-        ok, err = store.write(shared_file, data);
-        if (not ok) then say(err); state.retry_at = now() + 10; return false; end
-        state.shared_data = history.copy(data);
+        local ok, err = write_shared({ enabled = true, layout = profiles.capture(state.settings) });
+        if not ok then say(err); state.retry_at = now() + 10; return false; end
     end
     local ok, err = pcall(settings.save);
     if (not ok or err == false) then
@@ -237,13 +264,15 @@ local function update_auto_layout()
     local s = state.settings;
     if s.modes.selected ~= 'auto' then return; end
     if s.dynamis.layout_active or s.events.active_kind then return; end
-    if not s.display.auto_layout then state.auto_layout = nil; return; end
+    local farming = s.farming.auto_layout == true;
+    if not s.display.auto_layout and not farming and s.modes.active ~= 'farming' then state.auto_layout = nil; return; end
     local snapshot = state.snapshot;
+    if not snapshot or not snapshot.valid then return; end
     local mode = tracker_module.earning_mode(snapshot);
-    if not mode then return; end
+    if not mode and not farming and s.modes.active ~= 'farming' then return; end
     local previous = state.auto_layout;
     if previous and previous.settings == s and previous.id == snapshot.id and previous.job == snapshot.job and previous.mode == mode
-        and s.modes.active == (mode == 'lp' and 'merits' or 'exp') then return; end
+        and previous.farming == farming and previous.active == s.modes.active then return; end
     if imgui.IsMouseDown(ImGuiMouseButton_Left) or imgui.IsAnyItemActive() then return; end
     if state.before or state.dirty then
         finish_edit();
@@ -252,7 +281,7 @@ local function update_auto_layout()
     modes.automatic(s, mode);
     -- Rebase an idle editor so this automatic switch is not a saved edit.
     if state.edit_baseline then modes.automatic(state.edit_baseline, mode); end
-    state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job, mode = mode };
+    state.auto_layout = { settings = s, id = snapshot.id, job = snapshot.job, mode = mode, farming = farming, active = s.modes.active };
 end
 
 local function update_dynamis_layout()
@@ -422,15 +451,13 @@ services.job_link = function(job, name)
 end;
 services.shared = function(enabled)
     finish_edit();
-    local current, err = store.read(shared_file);
-    if (current == nil) then say(err); return false, err; end
+    if state.dirty then return false, 'Your changes could not be saved yet.'; end
     local data = { enabled = enabled == true, layout = profiles.capture(state.settings) };
-    ashita.fs.create_dir(folder);
-    local ok;
-    ok, err = store.write(shared_file, data);
-    if (not ok) then say(err); return false, err; end
-    if (not enabled) then profiles.apply(state.own, data.layout); end
+    local ok, err = write_shared(data);
+    if not ok then say(err); return false, err; end
+    if not enabled then profiles.apply(state.own, data.layout); end
     apply_shared(data);
+    state.own.shared = state.settings.shared;
     state.dirty, state.handled = true, true;
     save();
     return true;
@@ -446,6 +473,7 @@ services.session_new = function(name)
     local next_tracker, problem = saved_sessions:new_session(now(), name);
     if not next_tracker then return session_result(false, problem); end
     tracker = next_tracker;
+    farming_notifications:discontinuity();
     notifications:reset_session(current_view(now()));
     if state.settings.preview.show then
         state.settings.preview.show = false;
@@ -476,6 +504,45 @@ services.fonts = fonts.names;
 services.capabilities = player.capabilities;
 services.sound_files = sound.files;
 services.sound_refresh = sound.refresh;
+services.farming_item = function(id) return farming_client:item(id); end;
+services.farming_items = function(query) return farming_client:search(query); end;
+services.farming_storage_visible = function(open)
+    state.farming_storage_details = open == true;
+    if open then refresh_storage(state.snapshot, now()); end
+    return storage:view();
+end;
+services.farming_rows = function()
+    local source = tracker.farming:rows(now(), state.settings.farming);
+    if state.farming_rows and state.farming_rows.base == source then return state.farming_rows.rows; end
+    local rows = {};
+    for _, row in ipairs(source) do
+        local id = row.item_id or row.id;
+        local info = farming_client:item(id);
+        local shown = {};
+        for key, value in pairs(row) do shown[key] = value; end
+        shown.id, shown.name, shown.stack_size = id, info and info.name or ('Item ' .. id), info and info.stack_size or 1;
+        shown.price = state.settings.farming.prices[tostring(id)];
+        rows[#rows + 1] = shown;
+    end
+    state.farming_rows = { base = source, rows = rows };
+    return rows;
+end;
+services.farming_summary = function()
+    local view = current_view(now());
+    local farm = view.farming;
+    local num, duration = readouts.format_number, readouts.format_time;
+    local lines = { 'Momentum farming session', 'Items received: ' .. num(farm.total) .. ' | Items/HR: ' .. (farm.rate and num(farm.rate) or '--'),
+        'Farming time: ' .. duration(farm.elapsed), 'Gil gained: ' .. num(view.gil.gained) .. ' | Gil spent: ' .. num(view.gil.spent)
+            .. ' | Net gil: ' .. num(view.gil.net), 'Gil/HR: ' .. (view.gil.rate and num(view.gil.rate) or '--') .. ' | Gil from mobs: ' .. num(farm.mob_gil),
+        'Pool drops seen: ' .. num(farm.pool_found) };
+    if farm.estimated_value then lines[#lines + 1] = 'Estimated loot value: ~' .. num(farm.estimated_value) .. ' (separate from gil)'; end
+    if farm.unpriced_count > 0 then lines[#lines + 1] = 'Items without a price: ' .. num(farm.unpriced_count); end
+    if farm.partial then lines[#lines + 1] = 'Some drops could not be identified. Totals include only confirmed items.'; end
+    for _, row in ipairs(services.farming_rows()) do
+        lines[#lines + 1] = row.name .. ': ' .. num(row.count) .. ' | Items/HR: ' .. (row.rate and num(row.rate) or '--');
+    end
+    return table.concat(lines, '\n');
+end;
 services.sound_problem = function() return sound.problem(state.settings.alerts.food_sound); end;
 services.dock_problem = function() return state.dock_problem; end;
 services.chat_fallback = function() return state.chat_fallback; end;
@@ -548,7 +615,7 @@ services.notification_problem = function(id)
 end;
 
 local function apply_alerts()
-    if not state.resources_ready then return; end
+    if not state.startup_clock_ready then return; end
     local alerts = state.settings.alerts;
     if (state.food_enabled ~= alerts.food_enabled or state.food_sound ~= alerts.food_sound) then
         if (state.food_enabled ~= alerts.food_enabled) then sound.close(); food:discontinuity(); end
@@ -559,7 +626,8 @@ local function apply_alerts()
 end
 
 local function sample(t)
-    local snapshot = player.read();
+    local display = state.settings.display;
+    local snapshot = player.read(display.show_subjob and display.enabled.job);
     refresh_storage(snapshot, t);
     if snapshot.valid then
         local entity = GetPlayerEntity();
@@ -593,6 +661,14 @@ local function sample(t)
         if not state.award_ready then snapshot = { valid = false }; end
     end
     tracker:observe(snapshot, t);
+    farming_client:observe(snapshot);
+    if snapshot.valid and state.settings.farming.selected_item > 0 then
+        local info = farming_client:item(state.settings.farming.selected_item);
+        if info and state.settings.farming.stack_size ~= info.stack_size then
+            state.settings.farming.stack_size, state.dirty = info.stack_size, true;
+            tracker.farming:invalidate();
+        end
+    end
     phoenix:observe(snapshot, t);
     refresh_rings(snapshot, t);
     notifications:observe(current_view(t), snapshot, t, state.settings, quiet_notifications());
@@ -611,11 +687,12 @@ local function sample(t)
     end
 end
 
-local function prepare_resources()
+local function prepare_resources(seed_only)
     if state.resources_ready then return true; end
-    if state.startup_failed then return false; end
+    if state.startup_failed or state.startup_stopped then return false; end
     local t = now();
-    if state.startup_check_at and t >= state.startup_check_at and t - state.startup_check_at < 0.25 then return false; end
+    if not state.startup_task and state.startup_check_at and t >= state.startup_check_at
+        and t - state.startup_check_at < 0.25 then return false; end
     state.startup_check_at = t;
     local ok, ready = pcall(function()
         local memory = AshitaCore:GetMemoryManager();
@@ -626,30 +703,57 @@ local function prepare_resources()
         local entity = GetPlayerEntity();
         local id = party:GetMemberServerId(0);
         if entity == nil or not id or id == 0 or entity.ServerId ~= id then return false; end
-        if not fonts.load() then return false; end
-        job_icons.prepare();
-        player.load();
-        chat_window.load();
-        hud.reset_chat_anchor();
-        sound.refresh();
-        state.resources_ready = true;
-        sample(t);
-        if startup_events then
-            local queued = startup_events;
-            startup_events = nil;
-            if queued.player_id == id and queued.zone_id == party:GetMemberZone(0) then
-                for _, event in ipairs(queued.packets) do
-                    if t >= event.received_at and t - event.received_at <= 30 then
-                        if event.outgoing then events:outgoing(event, t, state.settings);
-                        else events:packet(event, t, state.settings); end
+        if not state.startup_seeded then
+            if not state.startup_clock_ready then
+                player.load_clock();
+                state.startup_clock_ready = true;
+            end
+            if startup_zone then
+                if id == startup_zone.player_id and party:GetMemberZone(0) == startup_zone.zone_id then
+                    dynamis:packet(startup_zone, startup_zone.received_at, state.settings);
+                    events:packet(startup_zone, startup_zone.received_at, state.settings);
+                end
+                startup_zone = nil;
+            end
+            -- Start tracking before spreading the client searches across frames.
+            sample(t);
+            if startup_events then
+                local queued = startup_events;
+                startup_events = nil;
+                if queued.player_id == id and queued.zone_id == party:GetMemberZone(0) then
+                    for _, event in ipairs(queued.packets) do
+                        if t >= event.received_at and t - event.received_at <= 30 then
+                            if event.outgoing then events:outgoing(event, t, state.settings);
+                            else events:packet(event, t, state.settings); end
+                        end
                     end
                 end
             end
+            state.startup_seeded, state.startup_check_at = true, nil;
         end
+        if seed_only then return false; end
+        if not state.startup_task then
+            if not fonts.load(state.settings.style.font) then return false; end
+            state.startup_task = coroutine.create(function()
+                coroutine.yield();
+                job_icons.prepare();
+                coroutine.yield();
+                player.load(coroutine.yield, true);
+                chat_window.load(coroutine.yield);
+            end);
+        end
+        local resumed, issue = coroutine.resume(state.startup_task);
+        if not resumed then error(issue); end
+        if coroutine.status(state.startup_task) ~= 'dead' then return false; end
+        state.startup_task = nil;
+        hud.reset_chat_anchor();
+        state.resources_ready = true;
+        sample(t);
         return true;
     end);
     if not ok then
         state.resources_ready, state.startup_failed = false, true;
+        state.startup_task = nil;
         say('Startup could not finish: ' .. tostring(ready) .. '. Type /momentum to try again.');
         return false;
     end
@@ -661,28 +765,36 @@ local function initialize_resources()
     if initialized then return; end
     initialized = true;
     refresh_shared();
-    if startup_zone then
-        local party = AshitaCore:GetMemoryManager():GetParty();
-        if party:GetMemberServerId(0) == startup_zone.player_id and party:GetMemberZone(0) == startup_zone.zone_id then
-            dynamis:packet(startup_zone, startup_zone.received_at, state.settings);
-            events:packet(startup_zone, startup_zone.received_at, state.settings);
-        end
-        startup_zone = nil;
-    end
-    prepare_resources();
+    prepare_resources(true);
 end
 ashita.events.register('load', 'momentum_load', initialize_resources);
 
--- Wait for the character, then load fonts before the next UI frame starts.
+-- Load a selected font before the next UI frame starts.
 ashita.events.register('d3d_beginscene', 'momentum_startup', function(rendering_back_buffer)
-    if state.resources_ready or rendering_back_buffer ~= true then return; end
-    prepare_resources();
+    if state.startup_stopped or rendering_back_buffer ~= true then return; end
+    if state.resources_ready then fonts.load(state.settings.style.font);
+    else prepare_resources(); end
 end);
 
 ashita.events.register('packet_in', 'momentum_packets', function(event)
     if (not packets.valid(event, 4)) then return; end
     storage:packet(event);
     local t = now();
+    if event.id == 0x00A or event.id == 0x00B then
+        farming_client:reset();
+        tracker.farming:discontinuity(t);
+        farming_notifications:discontinuity();
+        state.farming_space = nil;
+    end
+    local farming_packet = event.id == 0x0D2 or event.id == 0x0D3 or event.id == 0x029 and packets.valid(event, 28)
+        and event.data:byte(25) + event.data:byte(26) * 256 == 565;
+    if farming_packet then
+        local character, job = player.gil_identity();
+        if character and (not state.snapshot or state.snapshot.id ~= character or state.snapshot.job ~= job) then sample(t); end
+        if state.award_ready and state.snapshot and state.snapshot.valid and state.snapshot.id == character and state.snapshot.job == job then
+            farming_client:packet(event, t, tracker.farming, state.settings.farming);
+        end
+    end
     dynamis:packet(event, t, state.settings);
     events:packet(event, t, state.settings);
     local id = packets.zone_id(event);
@@ -756,7 +868,7 @@ end);
 
 local function render()
     sound.update(now());
-    if not flush_commands() then return; end
+    if state.resources_ready and not flush_commands() then return; end
     if state.settings.window.open and bit.band(ffi.C.GetAsyncKeyState(0x1B), 0x8000) ~= 0 then
         close_window();
     end
@@ -775,20 +887,40 @@ local function render()
             if (not ok and state.settings.alerts.food_sound ~= '') then say(err); end
         end
     end
-    if (t - state.shared_at >= 2 and not state.dirty and state.before == nil and not state.settings.window.open) then
-        refresh_shared();
-        state.shared_at = t;
-    end
     local quiet = quiet_notifications() or (state.settings.alerts.quiet_paused ~= false and tracker.paused);
     for _, event in ipairs(dynamis:alerts(t, state.settings)) do
         dynamis_notifications:dynamis(event, t, state.settings, quiet);
     end
     for _, event in ipairs(events:alerts(t, state.settings)) do
-        event_notifications:dynamis(event, t, state.settings, quiet);
+        event_notifications:event(event, t, state.settings, quiet);
     end
+    for _, event in ipairs(tracker.farming:take_alerts()) do
+        local info = farming_client:item(event.item_id);
+        local name = info and info.name or ('Item ' .. event.item_id);
+        event.message = event.id == 'farm_goal' and ('Item goal reached: ' .. name .. '.') or ('Received: ' .. name .. ' x' .. event.count .. '.');
+        farming_notifications:farming(event, t, state.settings, quiet);
+    end
+    local space = state.settings.alerts.events.farm_space;
+    if space and (space.visual or space.sound) and state.snapshot and state.snapshot.valid then
+        state.farming_space = state.farming_space or {};
+        local options, bags = state.settings.farming, storage:view();
+        local signature = options.space_bag .. ':' .. options.low_slots .. ':' .. tostring(space.visual) .. ':' .. tostring(space.sound);
+        for _, name in ipairs({ 'inventory', 'satchel' }) do
+            local bag = bags[name];
+            local selected = options.space_bag == name or options.space_bag == 'both';
+            local before = state.farming_space[name];
+            local low = selected and bag and bag.free <= options.low_slots;
+            if before and before.signature == signature and before.low == false and low then
+                farming_notifications:farming({ id = 'farm_space', message = (name == 'satchel' and 'Mog Satchel' or 'Inventory')
+                    .. ' space is low: ' .. bag.free .. ' slots free.' }, t, state.settings, quiet);
+            end
+            state.farming_space[name] = selected and bag and { low = low, signature = signature } or nil;
+        end
+    else state.farming_space = nil; end
     local notices = notifications:take(t, quiet);
     for _, event in ipairs(dynamis_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
     for _, event in ipairs(event_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
+    for _, event in ipairs(farming_notifications:take(t, quiet)) do notices[#notices + 1] = event; end
     for _, event in ipairs(notices) do
         local row = state.settings.alerts.events[event.id];
         if row and row.sound and event.sound and event.file ~= '' and not quiet_notifications()
@@ -800,6 +932,7 @@ local function render()
     checkpoint(t, false);
     dynamis:save(t, false);
     events:save(t, false);
+    if not state.resources_ready then return; end
     update_event_layout();
     update_dynamis_layout();
     update_auto_layout();
@@ -810,7 +943,7 @@ local function render()
     local typing = player.typing();
     local hide_idle = not always and state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
         and not events:view(t, state.settings).active
-        and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0;
+        and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0 and not tracker.farming.started and not tracker.gil.started;
     local hud_visible = ((not state.hidden and not hide_idle) or state.settings.preview.show)
         and not (not always and state.settings.bar.hide_typing and typing);
     if not hud_visible and not state.settings.window.open then hud.cancel_layout_gesture(); finish_edit(); return; end
@@ -845,6 +978,7 @@ local function render()
     if (state.settings.window.open) then changed = window.draw(state.settings, view, services) or changed; end
     if (before and not history.equal(before, state.settings)) then changed = true; end
     if (changed and not state.handled) then
+        tracker.farming:invalidate();
         state.before = state.before or before;
         state.dirty = true;
     end
@@ -853,7 +987,7 @@ local function render()
 end
 
 ashita.events.register('d3d_present', 'momentum_present', function()
-    if not state.resources_ready then return; end
+    if not state.startup_seeded or state.startup_failed or state.startup_stopped then return; end
     local ok, err = pcall(render);
     if (not ok) then
         state.broken = true;
@@ -868,7 +1002,7 @@ local function handle_command(event)
     local command = (args[2] or ''):lower();
     if (command == '') then
         if state.settings.window.open then close_window();
-        else state.settings.window.open = true; sound.refresh(); end
+        else state.settings.window.open = true; sound.invalidate(); end
         state.broken = false;
         state.startup_failed, state.startup_check_at = false, nil;
     elseif (command == 'show') then state.hidden = false;
@@ -908,6 +1042,7 @@ local function handle_command(event)
 end
 
 ashita.events.register('unload', 'momentum_unload', function()
+    state.startup_stopped, state.startup_task = true, nil;
     finish_edit();
     checkpoint(now(), true);
     local saved, issue = dynamis:save(now(), true);
@@ -926,6 +1061,9 @@ settings.register('settings', 'momentum_settings', function(loaded)
     account_cooldowns:detach();
     dynamis_notifications:discontinuity();
     event_notifications:discontinuity();
+    farming_notifications:discontinuity();
+    farming_client:reset();
+    state.farming_space = nil;
     state.dynamis_edit = nil;
     window.close();
     local detached, session_problem = saved_sessions:detach(now());
@@ -933,8 +1071,8 @@ settings.register('settings', 'momentum_settings', function(loaded)
     session_result(session_problem == nil, session_problem);
     -- The settings library already selected the new character's file.
     if (state.settings.shared and state.dirty) then
-        local existing = store.read(shared_file);
-        if (existing ~= nil) then store.write(shared_file, { enabled = true, layout = profiles.capture(state.settings) }); end
+        local ok, err = write_shared({ enabled = true, layout = profiles.capture(state.settings) });
+        if not ok then say(err); end
     end
     hud.cancel_layout_gesture();
     food:discontinuity();
@@ -946,7 +1084,7 @@ settings.register('settings', 'momentum_settings', function(loaded)
     migration_pending = false;
     state.own = own_settings(loaded);
     state.settings = state.own;
-    state.before, state.edit_baseline, state.dirty, state.last_job, state.shared_data = nil, nil, migration_pending, nil, nil;
+    state.before, state.edit_baseline, state.dirty, state.last_job, state.retry_at = nil, nil, migration_pending, nil, nil;
     state.player_id, state.sampled, state.last_job_id = nil, -1, nil;
     chat_window.reset();
     hud.reset_chat_anchor();
@@ -960,7 +1098,8 @@ if (MOMENTUM_TEST_MODE) then
     MOMENTUM_TEST = { settings = function() return state.settings; end, tracker = function() return tracker; end,
         state = state, services = services, sample = sample, view = current_view,
         sessions = saved_sessions, phoenix = phoenix, notifications = notifications, dynamis = dynamis,
-        events = events, account_cooldowns = account_cooldowns, storage = storage };
+        events = events, account_cooldowns = account_cooldowns, storage = storage, farming_client = farming_client,
+        farming_notifications = farming_notifications };
 end
 
 return { load = initialize_resources, command = handle_command,
@@ -1070,9 +1209,15 @@ end
 
 local startup_ids = { [0x02A] = true, [0x032] = true, [0x034] = true, [0x05C] = true,
     [0x075] = true, [0x113] = true, [0x056] = true };
+local function startup_packet_allowed(event)
+    local kind = type(event);
+    if kind ~= 'table' and kind ~= 'userdata' then return false; end
+    if event.blocked or event.injected then return false; end
+    return kind ~= 'table' or not (event.blocked_original or event.is_injected);
+end
 local function remember_event(event, outgoing)
     if runtime or stopped or starting or startup_overflow then return; end
-    if event.blocked or event.blocked_original or event.injected or event.is_injected then return; end
+    if not startup_packet_allowed(event) then return; end
     if outgoing and event.id ~= 0x05B or not outgoing and not startup_ids[event.id] then return; end
     local data, size, t = event.data, event.size, tick();
     if not t or type(data) ~= 'string' or not finite(size) or size < 4 or size > 512
@@ -1094,8 +1239,8 @@ end
 
 ashita.events.register('packet_in', 'momentum_bootstrap_zone', function(event)
     if runtime or stopped or starting then return; end
+    if not startup_packet_allowed(event) then return; end
     if event.id ~= 0x00A and event.id ~= 0x00B then remember_event(event, false); return; end
-    if event.blocked or event.blocked_original or event.injected or event.is_injected then return; end
     startup_zone, startup_events, startup_overflow = nil, nil, false;
     clear_stability();
     if event.id ~= 0x00A then return; end

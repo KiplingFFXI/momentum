@@ -14,11 +14,24 @@ MOCK.dirs = {
 };
 for _, name in ipairs({ 'FF VII Save.mp3', 'FF IX Moogle.mp3' }) do MOCK.fs[sound.BUILT_IN .. name] = true; end
 for _, name in ipairs({ 'a.MP3', 'B.wav' }) do MOCK.fs[sound.FOLDER .. name] = true; end
-sound.refresh();
+equal(MOCK.find_opened, nil, 'Import leaves sound folders unread');
 equal(table.concat(sound.files(), '|'), 'FF IX Moogle.mp3|FF VII Save.mp3|a.MP3|B.wav', 'Safe sounds remain sorted, bundled first');
+equal(MOCK.find_opened, 2, 'The first list request scans both sound folders');
 equal(sound.find('ff vii save'), 'FF VII Save.mp3', 'Find without extension');
 equal(sound.find('b.WAV'), 'B.wav', 'Find ignores case');
 equal(sound.find('absent'), nil, 'Absent sound stays absent');
+equal(MOCK.find_opened, 2, 'Repeated list and find requests reuse the saved list');
+MOCK.dirs[sound.FOLDER][#MOCK.dirs[sound.FOLDER] + 1] = 'Later.wav';
+MOCK.fs[sound.FOLDER .. 'Later.wav'] = true;
+equal(sound.find('Later'), nil, 'New files wait for a refresh');
+sound.invalidate();
+equal(MOCK.find_opened, 2, 'Invalidating the list does not scan files');
+equal(sound.find('Later'), 'Later.wav', 'The next find request picks up a new custom sound');
+equal(MOCK.find_opened, 4, 'The invalidated list is scanned once');
+equal(#sound.files(), 5, 'A later list request keeps the new sound');
+equal(MOCK.find_opened, 4, 'A later list request reuses the new list');
+sound.refresh();
+equal(MOCK.find_opened, 6, 'Explicit Refresh still rescans both folders');
 equal(libraries.winmm, nil, 'Refreshing never loads a decoder in the game');
 equal(MOCK.sound_workers, nil, 'Refreshing never starts playback');
 for _, name in ipairs({ '../bad.wav', 'folder/file.mp3', 'folder\\file.wav', 'C:bad.mp3', 'bad".wav', 'bad\n.wav', 'bad..wav', 'a.txt', 123 }) do
@@ -89,4 +102,17 @@ MOCK.sound_create_error = nil;
 equal(sound.use('', true), true, 'An empty selection disables future playback');
 equal(sound.problem('a.MP3'), nil, 'Disabling clears the old error');
 equal(libraries.winmm, nil, 'No scenario loads a decoder DLL in the game');
+sound.close(true);
+local scanned = MOCK.find_opened;
+package.loaded['core.sound'] = nil;
+local lazy = require('core.sound');
+equal(MOCK.find_opened, scanned, 'A fresh sound runtime leaves folders unread');
+equal(lazy.use('FF VII Save.mp3', true), true, 'Saved sound selection works before listing');
+equal(lazy.play(50), true, 'Saved sound playback works before listing');
+equal(MOCK.find_opened, scanned, 'Selection and playback never enumerate sound folders');
+lazy.close(true);
+equal(lazy.find('FF IX Moogle'), 'FF IX Moogle.mp3', 'Find can load a fresh list by itself');
+equal(MOCK.find_opened, scanned + 2, 'The first find request scans once');
+equal(#lazy.files(), 5, 'Files reuses the list loaded by Find');
+equal(MOCK.find_opened, scanned + 2, 'Find and Files share one cache');
 return { count = count };

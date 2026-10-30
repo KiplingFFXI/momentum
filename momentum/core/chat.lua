@@ -84,10 +84,12 @@ function reader:in_module(address, size)
     return span(address, size) and address >= self.base and address + size <= self.base + self.size;
 end
 
-function reader:operand(pattern, offset)
+function reader:operand(pattern, offset, pause)
     local ok, match = pcall(self.backend.find, pattern, 0);
+    if pause then pause(); end
     if not ok or not self:in_module(match, offset + 4) then return nil; end
     local checked, duplicate = pcall(self.backend.find, pattern, 1);
+    if pause then pause(); end
     if not checked or (duplicate ~= nil and duplicate ~= 0) then return nil; end
     local bytes = self:bytes(match + offset, 4);
     if not bytes then return nil; end
@@ -95,7 +97,7 @@ function reader:operand(pattern, offset)
     return self:in_module(address, 4) and address or nil;
 end
 
-function reader:load()
+function reader:load(pause)
     self.loaded, self.last, self.retained, self.visible = false, nil, nil, nil;
     if not self.backend then
         self.backend, self.reason = native_backend();
@@ -108,8 +110,8 @@ function reader:load()
     end
     self.base, self.size = base, size;
     self.chat_table, self.scale_slot = nil, nil;
-    self.chat_table = self:operand(CHAT_PATTERN, 6);
-    if self.chat_table and self:in_module(self.chat_table, 8) then self.scale_slot = self:operand(SCALE_PATTERN, 1); end
+    self.chat_table = self:operand(CHAT_PATTERN, 6, pause);
+    if self.chat_table and self:in_module(self.chat_table, 8) then self.scale_slot = self:operand(SCALE_PATTERN, 1, pause); end
     if not self.chat_table or not self:in_module(self.chat_table, 8) or not self.scale_slot then
         self.reason = 'Momentum could not find your chat window position and size.';
         return false, self.reason;
@@ -239,7 +241,7 @@ function reader:describe()
 end
 
 local current = chat.new();
-function chat.load() return current:load(); end
+function chat.load(pause) return current:load(pause); end
 function chat.reset() return current:reset(); end
 function chat.read(width, height, keep_anchor) return current:read(width, height, keep_anchor); end
 function chat.status() return current:status(); end

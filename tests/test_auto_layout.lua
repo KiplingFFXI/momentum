@@ -235,9 +235,10 @@ equal(shared_writes, before_switches, 'Automatic shared transitions never rewrit
 local path = AshitaCore:GetInstallPath() .. '\\config\\addons\\momentum\\shared_layout.json';
 local external = profiles.capture(app.settings());
 external.display.labels.lp_rate = 'Shared LP';
-equal(store.write(path, { enabled = true, layout = external }), true, 'External shared profile can be saved');
+equal(store.write(path, { enabled = true, layout = external }), true, 'A shared profile can be saved before a character loads');
+MOCK.settings.switch_character(history.copy(MOCK.settings.current));
 frame(2.1);
-equal(shown(), merit_layout, 'External shared profile preserves custom readouts');
-equal(app.settings().display.labels.lp_rate, 'Shared LP', 'External shared profile applies current edits');
+equal(shown(), merit_layout, 'Loading shared settings preserves custom readouts');
+equal(app.settings().display.labels.lp_rate, 'Shared LP', 'Loading character settings applies the saved shared edits');
 equal(#MOCK.commands, 0, 'Automatic layouts never change the game earning mode');
 return { count = checks };

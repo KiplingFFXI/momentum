@@ -1,0 +1,14 @@
+[
+  {"frame":2,"target":"Use one layout for all characters","lua":"PREVIEW.assert_shared_character('main',false)"},
+  {"frame":3,"target":"Use one layout for all characters","down":true},
+  {"frame":4,"down":false},
+  {"frame":6,"lua":"PREVIEW.assert_shared_character('main',true); PREVIEW.switch_shared_character('alt')"},
+  {"frame":8,"lua":"PREVIEW.assert_shared_character('alt',true); PREVIEW.switch_shared_character('main')"},
+  {"frame":10,"target":"Use one layout for all characters","lua":"PREVIEW.assert_shared_character('main',true)"},
+  {"frame":11,"target":"Use one layout for all characters","down":true},
+  {"frame":12,"down":false},
+  {"frame":14,"lua":"PREVIEW.assert_shared_character('main',false); PREVIEW.save_unshared_main()"},
+  {"frame":16,"lua":"PREVIEW.remember_main(); PREVIEW.switch_shared_character('alt')"},
+  {"frame":18,"lua":"PREVIEW.assert_shared_character('alt',false); PREVIEW.switch_shared_character('main')"},
+  {"frame":20,"mouse":[-100,-100],"lua":"PREVIEW.assert_shared_character('main',false)"}
+]

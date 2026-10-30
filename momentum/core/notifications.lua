@@ -84,6 +84,19 @@ function methods:dynamis(event, now, settings, quiet)
     return self:_emit(event.id, event.message, now, settings, quiet)
 end
 
+local event_ids = { event_time = true, event_extension = true, event_objective = true, event_clear = true,
+    event_failure = true, event_drop = true, event_ready = true }
+function methods:event(event, now, settings, quiet)
+    if type(event) ~= 'table' or not event_ids[event.id] or type(event.message) ~= 'string' or not finite(now) then return false end
+    return self:_emit(event.id, event.message, now, settings, quiet)
+end
+
+local farming_ids = { farm_item = true, farm_goal = true, farm_space = true }
+function methods:farming(event, now, settings, quiet)
+    if type(event) ~= 'table' or not farming_ids[event.id] or type(event.message) ~= 'string' or not finite(now) then return false end
+    return self:_emit(event.id, event.message, now, settings, quiet)
+end
+
 function methods:observe(view, snapshot, now, settings, quiet)
     if not finite(now) or not view or not view.valid or not snapshot or not snapshot.valid then
         self:discontinuity()

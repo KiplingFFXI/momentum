@@ -119,6 +119,19 @@ the Limbus reminder with real input. The Events cases also render narrow current
 run, wanted-drop, and entry-cooldown sections. All data is simulated; no real
 account details are entered or read.
 
+The audit UI cases search for subjob and click its checkbox, check supported
+reset menu actions, and inspect physical Dynamis progress fills for unknown and
+known timers. The shared-character case runs the full addon, clicks the actual
+sharing checkbox, and switches main-to-alt-to-main. It checks the shared layout
+with current character jobs, then turns sharing off and checks separate saved
+layouts. All writes use temporary files, and no gameplay commands are sent.
+The font-selection case clicks Ashita, Arial, Consolas, and cached Arial through
+the actual Appearance dropdown. Custom faces load between frames, draw both the
+bar and settings, and stay cached without adding unused fonts or changing sounds.
+Farming cases search for an item, watch it, choose a stack goal, save a manual
+unit price, and select Farming through the actual Bar mode dropdown. Separate
+cases check the compact bar and a narrow menu with large text.
+
 Each invocation uses its own temporary settings and ImGui ini folder. It reads the
 addon but does not modify it. The Agave font is extracted from the installed Ashita.dll
 into the ignored fonts/ folder. No font assets ship in the addon archive.

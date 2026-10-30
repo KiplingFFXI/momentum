@@ -34,6 +34,13 @@ because it needs the renderer and client font.
 For focused checks:
 
   tests/.venv/Scripts/python tests/run.py test_tracker.lua
+  tests/.venv/Scripts/python tests/run.py test_subjob_readout.lua test_subjob_entry.lua
+  tests/.venv/Scripts/python tests/run.py test_farming.lua test_farming_client.lua test_farming_entry.lua test_farming_lifecycle.lua
+  tests/.venv/Scripts/python tests/run.py test_farming_modes.lua test_farming_readouts.lua test_farming_ui.lua
+  tests/.venv/Scripts/python tests/test_farming_persistence.py
+  tests/.venv/Scripts/python tests/run.py test_sound_filename_settings.lua test_ui_audit_regressions.lua
+  tests/.venv/Scripts/python tests/preview/verify_preview.py settings-shared-characters
+  tests/.venv/Scripts/python tests/test_layout_character_roundtrip.py
   tests/.venv/Scripts/python tests/test_settings_client.py
   tests/.venv/Scripts/python tests/test_release.py
   tests/.venv/Scripts/python tests/run.py test_dynamis.lua
@@ -65,6 +72,9 @@ The focused suites cover:
   unknown client data.
 - Merit rollover, spending, capacity, session earnings, full storage, actual
   EXP/LP mode, level sync, and optional saved-layout switching.
+- Optional subjob text and its current level, Level Sync, missing or restricted
+  support jobs, one main job icon, cached changes, pause/reset, saved layouts,
+  profiles, and no subjob getters while the option is off.
 - Optional gil readouts in every bar mode, unknown and zero balances, negative
   changes and rates, short numbers, custom labels, and visible-value caching.
 - Gil packet bursts, duplicate balances, inventory readiness, job data gaps,
@@ -75,7 +85,13 @@ The focused suites cover:
   pause/resume edges, sound throttling, failures, and retries.
 - Sound-folder scans, bundled/custom ordering, duplicate names, bounded native
   filename reads, and search-handle cleanup when enumeration fails.
+- Complete custom sound filenames through tidying and JSON profile saves at
+  the 200-byte player limit; overlong names cannot become another selected file.
+- Empty progress fills for inactive or unknown Dynamis timers, direct subjob
+  search results, and supported reset actions on the intended settings tabs.
 - Normal client status, observation gaps, identity, packet bounds, and ring data.
+  Packet checks include native-style userdata that rejects unsupported fields,
+  including Dynamis parsing and startup buffering, plus blocked/injected inputs.
 - Character/job session recovery, save failures, file conflicts, profiles,
   sharing, saved folds, search, Undo, layout preservation, and Escape handling.
 - Bounded frame work, cache invalidation, counted alert-header measurements,
@@ -112,8 +128,16 @@ The focused suites cover:
 - Bounded startup event replay, countdown aging, stale zone or character context,
   and no EXP reward replay during the three-second initialization wait.
 - Local account-group sharing, Dynamis account timers, separate Limbus account
-  reminders, concurrent records, saved-setting migration, and account preferences
+  reminders, saved records, saved-setting migration, and account preferences
   staying separate from profiles, shared layouts, resets, and appearance Undo.
+  Successful account reads stay cached until character/group changes or a new
+  observed deadline needs an update; failed reads retry after five seconds.
+- Assault and battlefield alert dispatch with its existing quiet conditions and
+  cooldowns, fractional JSON save baselines, and detecting file changes made
+  outside Momentum.
+- Shared layouts through sequential main-to-alt-to-main changes, the actual
+  sharing checkbox, character-specific readings, and separate layouts after
+  turning sharing off.
 
 The archive suite checks the exact runtime manifest, reproducibility, normalized
 line endings, private-path rejection, links, missing or extra files, and sound
@@ -205,6 +229,20 @@ stays strict; every tracking view and every other readout must still match.
 Source checks and releases
 --------------------------
 
+Farming checks cover personal pool awards, new versus existing pool entries,
+duplicate receipts and reused slots, source filtering, rate warm-up, goals,
+manual prices, paused receipts, reset, and save/restore. Other-player wins,
+failed/lost awards, inventory moves, purchases, and unsupported direct-item
+sources must not become Farming loot. Existing event-run totals stay separate.
+
+Mode and UI regressions cover all twelve optional readouts, the compact Farming
+starter, EXP/Merits bank roundtrips, Automatic fallback and event priority, goal
+fill, cached formatted values, and Farming settings. Metadata and search are
+demand-driven: no startup item catalog scan, at most 64 resource lookups or two
+milliseconds per incremental name-search step, and a bounded 1,024-entry cache.
+Use a direct item ID to avoid a name search. These are work limits, not measured
+game frame times. Only current-character Inventory and Mog Satchel are sampled.
+
 tools/README.txt explains the pinned Phoenix rules checks and archive builder:
 
   tests/.venv/Scripts/python tools/export_rules.py --source ../Phoenix --check
@@ -224,6 +262,12 @@ rules automatically.
 
 Offline tests and rendered previews do not validate live packet delivery, graphics
 driver behavior, client reloads, or Phoenix gameplay. Report those separately.
+Font regressions cover zero extra font files with Ashita, selected-only custom
+fonts, safe loading between frames, and cached choices across profiles and
+sequential character changes. These checks do not measure a live reload hitch.
+Startup regressions also cover one client search per frame, tracking during
+resource setup, cancellation on unload, and saved event timers with a different
+computer clock. Sound lists stay lazy, and session saves encode once.
 Client-only regression checks cover normal buff timers, local chain estimates,
 Level Sync levels, and migration of removed server-dependent settings. Former
 custom status messages remain ordinary chat and cannot change tracking.

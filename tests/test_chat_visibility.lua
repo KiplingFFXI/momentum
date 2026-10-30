@@ -469,6 +469,7 @@ for _, docked in ipairs({ false, true }) do
         local shared = { bar = { docked = docked }, visibility = { mode = entry.value, map = false } };
         if entry.whole then shared.visibility = nil; end
         check(store.write(shared_file, { enabled = true, layout = shared }), 'Legacy shared layout is written to the test folder');
+        MOCK.settings.switch_character(history.copy(app.settings()));
         frame(true, 'Shared layout refreshes with ' .. entry.name, 2.1);
         equal(app.settings().shared, true, 'The refreshed shared layout is active');
         equal(app.settings().visibility.mode, entry.value == 'placement' and docked and 'chat' or 'keep',
@@ -479,6 +480,7 @@ for _, docked in ipairs({ false, true }) do
         check(app.services.shared(false), 'Explicit shared visibility starts from character settings');
         local shared = { bar = { docked = docked }, visibility = { mode = value } };
         check(store.write(shared_file, { enabled = true, layout = shared }), 'Explicit shared layout is written to the test folder');
+        MOCK.settings.switch_character(history.copy(app.settings()));
         frame(true, 'Shared layout refreshes with explicit ' .. value, 2.1);
         equal(app.settings().visibility.mode, value, 'Shared layouts preserve each explicit choice with either placement');
     end
@@ -487,6 +489,7 @@ for _, value in ipairs({ 'chat', 'keep', 'always' }) do
     check(app.services.shared(false), 'Partial shared layout starts from character settings');
     app.settings().visibility.mode = value;
     check(store.write(shared_file, { enabled = true, layout = { style = { font_size = 15 } } }), 'Style-only shared layout is written');
+    MOCK.settings.switch_character(history.copy(app.settings()));
     frame(true, 'Shared layout changes style only', 2.1);
     equal(app.settings().visibility.mode, value, 'A shared style-only layout preserves the character visibility choice');
 end

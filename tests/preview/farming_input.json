@@ -1,0 +1,22 @@
+[
+  {"frame":2,"target":"##Find farming item","down":true},
+  {"frame":3,"down":false},
+  {"frame":4,"text":"silk"},
+  {"frame":7,"target":"Silk thread##farm_result_833","down":true},
+  {"frame":8,"down":false},
+  {"frame":10,"target":"##Item goal unit","lua":"PREVIEW.assert_farming_selected()","down":true},
+  {"frame":11,"down":false},
+  {"frame":13,"target":"Stacks","down":true},
+  {"frame":14,"down":false},
+  {"frame":16,"target":"##Farming unit price","lua":"assert(settings.farming.goal_unit=='stacks','Goal unit did not change')","down":true},
+  {"frame":17,"down":false},
+  {"frame":18,"text":"250"},
+  {"frame":20,"target":"Save item price","down":true},
+  {"frame":21,"down":false},
+  {"frame":23,"mouse":[-100,-100],"lua":"assert(settings.farming.prices['833']==250,'Unit price was not saved');PREVIEW.assert_farming_selected()"},
+  {"frame":24,"target":"##Bar mode","down":true},
+  {"frame":25,"down":false},
+  {"frame":27,"target":"Farming##bar_mode_farming","down":true},
+  {"frame":28,"down":false},
+  {"frame":30,"mouse":[-100,-100],"lua":"assert(settings.modes.selected=='farming','Farming mode was not selected');PREVIEW.assert_farming_selected();assert(#MOCK.commands==0,'Farming settings sent a game command')"}
+]

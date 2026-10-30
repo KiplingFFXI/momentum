@@ -1,0 +1,13 @@
+[
+  {"frame":2,"target":"##Find settings"},
+  {"frame":3,"target":"##Find settings","down":true},
+  {"frame":4,"down":false},
+  {"frame":5,"text":"subjob"},
+  {"frame":7,"target":"Job and level##find","lua":"assert(PREVIEW.audit_widgets['Job and level##find'],'Subjob search has no direct Job result'); assert(not PREVIEW.audit_widgets['Display: Selected readout##find'],'Subjob search still offers the unrelated editor')"},
+  {"frame":8,"target":"Job and level##find","down":true},
+  {"frame":9,"down":false},
+  {"frame":11,"target":"Show subjob and level","lua":"assert(PREVIEW.audit_widgets['Show subjob and level'],'The search result did not expose the subjob option')"},
+  {"frame":12,"target":"Show subjob and level","down":true},
+  {"frame":13,"down":false},
+  {"frame":15,"mouse":[-100,-100],"lua":"assert(settings.display.show_subjob,'The actual subjob checkbox did not save its choice')"}
+]

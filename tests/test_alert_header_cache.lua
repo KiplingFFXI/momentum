@@ -30,7 +30,7 @@ draw();
 local initial = measured;
 local headings = 0;
 for title in pairs(labels) do if title ~= 'Quiet conditions' then headings = headings + 1; end end
-eq(headings, 8, 'Every alert type, including Assault and battlefields, has a counted heading');
+eq(headings, 9, 'Every alert type, including Farming, has a counted heading');
 eq(markers, 1, 'All help markers share one text measurement');
 eq(initial > 6, true, 'Narrow alert headings are measured and shortened initially');
 eq(labels['Levels and merit points']:find('...', 1, true) ~= nil, true, 'Long heading is shortened');
@@ -64,4 +64,9 @@ settings.window.sections['Alerts/Food'] = true;
 draw();
 eq(labels.Food, 'Food (1 on) (?)###section_Alerts/Food', 'Opening the group preserves its count and ID');
 eq(measured, before, 'Group fold state does not invalidate title measurements');
+settings.alerts.events.farm_item.visual, settings.alerts.events.farm_item.sound = true, true;
+settings.alerts.events.farm_goal.sound = true;
+draw();
+eq(labels.Farming, 'Farming (2 on) (?)###section_Alerts/Farming', 'Farming counts enabled alert types without counting sound and notice twice');
+eq(measured, before + 1, 'Changing Farming alerts remeasures only its heading');
 return { count = count };

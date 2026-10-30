@@ -67,8 +67,7 @@ local function parts_for(settings, view, height, sample)
         for _, part in ipairs(parts) do
             if part.id == 'job' and part.role == 'text' then
                 part.icon, part.icon_width, part.icon_gap = texture, math.min(font_size + 2, math.max(8, height - 4)), 4;
-                part.text = '(' .. (view.job_name or tostring(view.job)) .. ') ' .. (view.level and tostring(view.level) or '--');
-                if view.effective_level and view.level and view.effective_level < view.level then part.text = part.text .. ' (sync ' .. view.effective_level .. ')'; end
+                part.text = readouts.job_text(view, settings.display, true);
                 break;
             end
         end
@@ -191,9 +190,14 @@ local function paint(settings, view, rect, sample, mouse_x, mouse_y)
             list:AddRectFilled({ track_x, track_y }, { track_x + track_width, track_y + track_height }, theme.u32(colors.divider, 0.5), 1);
         end
         local percent, merit_fill = view.valid and view.percent, view.mode == 'lp';
+        if settings.modes and settings.modes.active == 'farming' then
+            local selected = view.farming and view.farming.selected;
+            percent = settings.farming and settings.farming.goal_fill and selected and selected.goal_fraction or nil;
+            merit_fill = false;
+        end
         local dyna = view.dynamis;
-        if settings.dynamis and settings.dynamis.layout_active and dyna and dyna.active then
-            local duration = dyna.end_time and dyna.start_time and dyna.end_time - dyna.start_time;
+        if settings.dynamis and settings.dynamis.layout_active then
+            local duration = dyna and dyna.active and dyna.end_time and dyna.start_time and dyna.end_time - dyna.start_time;
             percent = duration and duration > 0 and dyna.remaining and dyna.remaining / duration or nil;
             merit_fill = false;
         end
@@ -302,7 +306,8 @@ local function tooltip(settings, view, id, info)
     end
     if id == 'progress' and not settings.display.show_text then
         if settings.events and settings.events.active_kind then id = 'event_time';
-        elseif settings.dynamis and settings.dynamis.layout_active then id = 'dyna_time'; end
+        elseif settings.dynamis and settings.dynamis.layout_active then id = 'dyna_time';
+        elseif settings.modes and settings.modes.active == 'farming' then id = 'farm_goal'; end
     end
     local definition = readouts.definition(id);
     if not definition then return nil; end

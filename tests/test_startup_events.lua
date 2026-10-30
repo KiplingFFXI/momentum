@@ -3,7 +3,15 @@ local function check(value, label) count = count + 1; assert(value, label); end
 MOCK.login_status = 0;
 dofile(ADDON_DIR .. '/momentum.lua');
 MOCK.fire('load');
-local function packet(id, bytes) MOCK.fire('packet_in', MOCK.packet(id, bytes)); end
+local function native(fields)
+    local value = newproxy(true);
+    getmetatable(value).__index = function(_, name)
+        if fields[name] ~= nil then return fields[name]; end
+        error('Unknown native packet member: ' .. tostring(name));
+    end;
+    return value;
+end
+local function packet(id, bytes) MOCK.fire('packet_in', native(MOCK.packet(id, bytes))); end
 local utc, zone = os.time(), MOCK.bytes(60);
 MOCK.put(zone, 4, 4, 1001); MOCK.put(zone, 48, 2, 144); MOCK.put(zone, 56, 4, utc);
 packet(0x00A, zone);
@@ -22,8 +30,11 @@ check(MOMENTUM_BOOTSTRAP_TEST.inspect().queued_events == 2, 'Relevant normal pac
 check(not MOMENTUM_TEST, 'Capturing an entry does not start the runtime early');
 local injected = MOCK.packet(0x075, timer);
 injected.injected = true;
-MOCK.fire('packet_in', injected);
+MOCK.fire('packet_in', native(injected));
 check(MOMENTUM_BOOTSTRAP_TEST.inspect().queued_events == 2, 'Injected packets cannot enter the startup queue');
+local outgoing = MOCK.bytes(20);
+MOCK.fire('packet_out', native(MOCK.packet(0x05B, outgoing)));
+check(MOMENTUM_BOOTSTRAP_TEST.inspect().queued_events == 3, 'Native outgoing menu updates can wait for runtime readiness');
 for _ = 1, 63 do packet(0x075, timer); end
 check(MOMENTUM_BOOTSTRAP_TEST.inspect().event_overflow, 'The startup queue is bounded');
 check(MOMENTUM_BOOTSTRAP_TEST.inspect().queued_events == 0, 'Overflow discards the incomplete sequence');

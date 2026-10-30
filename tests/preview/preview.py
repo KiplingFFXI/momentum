@@ -58,7 +58,7 @@ def parse_args(argv):
     p.add_argument('--hud', action='store_true', help='show the bar without the settings window')
     p.add_argument('--icon-fixture', action='store_true', help='use a grey test texture to check job-picture layout; not game artwork')
     p.add_argument('--chat-fixture', action='store_true', help='draw the simulated chat rectangles behind the bar; not a game screenshot')
-    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused'])
+    p.add_argument('--scene', default='Leveling', choices=['Leveling', 'Merits', 'Farming', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused'])
     p.add_argument('--input-script', help='JSON mouse input and Lua assertions to replay')
     p.add_argument('--full', action='store_true',
                    help='run the whole addon: dofile momentum.lua, fire load, "/momentum", then d3d_present '
@@ -124,7 +124,7 @@ PREVIEW.settings = settings_lib.load(T(require('ui.defaults').make()))
 PREVIEW.hud = require('ui.hud')
 if not PREVIEW.hud_only then PREVIEW.window = require('ui.settings_window') end
 local ok, fonts = pcall(require, 'ui.fonts')
-if ok and fonts.load then fonts.load() end
+if ok and fonts.load then fonts.load(PREVIEW.settings.style.font) end
 PREVIEW.view = require('ui.readouts').sample(PREVIEW.scene)
 PREVIEW.settings.window.open = not PREVIEW.hud_only
 PREVIEW.services = {
@@ -521,6 +521,7 @@ class Preview:
                 io.add_input_characters_utf8(action['text'])
             if 'lua' in action:
                 self.lua.execute('local settings = PREVIEW.settings\n' + action['lua'])
+        self.lua.execute("local s = MOMENTUM_TEST and MOMENTUM_TEST.settings() or PREVIEW.settings; require('ui.fonts').load(s.style.font)")
 
     def gui(self):
         self.frame += 1

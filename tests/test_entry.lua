@@ -298,8 +298,10 @@ equal(app.settings().appearance_version, 2, 'Legacy profile gets migration marke
 check(app.services.delete_profile('Legacy layout'), 'Legacy profile fixture removed');
 check(require('core.file_store').write(profile_folder .. 'shared_layout.json', { enabled = true, layout = legacy }), 'Legacy shared fixture saved');
 app.settings().window.open = false;
-app.state.shared_at = -100;
 MOCK.frame(3);
+check(not app.settings().shared, 'Shared layouts are not polled while a character is active');
+MOCK.settings.switch_character(require('ui.defaults').make());
+MOCK.frame(0.25);
 check(not app.state.broken, 'Legacy shared layout draws');
 check(app.settings().shared, 'Legacy shared layout applied');
 equal(app.settings().bar.width, 640, 'Legacy shared width migrates');

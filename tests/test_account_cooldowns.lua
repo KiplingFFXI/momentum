@@ -25,17 +25,20 @@ tracker:observe('limbus', utc + 300, utc, now + 1);
 eq(disk.groups.main.dynamis.character_id, 1001, 'Recorded cooldown belongs to its observed character');
 eq(disk.groups.main.limbus.ready_at, utc + 300, 'Limbus reminder persists independently');
 local saved_reads, saved_writes = reads, writes;
-for i = 1, 100 do
-    tracker:select(1001, { group = 'Main' }, now + 1 + i / 100);
-    tracker:observe('dynamis', utc + 1000, utc, now + 1 + i / 100);
-    tracker:view(now + 1 + i / 100, utc);
+for i = 1, 600 do
+    tracker:select(1001, { group = 'Main' }, now + 1 + i / 60);
+    tracker:observe('dynamis', utc + 1000, utc, now + 1 + i / 60);
+    tracker:view(now + 1 + i / 60, utc);
 end
-eq(reads, saved_reads, 'Unchanged repeated frames do not reread the account file');
+eq(reads, saved_reads, 'Ten seconds of unchanged frames use the cached account file');
 eq(writes, saved_writes, 'Unchanged observations do not rewrite timers');
 disk.groups.main.dynamis = nil;
+tracker:detach();
+saved_reads = reads;
 tracker:select(1001, { group = 'Main' }, now + 7);
+eq(reads, saved_reads + 1, 'A fresh character load reads the account file once');
 tracker:observe('dynamis', utc + 1000, utc, now + 7);
-eq(disk.groups.main.dynamis.ready_at, utc + 1000, 'A later refresh repairs an observation lost to a concurrent writer');
+eq(disk.groups.main.dynamis.ready_at, utc + 1000, 'A fresh observation restores a missing saved timer');
 local alt = new();
 alt:select(1002, { group = 'MAIN' }, now + 2);
 eq(alt:view(now + 2, utc).dynamis.shared, true, 'Linked alt sees the other character\'s recorded cooldown');
@@ -58,6 +61,11 @@ broken:observe('dynamis', utc + 10, utc, now);
 eq(writes, saved_writes, 'Invalid saved data is not overwritten');
 eq(disk.version, 9, 'The original invalid file is kept');
 eq(type(broken:view(now, utc).error), 'string', 'A file problem is available to settings');
+saved_reads = reads;
+for index = 1, 100 do broken:view(now + index / 100, utc); end
+eq(reads, saved_reads, 'An invalid account file does not retry every frame');
+broken:view(now + 5, utc);
+eq(reads, saved_reads + 1, 'An invalid account file retries after five seconds');
 local failed_reads, failed_writes = 0, 0;
 local unavailable = cooldowns.new('test/', {
     read = function() failed_reads = failed_reads + 1; return nil, 'Unavailable'; end,
@@ -70,6 +78,10 @@ for index = 1, 100 do
 end
 eq(failed_reads, 1, 'An unreadable account file does not retry every sample');
 eq(failed_writes, 0, 'An unreadable account file never gets overwritten');
+unavailable:observe('dynamis', utc + 1000, utc, now + 4.9);
+eq(failed_reads, 1, 'An unreadable account file waits for its retry interval');
+unavailable:observe('dynamis', utc + 1000, utc, now + 5);
+eq(failed_reads, 2, 'An unreadable account file retries at five seconds');
 unavailable:observe('dynamis', utc + 1000, utc, now + 6);
 eq(failed_reads, 2, 'Unreadable account files retry after the normal interval');
 failed_reads, failed_writes = 0, 0;
@@ -95,4 +107,37 @@ limited:observe('dynamis', utc + 1000, utc, now);
 for index = 1, 100 do limited:observe('dynamis', utc + 1000, utc, now + index / 100); end
 eq(full_reads, 2, 'The account group limit does not reread the full file every sample');
 eq(limited:view(now + 1, utc).dynamis.remaining, 1000, 'A full account file keeps the own observed timer available');
+
+disk = {};
+local sequential = new();
+sequential:select(1001, { group = 'Main' }, now);
+sequential:observe('dynamis', utc + 1000, utc, now);
+sequential:observe('limbus', utc + 300, utc, now);
+sequential:detach();
+sequential:select(2002, { group = 'Other' }, now + 1);
+sequential:observe('limbus', utc + 2000, utc + 1, now + 1);
+eq(disk.groups.main.dynamis.ready_at, utc + 1000, 'Changing account groups keeps the previous Dynamis timer');
+eq(disk.groups.main.limbus.ready_at, utc + 300, 'Changing account groups keeps the previous Limbus reminder');
+eq(disk.groups.other.limbus.ready_at, utc + 2000, 'The next character saves its own account group');
+sequential:detach();
+sequential:select(1002, { group = 'Main' }, now + 3);
+local returning = sequential:view(now + 3, utc + 3);
+eq(returning.dynamis.shared, true, 'A returning alt loads the main character\'s saved timer');
+eq(returning.dynamis.remaining, 997, 'The account deadline keeps counting through character changes');
+eq(returning.limbus.remaining, 297, 'The Limbus reminder keeps its original deadline');
+sequential:observe('dynamis', utc + 100, utc + 3, now + 3);
+eq(disk.groups.main.dynamis.ready_at, utc + 1000, 'A shorter alt observation keeps the later account deadline');
+eq(disk.groups.other.limbus.ready_at, utc + 2000, 'Returning to an account group preserves the other group');
+saved_reads = reads;
+for frame = 1, 600 do
+    sequential:select(1002, { group = 'Main' }, now + 3 + frame / 60);
+    sequential:view(now + 3 + frame / 60, utc + 3);
+end
+eq(reads, saved_reads, 'A loaded nonempty account group stays cached through steady frames');
+sequential:select(1001, { group = 'Main' }, now + 14);
+eq(reads, saved_reads + 1, 'Changing characters refreshes the account group once');
+saved_reads = reads;
+sequential:observe('dynamis', utc + 1100, utc + 14, now + 14);
+eq(reads, saved_reads + 1, 'A new observed deadline reads the saved timers before updating');
+eq(disk.groups.main.dynamis.ready_at, utc + 1100, 'A newly observed later deadline is saved');
 return { count = count };

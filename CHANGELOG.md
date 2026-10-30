@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.6.0
+
+Farming mode adds personal drop counts, item rates, goals, and optional item values alongside your gil. This update also adds subjob text and reduces work during startup, reloads, and normal tracking.
+
+### Farming
+
+- Added **Farming** as a bar mode and starter layout with personal Items received, Items/HR, net gil, Gil/HR, and Inventory free slots. Its saved layout stays separate from EXP and Merits. **Use Farming outside events** is an optional Automatic fallback; detected event layouts still take priority.
+- Added twelve optional Farming readouts in every mode, with watched-item counts and rates, time since the last item, item or stack goals, an optional goal fill, pool drops seen, and gil from defeated monsters. Item rates use observed, unpaused farming time and need one minute after the first received item.
+- Farming lists received and recent items, supports watched-item and goal alerts plus low-space warnings, and copies a farming summary. New alerts start off and retain the existing notice, sound, volume, and quiet options. Only current-character Inventory and Mog Satchel space is used.
+- Optional manual unit prices estimate loot value and value per hour separately from actual gil changes. Unpriced loot is not assigned a value, and estimated loot value is never added to wallet gil as profit.
+- Farming follows confirmed personal treasure awards, including solo loot, crystals, seals, and normal treasure-pool chest drops. Purchases, trades, synthesis, bag moves, fishing, HELM, digging, and Steal do not become drops. Existing pool items seen on loading are not new pool drops, but count if later awarded to you.
+- Farming totals follow the current character/job session through saving, pause, reset, and reload. Shared layouts share preferences, not totals. Pause and reset leave buff, chain, ring, and event timers running, and leave event-specific drop totals with their event run.
+
+### Startup and tracking
+
+- Momentum loads only your selected custom font instead of registering every Windows font on each reload. The Ashita font needs no extra font files. All font choices remain available, including when switching profiles and characters.
+- Client searches finish one at a time across frames during startup. Tracking continues while they finish, and saved timers use the game clock before they are restored. The existing pointer and chat-window checks remain in place.
+- Sound folders load only when a sound list is needed. Opening settings does not scan them, and reopening a sound list still picks up added files. Session saves also avoid encoding the same data twice.
+
+### Jobs, layouts, and fixes
+
+- Added a **Show subjob and level** toggle to the **Job and level** readout. It adds text such as `/ NIN 37` after your main job and keeps only the main job icon. It starts off and is saved with each layout and profile, including the layouts used by Automatic.
+- The subjob level follows the game through Level Sync, job changes, and character changes. No available subjob leaves just the main job, and unavailable levels stay unknown. Pause and Reset session leave live job information updating.
+- Fixed Assault, Limbus, BCNM, KSNM, and ENM alerts being rejected before they could appear or play. Their chosen quiet conditions and time between alerts still apply.
+- Fixed false save-conflict warnings for Dynamis and event records when timer values contained fractional seconds. Actual conflicting file changes are still detected.
+- Fixed Dynamis updates being skipped because its packet reader rejected Ashita's native event objects. Event timing, normal packet checks, and startup buffering now use the supported fields, avoiding errors from unavailable fields.
+- Returning from the Farming fallback now restores the saved Merits layout correctly when EXP / Merits switching is off. Enabling Farming and returning to Automatic keeps the previous layout choice.
+- Shared layouts load at startup, when switching characters, and when changing the sharing option. The shared settings file is no longer polled while you play.
+- Recorded account timers keep counting down without reopening their file every few seconds. Character or group changes load the saved timers, and new entries still update the recorded deadlines.
+- Long custom MP3 and WAV filenames now stay intact when their alert settings are saved. Names over the supported limit are cleared instead of being shortened into another filename.
+- The Dynamis progress line stays empty until a current run has usable time remaining. Selecting Dynamis outside a run no longer shows unrelated EXP progress.
+- Searching for subjob now leads directly to **Job and level**, where its toggle is available.
+- Profiles no longer offers **Reset this section**, which had no effect. Its separately confirmed **Reset layout** option remains available.
+
+### Updating
+
+Enter `/addon unload momentum`, replace the whole `momentum` folder in your Phoenix `addons` folder, including `bin`, then enter `/addon load momentum`. Keep `config/addons/momentum/` for your settings, profiles, history, recorded cooldowns, and custom sounds. All MP3/WAV choices, volume controls, and the Linux sound fix are kept.
+
+Choose **Bar mode > Farming** for the compact Farming layout. Set watched items, goals, and manual unit prices on the **Farming** page. Enable optional notices and sounds under **Alerts > Farming**. Item rates appear after one minute of unpaused farming time following your first received treasure item. To use Farming between events, select **Automatic** and turn on **Farming > Use Farming outside events**.
+
+For subjob text, select **Display > Readouts and order > Job and level**, then enable **Selected readout > Show subjob and level**. It starts off in each saved layout.
+
 ## 1.5.0
 
 - Added optional Inventory and Mog Satchel slot readouts in every bar mode. Choose used slots and capacity, free slots, or both. Only your current character's Inventory and Mog Satchel are tracked.

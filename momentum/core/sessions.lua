@@ -123,18 +123,18 @@ function methods:_write(now)
     local previous, problem = self.read(self.path)
     if not previous then self.error = problem or 'The session file could not be read.'; return false, self.error end
     if not equal(previous, self.previous) then
-        self.error = 'Another game client changed this character\'s session file. Your unsaved progress is still being tracked here; the saved file has not been overwritten.'
+        self.error = 'The saved session file changed outside Momentum. Your unsaved progress is still being tracked here; the file has not been overwritten.'
         return false, self.error
     end
     local data = { version = 1, next_id = self.next_id, entries = entries }
-    local ok
-    ok, problem = self.write(self.path, data)
+    local ok, encoded
+    ok, problem, encoded = self.write(self.path, data)
     self.error = nil
     if not ok then self.error = problem or 'The session file could not be saved.' end
     if ok then
         self.entries, self.dirty, self.last_save = entries, false, now
         -- Compare the next read with the numbers written by the JSON encoder.
-        self.previous = json.decode(json.encode(data))
+        self.previous = json.decode(encoded or json.encode(data))
     end
     return ok, self.error
 end
@@ -147,12 +147,18 @@ function methods:_capture(now)
     end
 end
 
+local function has_activity(current)
+    local farm = current.farming;
+    return current.started or current.gil and current.gil.started
+        or farm and (farm.started or farm.pool_found > 0 or farm.mob_gil_total > 0);
+end
+
 function methods:checkpoint(now, force)
     now = number(now) or 0
     if not force and self.last_attempt and now >= self.last_attempt and now - self.last_attempt < SAVE_SECONDS then
         return self.error == nil, self.error
     end
-    if self.entry and (force or self.tracker.started or self.tracker.gil.started or self.dirty) then self:_capture(now) end
+    if self.entry and (force or has_activity(self.tracker) or self.dirty) then self:_capture(now) end
     if not self.dirty then return true end
     return self:_write(now)
 end
@@ -211,7 +217,9 @@ local function summary(entry, active, resumed)
         job_name = entry.job_name, created = entry.created, saved = entry.saved, closed = entry.closed,
         active = active, resumed = resumed == true, elapsed = data.elapsed, session_exp = data.session_exp,
         session_lp = data.session_lp, net_exp = data.net_exp, net_lp = data.net_lp,
-        merits_gained = data.merits_gained, best_chain = data.best_chain }
+        merits_gained = data.merits_gained, best_chain = data.best_chain,
+        farming = data.farming and { total = data.farming.total, elapsed = data.farming.elapsed,
+            pool_found = data.farming.pool_found, mob_gil = data.farming.mob_gil, partial = data.farming.partial } or nil }
 end
 
 function methods:current()
@@ -219,6 +227,9 @@ function methods:current()
     local row = summary(self.entry, true, self.resumed)
     row.elapsed = self.tracker:_elapsed(self.tracker.last_time or 0)
     row.best_chain = self.tracker.chain_state.best
+    local farm = self.tracker.farming
+    row.farming = { total = farm.total, elapsed = farm:_elapsed(self.tracker.last_time or 0), pool_found = farm.pool_found,
+        mob_gil = farm.mob_gil_total, partial = farm.partial }
     for _, key in ipairs({ 'session_exp', 'session_lp', 'net_exp', 'net_lp', 'merits_gained' }) do row[key] = self.tracker[key] end
     return row
 end
@@ -331,7 +342,7 @@ function managers:checkpoint_due(now)
     if not self.checkpoint_at or now >= self.checkpoint_at or now < self.checkpoint_time then return true end
     local active = self.active
     -- The first reward after a long idle period is still saved as soon as it is due.
-    if active and not active.blocked and (active.dirty or (active.entry and active.tracker.started)) then
+    if active and not active.blocked and (active.dirty or (active.entry and has_activity(active.tracker))) then
         return not active.last_attempt or now < active.last_attempt or now >= active.last_attempt + SAVE_SECONDS
     end
     return false

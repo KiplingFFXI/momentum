@@ -19,11 +19,18 @@ local function bits(data, offset, count)
     return result;
 end
 
+function packets.allowed(event)
+    local kind = type(event);
+    if kind ~= 'table' and kind ~= 'userdata' then return false; end
+    if event.blocked or event.injected then return false; end
+    -- These compatibility fields are not part of Ashita's bound event structure.
+    return kind ~= 'table' or not event.blocked_original and not event.is_injected;
+end
+
 function packets.valid(event, minimum)
-    return (type(event) == 'table' or type(event) == 'userdata') and type(event.data) == 'string'
+    return packets.allowed(event) and type(event.data) == 'string'
         and type(event.size) == 'number' and event.size == event.size and event.size >= minimum
-        and #event.data >= minimum and not event.blocked and not event.blocked_original
-        and not event.injected and not event.is_injected;
+        and #event.data >= minimum;
 end
 
 function packets.zone_id(event)

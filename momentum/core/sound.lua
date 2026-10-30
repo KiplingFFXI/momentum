@@ -9,6 +9,7 @@ sound.WORKER = addon.path:gsub('[\\/]+$', '') .. '\\bin\\momentum-sound.exe';
 sound.LAUNCHER = addon.path:gsub('[\\/]+$', '') .. '\\bin\\momentum-sound-launch.dll';
 local playback = require('core.sound_worker').new(sound.WORKER);
 local files, opened, failed, problem, playing = {}, nil, nil, nil, nil;
+local listed = false;
 local trace;
 
 local function file_label(name)
@@ -94,14 +95,20 @@ function sound.refresh()
         table.sort(found, function(a, b) return a:lower() < b:lower(); end);
         for _, name in ipairs(found) do files[#files + 1] = name; end
     end
+    listed = true;
     log('sound.refresh.after', { count = #files });
 end
 
-function sound.files() return files; end
+function sound.invalidate() listed = false; end
+
+function sound.files()
+    if not listed then sound.refresh(); end
+    return files;
+end
 
 function sound.find(word)
     local wanted = tostring(word):lower();
-    for _, name in ipairs(files) do
+    for _, name in ipairs(sound.files()) do
         local lower = name:lower();
         if (lower == wanted or lower:gsub('%.%w+$', '') == wanted) then return name; end
     end

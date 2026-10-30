@@ -161,6 +161,11 @@ Text line endings, ZIP timestamps, file modes, and entry order are normalized.
 Identical reviewed input produces the same archive in the same build environment.
 A temporary archive is verified before replacing an existing output.
 
+The Farming runtime is included in the same addon archive: core/farming.lua,
+core/farming_client.lua, and ui/farming.lua. Its saved statistics and manual
+prices stay under the normal Momentum configuration folder. There is no
+separate Farming package, sound variant, server component, or data request.
+
 Job artwork, player settings, profiles, sessions, event histories, local account
 groups and cooldown records, tests, source notes, and developer tools are not copied
 into the runtime archive.

@@ -172,6 +172,9 @@ local alert_help = {
     event_failure = 'Notify when an Assault or battlefield loss is confirmed.',
     event_drop = 'Notify when a chosen drop enters the treasure pool. Choose items under Events > Wanted event drops.',
     event_ready = 'Notify when an observed entry or key-item wait ends. Other entry requirements still apply.',
+    farm_item = 'Notify when you receive a watched item. Choose items under Farming > Watched items and goal. Items won by another player do not trigger this.',
+    farm_goal = 'Notify when a new received item completes your selected Farming goal. Changing a goal or loading settings stays quiet.',
+    farm_space = 'Warn when your Inventory or Mog Satchel reaches the free-slot limit chosen under Farming > Gil and bag space.',
 };
 
 local alert_groups = {
@@ -183,6 +186,7 @@ local alert_groups = {
     { 'Missed EXP', 'Reasons the game gives for missed EXP.', { 'no_exp' } },
     { 'Dynamis', 'Time, time extensions, wanted drops, the treasure pool, clears, and support job unlocks.', { 'dyna_time', 'dyna_extension', 'dyna_wanted', 'dyna_pool', 'dyna_clear', 'dyna_subjob' } },
     { 'Assault and battlefields', 'Time, objectives, results, wanted drops, and observed entry waits.', { 'event_time', 'event_extension', 'event_objective', 'event_clear', 'event_failure', 'event_drop', 'event_ready' } },
+    { 'Farming', 'Watched items received, item goals, and low space in your bags.', { 'farm_item', 'farm_goal', 'farm_space' } },
 };
 local alert_names = { food_end = 'Food effect wore off' };
 for _, event in ipairs(defaults.ALERTS) do alert_names[event[1]] = event[2]; end
@@ -376,6 +380,15 @@ function details.sessions(settings, _, services, ui)
                 .. '   |   Merit points ' .. num(selected.merits_gained) .. '   |   Best EXP chain ' .. num(selected.best_chain),
                 'Net includes gains, losses, Raise recovery, and other changes the addon saw. Merit points counts those gained during this session. Best EXP chain is the highest chain seen.');
             row(ui, records.dates[selected.id], 'Dates are shown in your computer\'s local time.');
+            if selected.farming and (selected.farming.total > 0 or selected.farming.pool_found > 0 or selected.farming.mob_gil > 0) then
+                local farm = selected.farming;
+                row(ui, 'Items received ' .. num(farm.total) .. '   |   Farming time ' .. time(farm.elapsed)
+                    .. '   |   Items/HR ' .. (farm.elapsed >= 60 and num(farm.total * 3600 / farm.elapsed) or '--'),
+                    'Personal treasure received during this saved session. Paused and offline time do not count.');
+                row(ui, 'Pool drops seen ' .. num(farm.pool_found) .. '   |   Gil from mobs ' .. num(farm.mob_gil),
+                    'Pool drops include treasure offered to the party. Gil from mobs is separate from other wallet changes.');
+                if farm.partial then ui.note('Some item history is unavailable. These are the recorded totals.'); end
+            end
             imgui.TextUnformatted('Session name');
             imgui.SetNextItemWidth(math.min(400, (imgui.GetContentRegionAvail())));
             imgui.InputText('##Session name', history_name, 49);

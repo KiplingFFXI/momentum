@@ -1,6 +1,6 @@
 # Contributing
 
-Momentum is an Ashita v4 addon for Phoenix. Keep changes focused on EXP, LP, merit points, gil, zone time, and event tracking.
+Momentum is an Ashita v4 addon for Phoenix. Keep changes focused on EXP, LP, merit points, farming drops and rates, gil, zone time, and event tracking.
 
 ## Set up
 
@@ -21,6 +21,7 @@ The tests read Ashita libraries from `C:/Games/PhoenixXI/addons/libs` by default
 - Use the pinned Phoenix source and its loaded modules for game rules. Record source changes through the exporter; do not substitute retail or another server's rules.
 - Keep the addon observational. Do not add item use, gameplay commands, automatic gameplay actions, changes to the character's EXP/merit mode, or new alerts that start enabled. Automatic bar layouts only change what Momentum shows.
 - Keep repeated frame work bounded. Avoid file reads, full inventory scans, history sorting, and unnecessary text measurements on every frame.
+- Ashita event callbacks supply userdata. Accept those events and read only their supported fields. Packet regressions should include userdata that rejects unknown fields, not only Lua table mocks.
 - Write labels and help in plain game terms. Explain what a control changes and when a reading is uncertain.
 
 ## Check a change

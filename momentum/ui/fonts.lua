@@ -1,27 +1,26 @@
 local imgui = require('imgui');
 local fonts = {};
 local faces = {};
-local loaded = false;
+local attempted = {};
 local choices = { 'Ashita', 'Segoe UI', 'Arial', 'Tahoma', 'Verdana', 'Calibri', 'Consolas' };
 local files = { ['Segoe UI'] = 'segoeui.ttf', Arial = 'arial.ttf', Tahoma = 'tahoma.ttf',
     Verdana = 'verdana.ttf', Calibri = 'calibri.ttf', Consolas = 'consola.ttf' };
 
 function fonts.names() return choices; end
 
--- Wait until drawing is done before adding fonts. A menu choice only selects one.
-function fonts.load()
-    if loaded then return true; end
+-- Load the selected font between frames. Ashita needs no extra font.
+function fonts.load(name)
+    local file = files[name];
+    if file == nil or attempted[name] then return true; end
     local io = imgui.GetIO();
     if io and io.Fonts and io.Fonts.Locked == true then return false; end
+    attempted[name] = true;
     local folder = (os.getenv('WINDIR') or 'C:\\Windows') .. '\\Fonts\\';
-    for name, file in pairs(files) do
-        local path = folder .. file;
-        if (ashita.fs.exists(path)) then
-            local ok, face = pcall(imgui.AddFontFromFileTTF, path, 18);
-            if (ok) then faces[name] = face; end
-        end
+    local path = folder .. file;
+    if (ashita.fs.exists(path)) then
+        local ok, face = pcall(imgui.AddFontFromFileTTF, path, 18);
+        if (ok) then faces[name] = face; end
     end
-    loaded = true;
     return true;
 end
 

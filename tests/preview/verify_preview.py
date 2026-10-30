@@ -331,6 +331,46 @@ def main():
                                     '--exec', "PREVIEW.center_storage_case='values'; " + storage_fixture,
                                     '--input-script', str(HERE / 'storage_values_input.json')]),
     ])
+    subjob_fixture = "dofile('tests/preview/subjob_fixture.lua')"
+    cases.extend([
+        ('subjob-centered-wide', ['--hud', '--window', 'momentum', '--icon-fixture', '--frames', '13',
+                                  '--exec', "PREVIEW.subjob_case='wide'; " + subjob_fixture,
+                                  '--input-script', str(HERE / 'subjob_input.json')]),
+        ('subjob-centered-overflow', ['--hud', '--window', 'momentum', '--icon-fixture', '--frames', '13',
+                                      '--exec', "PREVIEW.subjob_case='overflow'; " + subjob_fixture,
+                                      '--input-script', str(HERE / 'subjob_input.json')]),
+        ('settings-subjob-input', ['--window', 'settings', '--tab', 'Display', '--icon-fixture', '--frames', '17',
+                                   '--exec', "PREVIEW.subjob_case='menu'; " + subjob_fixture,
+                                   '--input-script', str(HERE / 'subjob_menu_input.json')]),
+    ])
+    audit_fixture = "dofile('tests/preview/audit_ui_fixture.lua')"
+    cases.extend([
+        ('settings-subjob-search', ['--window', 'settings', '--tab', 'Display', '--frames', '16', '--exec', audit_fixture,
+                                    '--input-script', str(HERE / 'audit_subjob_search_input.json')]),
+        ('settings-profiles-reset', ['--window', 'settings', '--tab', 'Profiles', '--frames', '7',
+                                     '--exec', 'PREVIEW.reset_supported=false; ' + audit_fixture,
+                                     '--input-script', str(HERE / 'audit_reset_menu_input.json')]),
+        ('settings-display-reset', ['--window', 'settings', '--tab', 'Display', '--frames', '7',
+                                    '--exec', 'PREVIEW.reset_supported=true; ' + audit_fixture,
+                                    '--input-script', str(HERE / 'audit_reset_menu_input.json')]),
+        ('dynamis-unknown-progress', ['--hud', '--window', 'momentum', '--frames', '9',
+                                     '--set', 'bar.docked=false', '--set', 'bar.auto_width=false', '--set', 'bar.width=600',
+                                     '--exec', "settings.display.show_text=false; require('ui.modes').select(settings,'dynamis'); PREVIEW.view.dynamis={active=false}; " + audit_fixture,
+                                     '--input-script', str(HERE / 'audit_dynamis_fill_input.json')]),
+    ])
+    cases.append(('settings-shared-characters', ['--full', '--window', 'settings', '--frames', '21',
+        '--exec', "dofile('tests/preview/shared_characters_fixture.lua')",
+        '--input-script', str(HERE / 'shared_characters_input.json')]))
+    cases.append(('settings-font-selection', ['--full', '--window', 'settings', '--tab', 'Appearance', '--frames', '33',
+        '--exec', "dofile('tests/preview/font_selection_fixture.lua')",
+        '--input-script', str(HERE / 'font_selection_input.json')]))
+    cases.append(('settings-farming', ['--window', 'settings', '--tab', 'Farming', '--scene', 'Farming', '--frames', '31',
+        '--window-size', '920', '820', '--exec', "dofile('tests/preview/farming_fixture.lua')",
+        '--input-script', str(HERE / 'farming_input.json')]))
+    cases.append(('settings-farming-narrow', ['--window', 'settings', '--tab', 'Farming', '--scene', 'Farming',
+        '--window-size', '400', '660', '--set', 'window.font_size=28']))
+    cases.append(('bar-farming', ['--hud', '--window', 'momentum', '--scene', 'Farming', '--frames', '6',
+        '--set', 'bar.docked=false', '--exec', "require('ui.modes').select(settings,'farming')"]))
     for mode in ('keep', 'always'):
         for anchor in ('top', 'bottom'):
             cases.append(('chat-hold-%s-%s' % (mode, anchor), [

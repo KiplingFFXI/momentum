@@ -37,6 +37,7 @@ class DeferredStartTests(unittest.TestCase):
             assert(MOMENTUM_TEST == nil)
             MOCK.now = 3
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
             local app = MOMENTUM_TEST
             local settings = app.settings()
@@ -60,6 +61,7 @@ class DeferredStartTests(unittest.TestCase):
             MOCK.fire('d3d_beginscene', true)
             MOCK.now = 33
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
         """)
 
@@ -82,6 +84,7 @@ class DeferredStartTests(unittest.TestCase):
             assert(MOMENTUM_TEST == nil)
             MOCK.now = 8
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
         """)
 
@@ -98,6 +101,7 @@ class DeferredStartTests(unittest.TestCase):
             assert(MOMENTUM_TEST == nil)
             MOCK.now = 4
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
         """)
 
@@ -126,6 +130,7 @@ class DeferredStartTests(unittest.TestCase):
             MOCK.fire('d3d_beginscene', true)
             MOCK.now = 16
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
         """)
 
@@ -157,13 +162,146 @@ class DeferredStartTests(unittest.TestCase):
                 MOCK.now = MOCK.now + 0.25
                 MOCK.fire('d3d_beginscene', true)
             end
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
-            assert(registrations == 6)
+            assert(registrations == 1)
             MOCK.fire('d3d_present')
             assert(MOMENTUM_TEST.state.hidden)
             assert(not MOMENTUM_TEST.settings().bar.docked)
             for i = 1, 10 do MOCK.fire('d3d_beginscene', true) end
-            assert(registrations == 6)
+            assert(registrations == 1)
+        """)
+
+    def test_unload_cancels_an_incomplete_resource_scan(self):
+        self.execute("""
+            local scans = 0
+            ashita.memory.find = function() scans = scans + 1; return 0 end
+            dofile(ADDON_DIR .. '/momentum.lua')
+            MOCK.fire('load')
+            MOCK.fire('d3d_beginscene', true)
+            MOCK.now = 3
+            MOCK.fire('d3d_beginscene', true)
+            local app = MOMENTUM_TEST
+            assert(app and not app.state.resources_ready)
+            for i = 1, 8 do
+                if scans >= 2 then break end
+                MOCK.fire('d3d_beginscene', true)
+            end
+            assert(scans >= 2 and not app.state.resources_ready)
+            assert(app.state.startup_task ~= nil)
+            MOCK.fire('unload')
+            assert(app.state.startup_stopped and app.state.startup_task == nil)
+            local stopped_scans = scans
+            for i = 1, 32 do
+                MOCK.now = MOCK.now + 0.25
+                MOCK.fire('d3d_beginscene', true)
+                MOCK.fire('d3d_present')
+            end
+            assert(scans == stopped_scans and not app.state.resources_ready)
+            assert(#MOCK.commands == 0)
+        """)
+
+    def test_ashita_font_startup_and_steady_frames_do_not_register_fonts(self):
+        self.execute("""
+            local imgui = require('imgui')
+            MOCK.settings_file = require('ui.defaults').make()
+            MOCK.settings_file.appearance_version = 2
+            MOCK.settings_file.style.palette_version = 1
+            MOCK.settings_file.style.font = 'Ashita'
+            local checks, registrations = 0, 0
+            local exists = ashita.fs.exists
+            ashita.fs.exists = function(path)
+                if path:match('%.ttf$') then checks = checks + 1; return true end
+                return exists(path)
+            end
+            imgui.AddFontFromFileTTF = function() registrations = registrations + 1; return 'face' end
+            MOCK.load_addon()
+            assert(MOMENTUM_TEST.state.resources_ready)
+            assert(MOMENTUM_TEST.settings().style.font == 'Ashita')
+            for i = 1, 600 do
+                MOCK.fire('d3d_beginscene', true)
+                MOCK.frame(1 / 60)
+            end
+            assert(checks == 0 and registrations == 0)
+            assert(not MOMENTUM_TEST.state.broken)
+            MOCK.fire('unload')
+            assert(registrations == 0)
+        """)
+
+    def test_font_changes_profiles_and_characters_load_only_between_frames(self):
+        self.execute("""
+            local imgui = require('imgui')
+            local defaults = require('ui.defaults')
+            MOCK.settings_file = defaults.make()
+            MOCK.settings_file.appearance_version = 2
+            MOCK.settings_file.style.palette_version = 1
+            MOCK.settings_file.style.font = 'Ashita'
+            local locked, in_scene, registrations, checks = false, false, 0, 0
+            local get_io, exists = imgui.GetIO, ashita.fs.exists
+            imgui.GetIO = function()
+                local value = get_io(); value.Fonts = { Locked = locked }; return value
+            end
+            ashita.fs.exists = function(path)
+                if path:match('%.ttf$') then checks = checks + 1; return true end
+                return exists(path)
+            end
+            imgui.AddFontFromFileTTF = function(path)
+                assert(in_scene and not locked, 'Font files load only before an unlocked UI frame')
+                registrations = registrations + 1
+                return path
+            end
+            local function scene(backbuffer)
+                in_scene = true
+                MOCK.fire('d3d_beginscene', backbuffer ~= false)
+                in_scene = false
+            end
+            MOCK.load_addon()
+            local app = MOMENTUM_TEST
+            app.settings().style.font = 'Arial'
+            MOCK.frame()
+            assert(registrations == 0 and checks == 0)
+            scene(false)
+            assert(registrations == 0)
+            locked = true
+            scene()
+            assert(registrations == 0 and checks == 0)
+            locked = false
+            scene()
+            assert(registrations == 1 and checks == 1)
+            assert(app.services.save_profile('Font test'))
+            app.settings().style.font = 'Tahoma'
+            MOCK.frame(); scene()
+            assert(registrations == 2)
+            assert(app.services.load_profile('Font test'))
+            assert(app.settings().style.font == 'Arial')
+            scene()
+            assert(registrations == 2, 'A profile reuses an already loaded font')
+            assert(app.services.shared(true))
+            app.settings().style.font = 'Consolas'
+            app.state.dirty = true
+            app.services.save()
+            MOCK.settings.switch_character(defaults.make())
+            assert(app.settings().style.font == 'Consolas')
+            MOCK.frame()
+            assert(registrations == 2, 'Character callbacks and drawing do not load fonts')
+            scene()
+            assert(registrations == 3 and checks == 3)
+            assert(app.services.shared(false))
+            local next_settings = defaults.make(); next_settings.style.font = 'Arial'
+            next_settings.appearance_version = 2; next_settings.style.palette_version = 1
+            MOCK.settings.switch_character(next_settings)
+            scene()
+            assert(registrations == 3, 'Private layouts reuse their selected font')
+            next_settings = defaults.make(); next_settings.style.font = 'Verdana'
+            next_settings.appearance_version = 2; next_settings.style.palette_version = 1
+            MOCK.settings.switch_character(next_settings)
+            MOCK.frame()
+            assert(registrations == 3)
+            scene()
+            assert(registrations == 4 and checks == 4)
+            for i = 1, 600 do scene(); MOCK.frame(1 / 60) end
+            assert(registrations == 4 and checks == 4)
+            assert(not app.state.broken)
         """)
 
     def test_zone_clock_keeps_original_receipt_time_without_status_packet(self):
@@ -185,6 +323,7 @@ class DeferredStartTests(unittest.TestCase):
             MOCK.now = 3
             MOCK.fire('d3d_beginscene', true)
             local app = MOMENTUM_TEST
+            MOCK.finish_resources()
             assert(app.state.resources_ready and app.state.snapshot.valid)
             assert(app.dynamis.observer:utc(MOCK.now) == 1730000003)
             assert(app.settings().style.font == 'Segoe UI')
@@ -211,6 +350,7 @@ class DeferredStartTests(unittest.TestCase):
             MOCK.fire('d3d_beginscene', true)
             MOCK.now = 4
             MOCK.fire('d3d_beginscene', true)
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
             local loaded_reads = reads
             for i = 1, 100 do
@@ -275,6 +415,7 @@ class DeferredStartTests(unittest.TestCase):
                 MOCK.now = MOCK.now + 0.25
                 MOCK.fire('d3d_beginscene', true)
             end
+            MOCK.finish_resources()
             assert(MOMENTUM_TEST.state.resources_ready)
             MOCK.fire('d3d_present')
             assert(not MOMENTUM_TEST.state.hidden, 'The newer show command must follow the older hide command')
@@ -288,9 +429,9 @@ class DeferredStartTests(unittest.TestCase):
         self.execute("""
             local fonts = require('ui.fonts')
             local load_fonts, fail = fonts.load, true
-            fonts.load = function()
+            fonts.load = function(name)
                 if fail then error('Test font startup failure') end
-                return load_fonts()
+                return load_fonts(name)
             end
             dofile(ADDON_DIR .. '/momentum.lua')
             MOCK.fire('load')
@@ -310,6 +451,7 @@ class DeferredStartTests(unittest.TestCase):
                 MOCK.now = MOCK.now + 0.25
                 MOCK.fire('d3d_beginscene', true)
             end
+            MOCK.finish_resources()
             assert(app.state.resources_ready)
             MOCK.fire('d3d_present')
             assert(app.state.hidden and not app.settings().bar.docked)

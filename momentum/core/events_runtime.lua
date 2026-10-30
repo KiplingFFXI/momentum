@@ -2,6 +2,7 @@ local events = require('core.events');
 local client = require('core.events_client');
 local store = require('core.file_store');
 local history = require('ui.history');
+local json = require('json');
 local runtime = {};
 local methods = {};
 methods.__index = methods;
@@ -49,15 +50,15 @@ function methods:save(now, force)
     self.save_at = now;
     local data, problem = store.read(self.path);
     if not data or not history.equal(data, self.disk) then
-        self.saved_error = problem or 'Another client changed this character\'s event history. Reload Momentum before saving again.';
+        self.saved_error = problem or 'The saved event history changed outside Momentum. Reload Momentum before saving again.';
         self.blocked = true;
         return false, self.saved_error;
     end
     ashita.fs.create_dir(self.folder);
     local payload = self.core:export(self.observer:utc(now));
-    local ok;
-    ok, problem = store.write(self.path, payload);
-    if ok then self.disk, self.saved_revision, self.saved_error = payload, self.core.revision, nil;
+    local ok, encoded;
+    ok, problem, encoded = store.write(self.path, payload);
+    if ok then self.disk, self.saved_revision, self.saved_error = json.decode(encoded or json.encode(payload)), self.core.revision, nil;
     else self.saved_error = problem; end
     return ok, problem;
 end

@@ -45,4 +45,57 @@ equal(player.read().unsupported_job, true)
 stats.GetMainJob = get_job
 MOCK.zoning = true
 equal(player.read().valid, false)
+MOCK.zoning = false
+local find = ashita.memory.find
+local scans = 0
+ashita.memory.find = function(...)
+    scans = scans + 1
+    return find(...)
+end
+local worker = coroutine.create(function() player.load(coroutine.yield) end)
+while coroutine.status(worker) ~= 'dead' do
+    local before = scans
+    local ok, problem = coroutine.resume(worker)
+    equal(ok, true, problem or 'Cooperative player scan completes')
+    equal(scans - before <= 1, true, 'A resumed player scan finds at most one signature')
+end
+equal(scans, 4, 'Cooperative startup keeps all four player signatures')
+equal(player.utc(), utc, 'Cooperative startup preserves the current UTC pointer')
+scans = 0
+player.load_clock()
+equal(scans, 1, 'The server clock can be loaded before the session baseline with one signature')
+equal(player.utc(), utc, 'An early clock load preserves the current server time')
+worker = coroutine.create(function() player.load(coroutine.yield, true) end)
+while coroutine.status(worker) ~= 'dead' do
+    local before = scans
+    local ok, problem = coroutine.resume(worker)
+    equal(ok, true, problem or 'Remaining player scans complete')
+    equal(scans - before <= 1, true, 'Remaining player searches still yield one at a time')
+end
+equal(scans, 4, 'A loaded clock is not searched for again during the remaining three scans')
+equal(player.utc(), utc, 'Remaining player searches keep the seeded server clock')
+scans = 0
+ashita.memory.find = function() scans = scans + 1; return 0 end
+worker = coroutine.create(function() player.load(coroutine.yield) end)
+while coroutine.status(worker) ~= 'dead' do
+    local before = scans
+    local ok, problem = coroutine.resume(worker)
+    equal(ok, true, problem or 'Missing signatures stay supported')
+    equal(scans - before <= 1, true, 'Missing player signatures still yield individually')
+end
+equal(scans, 4, 'Missing player signatures are attempted once each')
+equal(player.utc(), nil, 'Missing UTC stays unknown')
+scans = 0
+ashita.memory.find = function() scans = scans + 1; error('Test player scan failure') end
+worker = coroutine.create(function() player.load(coroutine.yield) end)
+equal(coroutine.resume(worker), true, 'A failed scan yields after its native call returns')
+equal(scans, 1, 'A failed native call uses one scan step')
+local ok, problem = coroutine.resume(worker)
+equal(ok, false, 'Player scan errors still reach the startup handler')
+equal(type(problem) == 'string' and problem:find('Test player scan failure', 1, true) ~= nil, true, 'Player scan errors keep their message')
+equal(scans, 1, 'Resuming a failed scan never retries it')
+equal(pcall(player.load), false, 'Synchronous player load still reports scan errors')
+ashita.memory.find = find
+player.load()
+equal(player.utc(), utc, 'Synchronous loading remains available after a cooperative scan')
 return { count = count }

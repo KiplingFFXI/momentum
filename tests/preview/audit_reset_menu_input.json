@@ -1,0 +1,6 @@
+[
+  {"frame":2,"target":"##reset_actions"},
+  {"frame":3,"target":"##reset_actions","down":true},
+  {"frame":4,"down":false},
+  {"frame":6,"mouse":[-100,-100],"lua":"assert(PREVIEW.audit_widgets['Reset layout'],'The full-layout reset disappeared'); assert((PREVIEW.audit_widgets['Reset this section'] == true) == PREVIEW.reset_supported,'The reset menu offers an unsupported action or lost a supported one')"}
+]

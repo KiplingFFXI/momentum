@@ -1,0 +1,13 @@
+[
+  {"frame":2,"target":"01  Job and level","lua":"assert(not settings.display.show_subjob,'The subjob option must start off')"},
+  {"frame":3,"target":"01  Job and level","down":true},
+  {"frame":4,"down":false},
+  {"frame":6,"lua":"settings.window.sections['Display/Readouts and order']=false"},
+  {"frame":8,"target":"Show subjob and level"},
+  {"frame":9,"target":"Show subjob and level","down":true},
+  {"frame":10,"down":false},
+  {"frame":12,"target":"Show subjob and level","lua":"assert(settings.display.show_subjob,'The subjob checkbox did not turn on'); PREVIEW.subjob_row('(WAR) 61 / NIN 30',1,false)"},
+  {"frame":13,"target":"Show subjob and level","down":true},
+  {"frame":14,"down":false},
+  {"frame":16,"mouse":[-100,-100],"lua":"assert(not settings.display.show_subjob,'The subjob checkbox did not turn off'); local text=PREVIEW.subjob_row('(WAR) 61',1,false); assert(not text:find('NIN',1,true),'The menu toggle left subjob text on the bar')"}
+]

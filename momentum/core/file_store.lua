@@ -46,7 +46,7 @@ function store.write(path, value)
         moved = ok and result ~= nil;
     end
     if (not moved) then os.remove(temp); return false, 'The saved file could not be replaced.'; end
-    return true;
+    return true, nil, text;
 end
 
 return store;

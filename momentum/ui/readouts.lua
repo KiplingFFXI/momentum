@@ -43,7 +43,7 @@ for _, item in ipairs(defaults.READOUTS) do
     local id = item.id;
     independent[id] = id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_'
         or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil
-        or inventory_fields[id] ~= nil or gil_fields[id] ~= nil or storage_fields[id] ~= nil;
+        or inventory_fields[id] ~= nil or gil_fields[id] ~= nil or storage_fields[id] ~= nil or id:sub(1, 5) == 'farm_';
 end
 
 function readouts.needs_character(id)
@@ -139,8 +139,60 @@ local function dynamis_value(id, view, short)
     return '--';
 end
 
+function readouts.job_text(view, display, icon)
+    if not view.valid then return '--'; end
+    local value = icon and '(' .. (view.job_name or tostring(view.job)) .. ')' or view.job_name or '--';
+    if view.level then value = value .. ' ' .. tostring(view.level); end
+    if view.effective_level and view.level and view.effective_level < view.level then value = value .. ' (sync ' .. view.effective_level .. ')'; end
+    if display.show_subjob and view.subjob and view.subjob_name then
+        value = value .. ' / ' .. view.subjob_name .. ' ' .. (view.subjob_level and tostring(view.subjob_level) or '--');
+    end
+    return value;
+end
+
+local function farming_rate(value, short)
+    if type(value) ~= 'number' or value ~= value or value == math.huge or value == -math.huge then return '--'; end
+    if value ~= 0 and math.abs(value) < 10 then return string.format('%.1f', value); end
+    return readouts.format_number(value, short);
+end
+
+local function farming_value(id, view, settings)
+    local farm = view.farming;
+    if type(farm) ~= 'table' then return '--'; end
+    local short, selected = settings.display.short, farm.selected or {};
+    if id == 'farm_items' then return readouts.format_number(farm.total, short);
+    elseif id == 'farm_rate' then return farming_rate(farm.rate, short);
+    elseif id == 'farm_time' then return readouts.format_time(farm.elapsed);
+    elseif id == 'farm_last' then return readouts.format_time(farm.last_seconds);
+    elseif id == 'farm_pool' then return readouts.format_number(farm.pool_found, short);
+    elseif id == 'farm_mob_gil' then return readouts.format_number(farm.mob_gil, short);
+    elseif id == 'farm_value' or id == 'farm_value_rate' then
+        local amount = id == 'farm_value' and farm.estimated_value or farm.value_rate;
+        return type(amount) == 'number' and '~' .. readouts.format_number(amount, short) or '--';
+    end
+    if type(selected.id) ~= 'number' or selected.id <= 0 then return '--'; end
+    if id == 'farm_watched' then
+        local name = selected.name or ('Item ' .. tostring(selected.id));
+        return name .. ' ' .. readouts.format_number(selected.count, short);
+    elseif id == 'farm_watched_rate' then return farming_rate(selected.rate, short);
+    elseif id == 'farm_watched_last' then return readouts.format_time(selected.last_seconds);
+    elseif id == 'farm_goal' then
+        if type(selected.goal) ~= 'number' or selected.goal <= 0 then return '--'; end
+        local count, goal = selected.count, selected.goal;
+        if settings.farming and settings.farming.goal_unit == 'stacks' then
+            local stack = settings.farming.stack_size or 1;
+            local function stacks(value)
+                return type(value) == 'number' and string.format('%.2f', value / stack):gsub('%.?0+$', '') or '--';
+            end
+            return stacks(count) .. ' / ' .. stacks(goal) .. ' stacks';
+        end
+        return readouts.format_number(count, short) .. ' / ' .. readouts.format_number(goal, short);
+    end
+end
+
 local function value_for(id, view, settings)
     if not definitions[id] then return nil; end
+    if id:sub(1, 5) == 'farm_' then return farming_value(id, view, settings); end
     if storage_fields[id] then
         local bag = view.storage and view.storage[storage_fields[id]];
         if type(bag) ~= 'table' then return '--'; end
@@ -157,10 +209,7 @@ local function value_for(id, view, settings)
     local lp = view.mode == 'lp';
     local function number(value) return readouts.format_number(value, settings.display.short); end
     if id == 'job' then
-        local value = view.job_name or '--';
-        if view.level then value = value .. ' ' .. tostring(view.level); end
-        if view.effective_level and view.level and view.effective_level < view.level then value = value .. ' (sync ' .. view.effective_level .. ')'; end
-        return value;
+        return readouts.job_text(view, settings.display);
     elseif id == 'progress' then return number(view.current) .. ' / ' .. number(view.needed);
     elseif id == 'remaining' then return lp and view.lp and view.lp.blocked and 'Spend merits' or view.capped and 'Full' or number(view.remaining);
     elseif id == 'rate' then return number(view.rate);
@@ -280,6 +329,11 @@ local dependencies = {
     sample_count = 'recent.count recent.requested', minimum = 'recent.min', maximum = 'recent.max', median = 'recent.median',
     food = 'food food_name food_seconds', ring = 'rings',
     gil = 'gil.current', gil_gained = 'gil.gained', gil_spent = 'gil.spent', gil_net = 'gil.net', gil_rate = 'gil.rate',
+    farm_items = 'farming.total farming.partial', farm_rate = 'farming.rate', farm_time = 'farming.elapsed', farm_last = 'farming.last_seconds',
+    farm_watched = 'farming.selected.id farming.selected.name farming.selected.count', farm_watched_rate = 'farming.selected.id farming.selected.rate',
+    farm_watched_last = 'farming.selected.id farming.selected.last_seconds',
+    farm_goal = 'farming.selected.id farming.selected.count farming.selected.goal', farm_pool = 'farming.pool_found',
+    farm_mob_gil = 'farming.mob_gil', farm_value = 'farming.estimated_value', farm_value_rate = 'farming.value_rate',
     inventory_slots = 'storage.inventory.used storage.inventory.capacity', inventory_free = 'storage.inventory.free',
     satchel_slots = 'storage.satchel.used storage.satchel.capacity', satchel_free = 'storage.satchel.free',
     dyna_zone = 'dynamis.active dynamis.name dynamis.short_name', dyna_time = 'dynamis.active dynamis.remaining dynamis.clock_estimated',
@@ -314,6 +368,8 @@ local timer_fields = { chain_left = true, eta = true, ['lp.eta'] = true, goal_et
 local countdown_fields = { ['dynamis.remaining'] = true, ['dynamis.weakness_seconds'] = true };
 timer_fields['dynamis.next_entry_seconds'] = true;
 timer_fields['events.zone_elapsed'], timer_fields['events.elapsed'], timer_fields['account_cooldowns.limbus.remaining'] = true, true, true;
+timer_fields['farming.elapsed'], timer_fields['farming.last_seconds'] = true, true;
+timer_fields['farming.selected.last_seconds'] = true;
 countdown_fields['events.remaining'] = true;
 local cached = setmetatable({}, { __mode = 'k' });
 
@@ -375,7 +431,9 @@ local function append_dependency(parts, view, id, field, short, settings)
         value = cooldown and (tostring(cooldown.estimated) .. ':' .. tostring(math.floor((cooldown.remaining or 0) + 0.5))) or nil;
     elseif field == 'events.inventory' then
         value = value and value[inventory_fields[id]];
-    elseif gil_fields[id] or id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
+    elseif id == 'farm_rate' or id == 'farm_watched_rate' then
+        value = field:find('rate', 1, true) and farming_rate(value, short) or value;
+    elseif gil_fields[id] or id == 'farm_value_rate' or id == 'rate' or id == 'exp_rate' or id == 'lp_rate' or id == 'dyna_currency_rate' then
         value = number_key(value, short);
     elseif id == 'merit_rate' then
         value = value and string.format('%.2f', value / rules.lp_per_merit) or '--';
@@ -394,6 +452,16 @@ function readouts.cached(settings, view, sample)
         if settings.display.enabled[id] then
             local condition = (settings.display.conditions or {})[id];
             append_key(parts, id); append_key(parts, settings.display.labels[id]); append_key(parts, condition);
+            if id == 'job' then
+                append_key(parts, settings.display.show_subjob);
+                if settings.display.show_subjob then
+                    append_key(parts, view.subjob); append_key(parts, view.subjob_name); append_key(parts, view.subjob_level);
+                end
+            end
+            if id == 'farm_goal' then
+                append_key(parts, settings.farming and settings.farming.goal_unit);
+                append_key(parts, settings.farming and settings.farming.stack_size);
+            end
             for _, field in ipairs(dependencies[id] or {}) do append_dependency(parts, view, id, field, settings.display.short, settings); end
             for _, field in ipairs(condition_fields[condition] or {}) do append_key(parts, view[field], field); end
         end
@@ -445,7 +513,7 @@ end
 
 function readouts.sample(scenario)
     local sample = {
-        valid = true, job = 1, job_name = 'WAR', level = 61, effective_level = 61, mode = 'exp',
+        valid = true, job = 1, job_name = 'WAR', level = 61, effective_level = 61, subjob = 13, subjob_name = 'NIN', subjob_level = 30, mode = 'exp',
         current = 12450, needed = 20000, remaining = 7550, percent = 0.6225, rate = 8500, eta = 3198,
         session_exp = 6375, session_lp = 0, net_exp = 6200, net_lp = 0, lost = 525, recovered = 350, adjustment = 0,
         merits = 3, merit_cap = 10, merit_headroom = 7, merit_full = false, merits_gained = 0, elapsed = 2700, last_amount = 240, last_kind = 'exp', average = 185,
@@ -483,6 +551,10 @@ function readouts.sample(scenario)
     sample.sync_active, sample.sync_gap = false, 0;
     sample.food, sample.food_seconds = true, 840;
     sample.rings = { available = false, entries = {} };
+    sample.farming = { total = 24, rate = 48, elapsed = 1800, last_seconds = 14, pool_found = 32, mob_gil = 450,
+        estimated_value = 7200, value_rate = 14400, unpriced_count = 6, partial = false,
+        selected = { id = 4, name = 'Shell', count = 6, rate = 12, last_seconds = 42,
+            goal = 12, goal_remaining = 6, goal_fraction = 0.5, goal_complete = false }, recent = {} };
     if scenario == 'Dynamis' then
         sample.dynamis = {
             active = true, zone = 185, name = 'Dynamis - San d\'Oria', short_name = 'San d\'Oria',

@@ -9,6 +9,7 @@ local hud = require('ui.hud');
 local details = require('ui.details');
 local dynamis = require('ui.dynamis');
 local events = require('ui.events');
+local farming = require('ui.farming');
 local settings_window = {};
 local selected = 'progress';
 local scroll_selected = false;
@@ -36,9 +37,9 @@ local dragged, drag_target;
 local readout_sizes = {};
 local section_labels = {};
 local help_marker;
-local pages = { 'Display', 'Tracking', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
+local pages = { 'Display', 'Tracking', 'Farming', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Session', 'Profiles' };
 local jobs = { 'WAR', 'MNK', 'WHM', 'BLM', 'RDM', 'THF', 'PLD', 'DRK', 'BST', 'BRD', 'RNG', 'SAM', 'NIN', 'DRG', 'SMN', 'BLU', 'COR', 'PUP' };
-local page_section = { Display = 'display', Tracking = 'tracking', Dynamis = 'dynamis', Events = 'events', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions', Profiles = 'profiles' };
+local page_section = { Display = 'display', Tracking = 'tracking', Farming = 'farming', Dynamis = 'dynamis', Events = 'events', Details = 'planner', Alerts = 'alerts', Appearance = 'style', Session = 'sessions' };
 local section_names = {
     ['Level sync'] = 'Level Sync', ['Advanced sync estimate'] = 'Level Sync estimate',
     ['Recent rewards'] = 'Recent EXP and LP', ['Owned EXP rings'] = 'EXP rings',
@@ -81,7 +82,7 @@ local tips = {
     ['Corner roundness'] = 'Round the ends of the bar, or use zero for square corners.',
     ['Progress style'] = 'Show progress as a thin line or a fill behind the text. Event layouts use the time left when it is known.',
     ['Fill direction'] = 'Choose which way the progress bar fills. This does not change the readout order.',
-    ['Sample state'] = 'Try sample EXP, LP, Dynamis, Assault, Limbus, or battlefield readings. Your session keeps tracking normally.',
+    ['Sample state'] = 'Try sample EXP, LP, Farming, Dynamis, Assault, Limbus, or battlefield readings. Your session keeps tracking normally.',
     ['Sound'] = 'Choose a sound from the list. To add your own .mp3 or .wav, put it in config/addons/momentum/sounds and press Refresh.',
     ['Sound volume'] = '0 is silent. 100 is full volume.',
     ['Profile'] = 'Choose a saved layout, then press Load profile to use it or Delete profile to remove it.',
@@ -306,7 +307,7 @@ local function position(settings, services)
 end
 
 local function starter_name(settings)
-    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }) do
+    for _, name in ipairs({ 'Minimal', 'Leveling', 'Merits', 'Farming', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }) do
         local chosen, matches, index = {}, true, 0;
         for _, id in ipairs(defaults.STARTER_LAYOUTS[name]) do chosen[id] = true; end
         for _, item in ipairs(defaults.READOUTS) do
@@ -336,6 +337,7 @@ local catalog_groups = {
     { 'Merit points and LP', 'merits merit_rate lp_progress lp_rate merits_session merit_headroom lp_remaining merit_eta' },
     { 'Session', 'last session net elapsed best_chain exp_session lp_session zone_time zone_name' },
     { 'Gil', 'gil gil_gained gil_spent gil_net gil_rate' },
+    { 'Farming', 'farm_items farm_rate farm_time farm_last farm_watched farm_watched_rate farm_watched_last farm_goal farm_pool farm_mob_gil farm_value farm_value_rate' },
     { 'Storage', 'inventory_slots inventory_free satchel_slots satchel_free' },
     { 'Buffs', 'dedication food ring' },
     { 'Dynamis', 'dyna_zone dyna_time dyna_extensions dyna_currency dyna_af2 dyna_currency_received dyna_currency_rate dyna_af2_received dyna_bynes dyna_bronze dyna_shells dyna_bynes_received dyna_bronze_received dyna_shells_received dyna_kills dyna_objectives dyna_pool dyna_subjob dyna_weakness dyna_next_entry' },
@@ -514,10 +516,8 @@ local function display_page(settings, services)
                 if scroll_selected and selected == id then imgui.SetScrollHereY(0.5); scroll_selected = false; end
                 tip(definition.name .. '\n' .. definition.help);
                 if wrapped then
-                    local next_x, next_y = imgui.GetCursorScreenPos();
                     imgui.SetCursorScreenPos({ left, top });
                     note(label);
-                    imgui.SetCursorScreenPos({ next_x, next_y });
                 end
                 imgui.PopID();
             end
@@ -545,7 +545,7 @@ local function display_page(settings, services)
             { 'Remove all dividers', function()
                 for _, item in ipairs(defaults.READOUTS) do set_divider(settings, item.id, false); end
             end, 'Remove the dividers from every readout. Your chosen divider style stays saved.' } });
-        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }, function(value)
+        combo('Starter layout', starter_name(settings), { 'Minimal', 'Leveling', 'Merits', 'Farming', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM' }, function(value)
             if defaults.apply_starter(settings, value) then pending = true; end
         end);
         imgui.BeginDisabled(settings.modes.selected ~= 'auto');
@@ -562,6 +562,10 @@ local function display_page(settings, services)
     if section('Selected readout', 'Select a row above to change its label, alignment group, priority, conditions, divider, or color.', false) then
         local definition = readouts.definition(selected);
         heading(definition.name, definition.help);
+        if selected == 'job' then
+            checkbox(settings.display, 'show_subjob', 'Show subjob and level',
+                'Add your subjob and its current level after your main job. Uses the level shown by the game, including Level Sync.');
+        end
         input(settings.display.labels, selected, 'Label##readout', 32, 'Leave this empty to show only the value and any built-in EXP or LP unit.');
         local divider = { settings.display.dividers[selected] ~= false };
         if imgui.Checkbox('Divider before this readout', divider) then set_divider(settings, selected, divider[1]); end
@@ -719,7 +723,7 @@ local function fixed_preview(settings, view, services)
         beside(sample_width);
         imgui.SetNextItemWidth(math.min(sample_width, (imgui.GetContentRegionAvail())));
         if imgui.BeginCombo('##Sample state', settings.preview.scenario) then
-            for _, name in ipairs({ 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }) do
+            for _, name in ipairs({ 'Leveling', 'Merits', 'Farming', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }) do
                 if imgui.Selectable(name, name == settings.preview.scenario) then settings.preview.scenario = name; pending = true; end
             end
             imgui.EndCombo();
@@ -860,6 +864,12 @@ local search_sections = {
     { 'Tracking', 'EXP and merits', 'rate hour window exp limit points mode merits reward sample earned net' },
     { 'Tracking', 'Progress goal', 'goal target level session buffer merit' },
     { 'Tracking', 'Visibility', 'hide map event game ui visibility chat close disappear keep always permanent typing idle' },
+    { 'Farming', 'Farming options', 'farming items hour automatic layout profile pool drops received copy summary' },
+    { 'Farming', 'Watched items and goal', 'farming wanted item search number watched stacks quantity goal fill last drop' },
+    { 'Farming', 'Items received', 'farming item loot received count breakdown rate per hour last drop filter' },
+    { 'Farming', 'Recent items', 'farming recent drops loot personal treasure received history' },
+    { 'Farming', 'Gil and bag space', 'farming gil gained spent net mobs inventory mog satchel free slots warning' },
+    { 'Farming', 'Estimated loot value', 'farming estimated item loot value unit price gil per hour manual' },
     { 'Dynamis', 'Dynamis options', 'dynamis automatic layout mode enabled tracking history retention' },
     { 'Dynamis', 'Current Dynamis run', 'dynamis time hourglass currency relic armor af2 received found reset clear summary copy weakness support job clear' },
     { 'Dynamis', 'Objectives and time extensions', 'dynamis te time extension boss weakening wave monsters unknown objectives' },
@@ -893,6 +903,7 @@ local search_sections = {
     { 'Alerts', 'Missed EXP', 'alert notification missed no exp reason distance range sound volume notice visual cooldown play refresh' },
     { 'Alerts', 'Dynamis', 'dynamis alert warning time extension wanted drop pool expires clear support job sound notice' },
     { 'Alerts', 'Assault and battlefields', 'assault limbus bcnm ksnm enm alert warning time objective clear fail wanted drop entry ready cooldown sound' },
+    { 'Alerts', 'Farming', 'farming wanted item received goal bag space inventory satchel low free slots notice sound' },
     { 'Alerts', 'Quiet conditions', 'quiet paused event cutscene suppress' },
     { 'Appearance', 'Skin and text', 'skin font text size compact tab navigation selector' },
     { 'Appearance', 'Bar and progress', 'opacity transparency corners round border fill shadow rail accent text visibility' },
@@ -963,7 +974,7 @@ local function search(settings)
     end
 end
 
-local bar_modes = { 'auto', 'exp', 'merits', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' };
+local bar_modes = { 'auto', 'exp', 'merits', 'farming', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' };
 local mode_names = require('ui.modes').names;
 local function toolbar(settings, view, services)
     imgui.AlignTextToFramePadding();
@@ -978,12 +989,12 @@ local function toolbar(settings, view, services)
         end
         imgui.EndCombo();
     end
-    help('Choose a mode to keep its saved bar selected. Automatic uses your saved layouts and added readouts. Event switching is under Events; EXP / Merits switching is under Display. This only changes the bar.');
+    help('Choose a mode to keep its saved bar selected. Automatic uses your saved layouts and added readouts. Farming outside events is under Farming. Event switching is under Events; EXP / Merits switching is under Display. This only changes the bar.');
     button_row({
         { view.paused and 'Resume session' or 'Pause session', function()
             if services.session_pause then services.session_pause(not view.paused); end
-        end, (view.paused and 'Resume counting EXP, LP, merit points, gil changes, and session time.'
-            or 'Stop counting EXP, LP, merit points, gil changes, and session time. Current gil and bag space keep updating.')
+        end, (view.paused and 'Resume counting EXP, LP, merit points, farming items, gil changes, and session time.'
+            or 'Stop counting EXP, LP, merit points, farming items, gil changes, and session time. Current gil and bag space keep updating.')
             .. ' EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event drops still count.' },
         { 'Reset session', function()
             local current = services.session_current and services.session_current();
@@ -1000,21 +1011,23 @@ local function toolbar(settings, view, services)
                     status = problem or 'The session could not be saved and reset. Wait for your EXP and LP to load, then try again.';
                 end
             end
-        end, 'Save this session and clear its totals, EXP/HR, LP/HR, Gil/HR, and Next. Current gil and bag space stay live. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event totals stay as they are.' },
+        end, 'Save this session and clear its totals, farming items, EXP/HR, LP/HR, Items/HR, Gil/HR, and Next. Current gil and bag space stay live. EXP chain, food, Dedication, EXP ring recast, zone and event timers keep running. Event totals stay as they are.' },
         { 'Undo', function() if services.undo then services.undo(); end end, 'Undo one of the last eight saved settings changes. This does not undo a session reset.' },
     });
     beside(108);
     imgui.SetNextItemWidth(math.min(108, (imgui.GetContentRegionAvail())));
     if imgui.BeginCombo('##reset_actions', 'Reset...') then
-        if imgui.Selectable('Reset this section') and services.reset_section then
-            services.reset_section(page_section[settings.window.tab]);
+        local reset_section = page_section[settings.window.tab];
+        if reset_section then
+            if imgui.Selectable('Reset this section') and services.reset_section then services.reset_section(reset_section); end
+            tip('Reset the settings on this tab. Use Undo to bring your previous choices back.');
         end
-        tip('Reset the settings on this tab. Use Undo to bring your previous choices back.');
         if imgui.Selectable('Reset layout') then reset_layout = true; status = nil; end
         tip('Restore the default layout and settings after confirmation. Saved sessions remain in history.');
         imgui.EndCombo();
     end
-    tip('Restore settings for this tab or the entire layout. Use Reset session to start a fresh session.');
+    tip(page_section[settings.window.tab] and 'Restore settings for this tab or the entire layout. Use Reset session to start a fresh session.'
+        or 'Restore the default layout and settings after confirmation. Saved profiles and sessions are kept.');
     if reset_layout then
         note('Restore the default layout and settings? Session history stays as it is.');
         button_row({ { 'Restore default layout', function()
@@ -1082,6 +1095,7 @@ function settings_window.draw(settings, view, services)
             if status then note(status); end
             if settings.window.tab == 'Display' then display_page(settings, services);
             elseif settings.window.tab == 'Tracking' then tracking_page(settings, view, services);
+            elseif settings.window.tab == 'Farming' then farming.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Dynamis' then dynamis.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Events' then events.draw(settings, view, services, controls);
             elseif settings.window.tab == 'Details' then details.draw(settings, view, services, controls);
@@ -1112,6 +1126,7 @@ function settings_window.close()
     details.cancel_pending();
     dynamis.cancel_pending();
     events.cancel_pending();
+    farming.cancel_pending();
     focus_on_open = true;
 end
 

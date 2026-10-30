@@ -1,4 +1,5 @@
 local rules = require('data.dynamis_rules');
+local packets = require('core.packets');
 local bit = require('bit');
 local client = {};
 local methods = {};
@@ -12,8 +13,7 @@ local function uint(data, offset, size)
 end
 
 local function valid(event, size)
-    return type(event) == 'table' and not event.injected and type(event.data) == 'string'
-        and type(event.size) == 'number' and event.size >= size and #event.data >= event.size;
+    return packets.valid(event, size) and event.size <= 512 and event.size % 1 == 0 and #event.data >= event.size;
 end
 
 local function call(object, name, ...)

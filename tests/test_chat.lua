@@ -128,6 +128,28 @@ for _, change in ipairs({ 'no_match', 'duplicate', 'throw_find', 'throw_read', '
     check(not loaded and type(failure) == 'string', 'Missing, ambiguous, or unreadable signatures fail closed: ' .. change);
     check(r:read(1920, 1080) == nil, 'An unsuccessful load never supplies a rectangle.');
 end
+for _, change in ipairs({ 'valid', 'no_match', 'duplicate', 'throw_find', 'throw_read', 'short_read' }) do
+    r, s = fixture();
+    if change ~= 'valid' then s[change] = true; end
+    local loaded, failure;
+    local worker = coroutine.create(function() loaded, failure = r:load(coroutine.yield); end);
+    local resumes = 0;
+    while coroutine.status(worker) ~= 'dead' do
+        local before = s.finds;
+        local ok, problem = coroutine.resume(worker);
+        resumes = resumes + 1;
+        check(ok, 'Cooperative chat startup contains backend failures: ' .. tostring(problem));
+        check(s.finds - before <= 1, 'A resumed chat scan finds at most one signature: ' .. change);
+        check(resumes <= 5, 'A cooperative chat scan completes without spinning.');
+    end
+    if change == 'valid' then
+        check(loaded and failure == nil and s.finds == 4, 'Cooperative chat startup keeps both uniqueness checks.');
+        check(r:read(1920, 1080) ~= nil and s.finds == 4, 'Cooperative chat startup supplies geometry without rescanning.');
+    else
+        check(not loaded and type(failure) == 'string', 'Cooperative chat startup still fails closed: ' .. change);
+        check(r:read(1920, 1080) == nil, 'A failed cooperative scan never publishes geometry.');
+    end
+end
 r, s = fixture(); s.chat_match = 0xFFFF0;
 check(not r:load() and s.reads == 0, 'A scan result outside the module is never dereferenced.');
 r, s = fixture(); s:write(s.chat_match + 6, 0xF00000, 4);

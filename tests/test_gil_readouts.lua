@@ -11,7 +11,9 @@ local settings = defaults.make();
 for _, id in ipairs(ids) do eq(settings.display.enabled[id], false, id .. ' starts off'); end
 for name in pairs(defaults.STARTER_LAYOUTS) do
     defaults.apply_starter(settings, name);
-    for _, id in ipairs(ids) do eq(settings.display.enabled[id], false, name .. ' stays compact without ' .. id); end
+    for _, id in ipairs(ids) do
+        eq(settings.display.enabled[id], name == 'Farming' and (id == 'gil_net' or id == 'gil_rate'), name .. ' keeps its chosen gil readings');
+    end
 end
 settings.display.order = ids;
 for _, id in ipairs(ids) do settings.display.enabled[id] = true; end

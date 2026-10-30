@@ -44,6 +44,7 @@ end
 
 function methods:refresh(now, force)
     if self.group == '' or not self.group then return true; end
+    if not force and self.checked and not self.error then return true; end
     if not force and self.checked and now >= self.checked and now - self.checked < 5 then return true; end
     self.checked = now;
     local data, problem = self.read(self.path);

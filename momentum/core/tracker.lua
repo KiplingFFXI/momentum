@@ -2,6 +2,7 @@ local rules = require('data.phoenix_rules')
 local chains = require('core.chains')
 local goals = require('core.goals')
 local gil = require('core.gil')
+local farming = require('core.farming')
 local tracker = {}
 local methods = {}
 methods.__index = methods
@@ -100,7 +101,7 @@ local function exp_delta(before, after)
 end
 
 function tracker.new()
-    local self = setmetatable({ chain_state = chains.new(), gil = gil.new(), tokens = {}, token_order = {}, paused = false }, methods)
+    local self = setmetatable({ chain_state = chains.new(), gil = gil.new(), farming = farming.new(), tokens = {}, token_order = {}, paused = false }, methods)
     self:reset(0)
     return self
 end
@@ -186,6 +187,7 @@ end
 function methods:reset(now, keep_chain)
     now = self:_now(now)
     self.gil:reset(now)
+    self.farming:reset(now)
     self.started = nil
     self.pause_total = 0
     self.paused_at = self.paused and now or nil
@@ -222,6 +224,7 @@ end
 function methods:discontinuity(now)
     now = self:_now(now)
     self.gil:discontinuity(now)
+    self.farming:discontinuity(now)
     self:_reconcile(now + MATCH_SECONDS + 1)
     self.baseline = nil
     self.pending_gains = {}
@@ -249,6 +252,7 @@ function methods:pause(now, paused)
     end
     self.paused = paused
     self.gil:set_paused(paused, now)
+    self.farming:set_paused(paused, now)
     self.pending_gains = {}
     self.pending_awards = {}
     self.death_balance = 0
@@ -279,6 +283,7 @@ function methods:observe(snapshot, now)
         self.token_order = {}
     end
     self.identity = { id = snapshot.id, job = snapshot.job }
+    self.farming:observe(true, now)
     local before = self.baseline
     local previous_zone = self.snapshot and self.snapshot.zone
     self.snapshot = snapshot
@@ -451,7 +456,7 @@ function methods:export(now)
     self:_reconcile(now)
     local elapsed = self:_elapsed(now)
     local result = { version = 1, identity = copy(self.identity), elapsed = elapsed,
-        gil = self.gil:export(now),
+        gil = self.gil:export(now), farming = self.farming:export(now),
         started = self.started ~= nil, paused = self.paused, best_chain = self.chain_state.best,
         last_amount = self.last_amount, last_kind = self.last_kind,
         recent_exp = copy(self.recent_exp), recent_lp = copy(self.recent_lp), buckets = {} }
@@ -516,12 +521,16 @@ function methods:restore(data, now, identity)
     local restored_gil = gil.new()
     if data.gil ~= nil and (not restored_gil:restore(data.gil, now) or data.gil.paused ~= data.paused) then return false end
     restored_gil:set_paused(data.paused, now)
+    local restored_farming = farming.new()
+    if data.farming ~= nil and (not restored_farming:restore(data.farming, now) or data.farming.paused ~= data.paused) then return false end
+    restored_farming:set_paused(data.paused, now)
     now = number(now) or 0
     self.last_time = nil
     self.snapshot = { valid = false }
     self.paused = data.paused
     self:reset(now)
     self.gil = restored_gil
+    self.farming = restored_farming
     self.identity = copy(data.identity)
     self.started = data.started and now - elapsed or nil
     self.paused_at = self.paused and now or nil
@@ -590,9 +599,12 @@ function methods:view(now, settings)
     local goal_remaining = snapshot.merits and snapshot.lp and math.max(0, (goal - snapshot.merits) * rules.lp_per_merit - snapshot.lp) or nil
     local result = {
         valid = snapshot.valid == true,
-        gil = self.gil:view(now),
+        gil = self.gil:view(now), farming = self.farming:view(now, settings.farming),
         job = snapshot.job,
         job_name = snapshot.job_name,
+        subjob = snapshot.subjob,
+        subjob_name = snapshot.subjob_name,
+        subjob_level = snapshot.subjob_level,
         level = snapshot.level,
         effective_level = snapshot.effective_level,
         mode = mode,

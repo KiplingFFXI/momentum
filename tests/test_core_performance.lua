@@ -124,8 +124,8 @@ files['memory-1001.json'].entries[1].name = 'Other client'
 local before = writes
 ok, problem = manager:checkpoint(133)
 equal(ok, false, 'External session-file change is rejected')
-equal(problem:find('Another game client', 1, true) ~= nil, true, 'Conflict reason remains explicit')
-equal(writes, before, 'Conflict never overwrites another client')
+equal(problem:find('changed outside Momentum', 1, true) ~= nil, true, 'External file changes remain explicit')
+equal(writes, before, 'An external file change is not overwritten')
 equal(manager:checkpoint_due(134), false, 'Conflict checks retain retry throttle')
 equal(manager:checkpoint_due(163), true, 'Conflict can be retried at due time')
 return { count = count }

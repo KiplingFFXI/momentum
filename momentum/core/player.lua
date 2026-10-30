@@ -54,19 +54,25 @@ local function current_gil(id)
     return gil_balance;
 end
 
-local function pointer(pattern, offset, extra)
-    local match = ashita.memory.find('FFXiMain.dll', 0, pattern, offset or 0, 0);
+local function pointer(pattern, offset, extra, pause)
+    local ok, match = pcall(ashita.memory.find, 'FFXiMain.dll', 0, pattern, offset or 0, 0);
+    if pause then pause(); end
+    if not ok then error(match, 0); end
     if (not match or match == 0) then return 0; end
     return ashita.memory.read_uint32(match + (extra or 0)) or 0;
 end
 
-function player.load()
-    event_flag = pointer('A0????????84C0741AA1????????85C0741166A1????????663B05????????0F94C0C3', 0, 1);
-    interface = pointer('8B4424046A016A0050B9????????E8????????F6D81BC040C3', 0, 10);
-    focus_slot = pointer('8B480C85C974??8B510885D274??3B05', 16, 0);
-    if (focus_slot ~= 0 and focus_slot ~= interface + 0x54) then interface, focus_slot = 0, 0; end
-    local slot = pointer('8B0D????????8B410C8B49108D04808D04808D04808D04C1C3', 2, 0);
+function player.load_clock(pause)
+    local slot = pointer('8B0D????????8B410C8B49108D04808D04808D04808D04C1C3', 2, 0, pause);
     time_struct = slot ~= 0 and ashita.memory.read_uint32(slot) or 0;
+end
+
+function player.load(pause, clock_ready)
+    event_flag = pointer('A0????????84C0741AA1????????85C0741166A1????????663B05????????0F94C0C3', 0, 1, pause);
+    interface = pointer('8B4424046A016A0050B9????????E8????????F6D81BC040C3', 0, 10, pause);
+    focus_slot = pointer('8B480C85C974??8B510885D274??3B05', 16, 0, pause);
+    if (focus_slot ~= 0 and focus_slot ~= interface + 0x54) then interface, focus_slot = 0, 0; end
+    if not clock_ready then player.load_clock(pause); end
 end
 
 function player.on_zone(id)
@@ -117,7 +123,7 @@ local function effect_seconds(raw, utc)
     if (ticks >= 0 and ticks <= 604800 * 60) then return ticks / 60; end
 end
 
-function player.read()
+function player.read(include_subjob)
     if stats:GetLoginStatus() ~= 2 or truth(stats:GetIsZoning()) then return invalid(nil, true); end
     local entity = GetPlayerEntity();
     if entity == nil then return invalid(); end
@@ -139,6 +145,16 @@ function player.read()
         limit_mode = truth(stats:GetIsLimitModeEnabled()), limit_breaker = truth(stats:GetIsLimitBreaker()),
         exp_locked = truth(stats:GetIsExperiencePointsLocked()), dead = status == 2 or status == 3, dedication = false,
         food = false, food_known = false, sync_active = nil, utc = player.utc(), gil_current = current_gil(id) };
+    if include_subjob then
+        local subjob = stats:GetSubJob();
+        if jobs[subjob] then
+            snapshot.subjob, snapshot.subjob_name = subjob, jobs[subjob];
+            local sublevel = stats:GetSubJobLevel();
+            if type(sublevel) == 'number' and sublevel > 0 and sublevel <= 255 and sublevel == math.floor(sublevel) then
+                snapshot.subjob_level = sublevel;
+            end
+        end
+    end
     local icons, timers = stats:GetStatusIcons(), stats:GetStatusTimers();
     if (icons ~= nil) then
         snapshot.food_known = true;

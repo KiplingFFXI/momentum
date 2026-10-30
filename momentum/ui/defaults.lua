@@ -2,7 +2,7 @@ local theme = require('ui.theme');
 local defaults = {};
 
 defaults.READOUTS = {
-    { id = 'job', name = 'Job and level', label = '', enabled = true, help = 'Shows your main job, normal level, and synced level while Level Sync is active.' },
+    { id = 'job', name = 'Job and level', label = '', enabled = true, help = 'Shows your main job, normal level, and synced level while Level Sync is active. Select this readout to add your subjob and its current level.' },
     { id = 'progress', name = 'EXP / LP progress', label = '', enabled = true, help = 'Shows your current EXP or limit points (LP) and how much you need for the next level or merit point. Choose which one to show in Tracking.' },
     { id = 'remaining', name = 'TNL / LP needed', label = 'TNL', enabled = true, help = 'Shows the EXP needed for your next level, or the LP needed for your next merit point. At level 75, EXP shows how much room is left in your EXP buffer.' },
     { id = 'rate', name = 'EXP/HR', label = '', enabled = true, help = 'Shows your EXP per hour over the time period chosen in Tracking. It changes to LP/HR when the bar shows limit points. Choose EXP/HR (always) or LP/HR (always) to show one of these all the time.' },
@@ -103,6 +103,18 @@ defaults.READOUTS = {
     { id = 'inventory_free', name = 'Inventory free slots', label = 'Inventory free', enabled = false, help = 'Shows empty slots in your Inventory. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means Inventory is not known yet.' },
     { id = 'satchel_slots', name = 'Mog Satchel slots', label = 'Satchel', enabled = false, help = 'Shows used Mog Satchel slots and total slots, such as 35 / 80. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means your Mog Satchel is not known yet.' },
     { id = 'satchel_free', name = 'Mog Satchel free slots', label = 'Satchel free', enabled = false, help = 'Shows empty slots in your Mog Satchel. Each stack uses one slot. Counts stay live when you pause or reset your session. -- means your Mog Satchel is not known yet.' },
+    { id = 'farm_items', name = 'Items received this session', label = 'Items', enabled = false, help = 'Counts individual treasure items awarded to you this session. Other players\' items, purchases, trades, and bag moves do not count. Pause stops this total; Reset session clears it.' },
+    { id = 'farm_rate', name = 'Items/HR', label = 'Items/HR', enabled = false, help = 'Shows treasure items received per hour. It starts with your first received item and needs one minute of tracking. Paused, offline, and unavailable time do not count.' },
+    { id = 'farm_time', name = 'Farming time', label = 'Farm time', enabled = false, help = 'Shows the tracked time since your first received treasure item. It does not need EXP. Paused, offline, and unavailable time do not count.' },
+    { id = 'farm_last', name = 'Time since last item', label = 'Last item', enabled = false, help = 'Shows farming time since your last received treasure item. -- means none has been received this session.' },
+    { id = 'farm_watched', name = 'Watched item received', label = 'Watched', enabled = false, help = 'Shows the item selected in Farming and how many you received this session. Choose a goal to track items or stacks.' },
+    { id = 'farm_watched_rate', name = 'Watched item per hour', label = 'Watched/HR', enabled = false, help = 'Shows the selected item\'s received quantity per hour over your farming time. It needs one minute of tracking after the first received treasure item.' },
+    { id = 'farm_watched_last', name = 'Time since watched item', label = 'Last watched', enabled = false, help = 'Shows farming time since you last received the item selected in Farming. -- means none has been received this session. Paused and offline time do not count.' },
+    { id = 'farm_goal', name = 'Farming item goal', label = 'Item goal', enabled = false, help = 'Shows progress toward the selected item goal in Farming. A stack goal uses that item\'s stack size. Only treasure awarded to you counts.' },
+    { id = 'farm_pool', name = 'Treasure pool drops seen', label = 'Pool found', enabled = false, help = 'Counts new treasure items your client saw enter the pool this session, including items awarded to other players. Existing items seen on loading do not count as new drops.' },
+    { id = 'farm_mob_gil', name = 'Gil from mobs', label = 'Mob gil', enabled = false, help = 'Adds up gil awarded to you by defeated monsters while this session is running. This is separate from all changes in your carried gil.' },
+    { id = 'farm_value', name = 'Estimated loot value', label = 'Loot value', enabled = false, help = 'Estimates the value of received items using the unit prices you enter in Farming. Unpriced items are not valued. This is separate from actual gil and is not added to profit.' },
+    { id = 'farm_value_rate', name = 'Estimated loot value per hour', label = 'Value/HR', enabled = false, help = 'Estimates received item value per hour using your manual unit prices and farming time. It needs one minute of tracking. This is not actual gil earned.' },
 };
 
 defaults.ALERTS = {
@@ -116,6 +128,7 @@ defaults.ALERTS = {
     { 'event_objective', 'Assault or battlefield objective completed' }, { 'event_clear', 'Assault or battlefield won' },
     { 'event_failure', 'Assault or battlefield lost' }, { 'event_drop', 'Wanted Assault or battlefield drop' },
     { 'event_ready', 'Observed entry cooldown ended' },
+    { 'farm_item', 'Wanted item received' }, { 'farm_goal', 'Farming item goal reached' }, { 'farm_space', 'Bag space running low' },
 };
 
 defaults.STARTER_LAYOUTS = {
@@ -128,6 +141,7 @@ defaults.STARTER_LAYOUTS = {
     BCNM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
     KSNM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
     ENM = { 'event_name', 'event_time', 'event_objective', 'event_status' },
+    Farming = { 'farm_items', 'farm_rate', 'gil_net', 'gil_rate', 'inventory_free' },
 };
 
 function defaults.apply_starter(settings, name)
@@ -159,11 +173,13 @@ function defaults.make()
             x = 0, y = 500, width = 640, height = 18, bottom = 2, locked = false, snap = true },
         display = { mode = 'auto', alignment = 'left', label_position = 'before', order = {}, enabled = {}, labels = {}, dividers = {}, colors = {}, divider = ' ', label_divider = ' ',
             groups_enabled = false, groups = {}, priority_overflow = false, priorities = {}, pinned = {}, conditions = {},
-            chain_strip = true, short = false, spacing = 8, preset = 'Leveling', auto_layout = false, hover = true, show_fill = true, show_text = true },
+            chain_strip = true, short = false, spacing = 8, preset = 'Leveling', auto_layout = false, hover = true, show_fill = true, show_text = true, show_subjob = false },
         tracking = { window = 900, rate_basis = 'earned', goal_merits = 5, hide_idle = false, average_count = 10,
             goal_type = 'stored_merits', goal_level = 75, goal_exp = 10000, goal_session_merits = 1, goal_buffer = 10000 },
         sessions = { resume = true, retention = 30 },
-        modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, previous_display = {} },
+        modes = { selected = 'auto', active = 'exp', layout_version = 0, auto = {}, exp = {}, merits = {}, farming = {}, farming_previous = 'exp', previous_display = {} },
+        farming = { selected_item = 0, wanted = {}, goal = 0, goal_unit = 'items', stack_size = 1, prices = {},
+            goal_fill = false, auto_layout = false, low_slots = 5, space_bag = 'inventory' },
         dynamis = { enabled = true, auto_layout = true, layout_active = false, wanted_jobs = {}, wanted_items = {}, retention = 30,
             warning_minutes = { 10, 5, 1 }, pool_warning_seconds = 60 },
         events = { enabled = true, auto_layout = true, history_limit = 30, wanted = {}, warning_minutes = 5, enm_group = 0, layouts = {} },
@@ -223,6 +239,12 @@ end
 
 local function plain(value, limit)
     return tostring(value):gsub('[^ -~]', ''):sub(1, limit);
+end
+
+local function sound_file(value)
+    value = value:match('[^\\/:]*$'):gsub('[%c"]', '');
+    if #value > 200 or value:find('^%.*$') then return ''; end
+    return value;
 end
 
 local function choice(value, choices, fallback)
@@ -298,7 +320,7 @@ function defaults.tidy(settings)
     if type(settings) ~= 'table' then return defaults.make(); end
     retire_bonus_readout(settings.display);
     if type(settings.modes) == 'table' then
-        for _, key in ipairs({ 'exp', 'merits', 'previous_display', 'legacy_auto_display' }) do retire_bonus_readout(settings.modes[key]); end
+        for _, key in ipairs({ 'exp', 'merits', 'farming', 'previous_display', 'legacy_auto_display' }) do retire_bonus_readout(settings.modes[key]); end
     end
     if type(settings.dynamis) == 'table' then
         retire_bonus_readout(settings.dynamis.layout);
@@ -319,12 +341,13 @@ function defaults.tidy(settings)
     settings.window.sections[old_section] = nil;
     local known, seen = {}, {};
     for _, item in ipairs(defaults.READOUTS) do known[item.id] = true; end
-    settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' }, 'auto');
-    settings.modes.active = choice(settings.modes.active, { 'exp', 'merits' }, 'exp');
+    settings.modes.selected = choice(settings.modes.selected, { 'auto', 'exp', 'merits', 'farming', 'dynamis', 'assault', 'limbus', 'bcnm', 'ksnm', 'enm' }, 'auto');
+    settings.modes.active = choice(settings.modes.active, { 'exp', 'merits', 'farming' }, 'exp');
+    settings.modes.farming_previous = choice(settings.modes.farming_previous, { 'exp', 'merits' }, 'exp');
     settings.modes.layout_version = settings.modes.layout_version == 1 and 1 or 0;
     settings.modes.auto.mode = choice(settings.modes.auto.mode, { 'auto', 'exp', 'lp' }, 'auto');
     settings.modes.auto.auto_layout = settings.modes.auto.auto_layout == true;
-    for _, key in ipairs({ 'exp', 'merits', 'previous_display' }) do
+    for _, key in ipairs({ 'exp', 'merits', 'farming', 'previous_display' }) do
         if next(settings.modes[key]) then tidy_saved_display(settings.modes[key], fresh.display, known); end
     end
     if type(settings.modes.legacy_auto_display) == 'table' then tidy_saved_display(settings.modes.legacy_auto_display, fresh.display, known); end
@@ -341,6 +364,29 @@ function defaults.tidy(settings)
         if enabled == true and item and item % 1 == 0 and item > 0 and item <= 65535 then wanted[tostring(item)] = true; end
     end
     settings.events.wanted = wanted;
+    local farming = settings.farming;
+    farming.selected_item = math.floor(number(farming.selected_item, 0, 65535, 0));
+    farming.goal = math.floor(number(farming.goal, 0, 1000000000, 0));
+    farming.goal_unit = choice(farming.goal_unit, { 'items', 'stacks' }, 'items');
+    farming.stack_size = math.floor(number(farming.stack_size, 1, 999, 1));
+    farming.goal_fill, farming.auto_layout = farming.goal_fill == true, farming.auto_layout == true;
+    farming.low_slots = math.floor(number(farming.low_slots, 0, 80, 5));
+    farming.space_bag = choice(farming.space_bag, { 'inventory', 'satchel', 'both' }, 'inventory');
+    local wanted_items, prices, wanted_count, price_count = {}, {}, 0, 0;
+    for id, enabled in pairs(farming.wanted) do
+        local item = tonumber(id);
+        if wanted_count < 1024 and enabled == true and item and item % 1 == 0 and item > 0 and item <= 65535 then
+            wanted_items[tostring(item)], wanted_count = true, wanted_count + 1;
+        end
+    end
+    for id, price in pairs(farming.prices) do
+        local item, amount = tonumber(id), tonumber(price);
+        if price_count < 1024 and item and item % 1 == 0 and item > 0 and item <= 65535
+            and amount and amount == amount and amount >= 0 and amount <= 999999999 then
+            prices[tostring(item)], price_count = math.floor(amount), price_count + 1;
+        end
+    end
+    farming.wanted, farming.prices = wanted_items, prices;
     settings.account.group = plain(settings.account.group, 80):match('^%s*(.-)%s*$');
     settings.display.order = {};
     for _, id in ipairs(saved_order) do
@@ -439,14 +485,12 @@ function defaults.tidy(settings)
     settings.planner.level = math.floor(number(settings.planner.level, 10, 75, 50));
     settings.planner.population = math.floor(number(settings.planner.population, 0, 100000, 0));
     settings.alerts.food_volume = math.floor(number(settings.alerts.food_volume, 0, 100, 100) + 0.5);
-    settings.alerts.food_sound = settings.alerts.food_sound:match('[^\\/:]*$'):gsub('[%c"]', ''):sub(1, 160);
-    if settings.alerts.food_sound:find('^%.*$') then settings.alerts.food_sound = ''; end
+    settings.alerts.food_sound = sound_file(settings.alerts.food_sound);
     for _, alert in ipairs(defaults.ALERTS) do
         local event = settings.alerts.events[alert[1]];
         event.volume = math.floor(number(event.volume, 0, 100, 100));
         event.cooldown = math.floor(number(event.cooldown, 0, 3600, 30));
-        event.file = event.file:match('[^\\/:]*$'):gsub('[%c"]', ''):sub(1, 160);
-        if event.file:find('^%.*$') then event.file = ''; end
+        event.file = sound_file(event.file);
     end
     settings.alerts.food_soon_seconds = math.floor(number(settings.alerts.food_soon_seconds, 5, 600, 60));
     settings.alerts.chain_soon_seconds = math.floor(number(settings.alerts.chain_soon_seconds, 1, 60, 10));
@@ -456,8 +500,8 @@ function defaults.tidy(settings)
     settings.window.x = number(settings.window.x, -100000, 100000, 80);
     settings.window.y = number(settings.window.y, -100000, 100000, 60);
     settings.window.font_size = number(settings.window.font_size, 12, 28, 18);
-    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
-    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }, 'Leveling');
+    settings.window.tab = choice(settings.window.tab, { 'Display', 'Tracking', 'Farming', 'Dynamis', 'Events', 'Details', 'Alerts', 'Appearance', 'Preview', 'Session', 'Profiles' }, 'Display');
+    settings.preview.scenario = choice(settings.preview.scenario, { 'Leveling', 'Merits', 'Farming', 'Dynamis', 'Assault', 'Limbus', 'BCNM', 'KSNM', 'ENM', 'Capped', 'No data', 'Paused' }, 'Leveling');
     for key, color in pairs(settings.style.colors) do
         if fresh.style.colors[key] then
             for i = 1, 4 do color[i] = number(color[i], 0, 1, fresh.style.colors[key][i]); end

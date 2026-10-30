@@ -66,6 +66,14 @@ function MOCK.finish_startup()
     MOCK.fire('d3d_beginscene', true);
     MOCK.now = MOCK.now + 3;
     MOCK.fire('d3d_beginscene', true);
+    MOCK.finish_resources();
+end
+function MOCK.finish_resources()
+    for _ = 1, 16 do
+        local app = MOMENTUM_TEST;
+        if not app or app.state.resources_ready or app.state.startup_failed then return; end
+        MOCK.fire('d3d_beginscene', true);
+    end
 end
 function MOCK.load_addon(chunk)
     if chunk then chunk(); else dofile(ADDON_DIR .. '/momentum.lua'); end

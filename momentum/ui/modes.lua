@@ -3,7 +3,7 @@ local defaults = require('ui.defaults');
 local dynamis = require('ui.dynamis_layout');
 local events = require('ui.event_layout');
 local modes = {};
-modes.names = { auto = 'Automatic', exp = 'EXP', merits = 'Merits', dynamis = 'Dynamis',
+modes.names = { auto = 'Automatic', exp = 'EXP', merits = 'Merits', farming = 'Farming', dynamis = 'Dynamis',
     assault = 'Assault', limbus = 'Limbus', bcnm = 'BCNM', ksnm = 'KSNM', enm = 'ENM' };
 
 local function saved(display)
@@ -41,9 +41,9 @@ function modes.prepare(settings)
     local display = normal_display(settings);
     local automatic = saved(options.previous_display) and options.previous_display or display;
     options.auto = { mode = automatic.mode or 'auto', auto_layout = automatic.auto_layout == true };
-    local active = options.selected == 'exp' and 'exp' or options.selected == 'merits' and 'merits'
+    local active = options.selected == 'farming' and 'farming' or options.selected == 'exp' and 'exp' or options.selected == 'merits' and 'merits'
         or display.preset == 'Merits' and 'merits' or 'exp';
-    if options.selected == 'exp' or options.selected == 'merits' or not saved(options[active]) then
+    if options.selected == 'exp' or options.selected == 'merits' or options.selected == 'farming' or not saved(options[active]) then
         options[active] = history.copy(display);
     elseif not history.equal(display, options[active]) then
         -- Keep the old Automatic layout if it differs from the saved mode.
@@ -73,7 +73,8 @@ local function activate(settings, active, force, stored)
     if saved(options[active]) then display = history.copy(options[active]);
     else
         display = history.copy(normal_display(settings));
-        defaults.apply_starter({ display = display }, active == 'merits' and 'Merits' or 'Leveling');
+        defaults.apply_starter({ display = display }, active == 'farming' and 'Farming' or active == 'merits' and 'Merits' or 'Leveling');
+        if active == 'farming' then display.divider = ' | '; end
     end
     apply_preferences(settings, display);
     options.active = active;
@@ -85,13 +86,22 @@ function modes.automatic(settings, earning_mode)
     modes.prepare(settings);
     if settings.modes.selected ~= 'auto' or settings.dynamis.layout_active or settings.events and settings.events.active_kind then return false; end
     preferences(settings, settings.display);
+    if settings.farming and settings.farming.auto_layout then
+        if settings.modes.active ~= 'farming' then settings.modes.farming_previous = settings.modes.active; end
+        return activate(settings, 'farming');
+    end
+    if settings.modes.active == 'farming' then
+        local active = settings.display.auto_layout and earning_mode and (earning_mode == 'lp' and 'merits' or 'exp')
+            or settings.modes.farming_previous or 'exp';
+        return activate(settings, active);
+    end
     if not settings.display.auto_layout or not earning_mode then return false; end
     return activate(settings, earning_mode == 'lp' and 'merits' or 'exp');
 end
 
 function modes.select(settings, selected)
     if selected == 'lp' then selected = 'merits'; end
-    if not modes.names[selected] then return false, 'Choose Automatic, EXP, Merits, Dynamis, Assault, Limbus, BCNM, KSNM, or ENM.'; end
+    if not modes.names[selected] then return false, 'Choose Automatic, EXP, Merits, Farming, Dynamis, Assault, Limbus, BCNM, KSNM, or ENM.'; end
     modes.prepare(settings);
     local options = settings.modes;
     local previous = options.selected;
@@ -100,8 +110,16 @@ function modes.select(settings, selected)
     if settings.events then events.switch(settings, nil); end
     dynamis.switch(settings, false);
     options.selected = selected;
-    local active = selected == 'exp' or selected == 'merits';
-    activate(settings, active and selected or options.active, true, true);
+    local active = selected == 'exp' or selected == 'merits' or selected == 'farming';
+    if selected == 'farming' and options.active ~= 'farming' then options.farming_previous = options.active; end
+    local target = active and selected or options.active;
+    if selected == 'auto' then
+        if settings.farming and settings.farming.auto_layout then
+            if target ~= 'farming' then options.farming_previous = target; end
+            target = 'farming';
+        elseif target == 'farming' then target = options.farming_previous or 'exp'; end
+    end
+    activate(settings, target, true, true);
     if selected == 'dynamis' then dynamis.switch(settings, true); end
     if events.names[selected] then events.switch(settings, selected); end
     return true;

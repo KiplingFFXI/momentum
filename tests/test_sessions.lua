@@ -143,7 +143,7 @@ ta:award({ kind = 'exp', amount = 7 }, 11)
 equal(a:checkpoint(20, true), false, 'Older client refuses an external change')
 equal(files['parallel-100.json'].entries[1].payload.session_exp, 161, 'External change is not overwritten')
 equal(a:current().session_exp, 118, 'Conflicting client retains its unsaved progress in memory')
-equal(a:problem():find('Another game client', 1, true) ~= nil, true, 'Conflict explains why saving stopped')
+equal(a:problem():find('changed outside Momentum', 1, true) ~= nil, true, 'An external file change explains why saving stopped')
 equal(a:new_session(21), nil, 'Cannot reset away unsaved progress on conflict')
 equal(a:current().session_exp, 118, 'Failed reset preserves conflicting session')
 local old_id = a:current().id
@@ -198,4 +198,41 @@ broken:select(snapshot(), 1)
 equal(broken:checkpoint(2, true), false, 'Malformed JSON not overwritten')
 file = assert(io.open(path, 'rb'))
 equal(file:read('*a'), '{broken', 'Malformed original remains intact'); file:close()
+
+local json = require('json')
+local encode, encodes = json.encode, 0
+json.encode = function(...)
+    encodes = encodes + 1
+    return encode(...)
+end
+local counted_path = MOCK_INSTALL_PATH .. '/config/addons/momentum/session_encoding.json'
+local counted = sessions.new(counted_path)
+equal(encodes, 0, 'Opening an empty session file does not encode JSON')
+local counted_tracker = counted:select(snapshot(), 0.12345678912345)
+equal(encodes, 1, 'New session writes and records its baseline with one JSON encode')
+equal(counted:checkpoint(1), true, 'An early clean checkpoint stays successful')
+equal(encodes, 1, 'An early clean checkpoint does not encode JSON')
+equal(counted:checkpoint(30.234567891234), true, 'A due idle checkpoint stays clean')
+equal(encodes, 1, 'A due idle checkpoint does not encode JSON')
+counted_tracker:award({ kind = 'exp', amount = 73, token = 'fractional-save' }, 30.345678912345)
+equal(counted:checkpoint(31.345678912345, true), true, 'Fractional session timing saves normally')
+equal(encodes, 2, 'A durable session checkpoint encodes JSON only once')
+equal(counted:checkpoint(62.456789123456, true), true, 'Written fractional values do not create a false outside-file change')
+equal(encodes, 3, 'The next fractional checkpoint also encodes JSON once')
+MOCK.file_replace_error = true
+equal(counted:checkpoint(63.567891234567, true), false, 'A failed atomic checkpoint remains visible')
+equal(encodes, 4, 'A failed write does not encode a second baseline')
+MOCK.file_replace_error = false
+equal(counted:checkpoint(64.678912345678, true), true, 'A failed write keeps the previous baseline for retry')
+equal(encodes, 5, 'A successful checkpoint retry encodes once')
+local counted_file = MOCK_INSTALL_PATH .. '/config/addons/momentum/session_encoding-100.json'
+local recorded = assert(store.read(counted_file))
+equal(recorded.entries[1].payload.session_exp, 73, 'The forced checkpoint keeps the recorded EXP total')
+recorded.next_id = recorded.next_id + 1
+assert(store.write(counted_file, recorded))
+local before_conflict = encodes
+equal(counted:checkpoint(65.789123456789, true), false, 'A genuine outside-file edit still stops the next checkpoint')
+equal(encodes, before_conflict, 'A refused outside-file edit does not encode or overwrite the session')
+equal(counted:current().session_exp, 73, 'A refused checkpoint keeps the unsaved session in memory')
+json.encode = encode
 return checks .. ' assertions'

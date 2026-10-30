@@ -1,0 +1,6 @@
+[
+  {"frame":2,"lua":"PREVIEW.progress_fills(0); PREVIEW.view.dynamis={active=true,start_time=100,end_time=200}"},
+  {"frame":4,"lua":"PREVIEW.progress_fills(0); PREVIEW.view.dynamis.remaining=25"},
+  {"frame":6,"lua":"PREVIEW.timer_fill=PREVIEW.progress_fills(1); settings.dynamis.layout_active=false; PREVIEW.view.percent=.5"},
+  {"frame":8,"lua":"local width=PREVIEW.progress_fills(1); assert(math.abs(width-PREVIEW.timer_fill*2)<.1,'Normal EXP progress did not return after leaving Dynamis')"}
+]

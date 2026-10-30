@@ -25,6 +25,14 @@ New event layouts should start from their compact defaults only when that mode h
 
 ## Verify
 
+For Farming, test confirmed solo and party treasure awards separately from new pool drops. Old pool refreshes must not increase Pool drops seen, and an existing item later won by the current player must count once. Lot/pass updates, another player's win, failed or lost awards, purchases, trades, crafting, and bag moves must not add received loot. Check current character/job recovery, duplicate packets, slot reuse, zoning, and saved sessions. Fishing, HELM, digging, and Steal remain outside Farming's supported sources.
+
+Check all twelve Farming readouts, item and stack goals, wanted-item and low-space alerts, and manual prices. Validate zero against unknown values and confirm that estimates remain separate from actual gil. Rate warm-up uses the first personal item and unpaused observed time; Gil/HR keeps its existing clock. Pause/reset must affect Farming session statistics without changing active chain, buff, ring, zone, or event timers and event-specific drop totals. Do not replay missed or paused items after resume.
+
+Packet checks must include Ashita-style userdata with only the supported event fields. Missing compatibility aliases must not stop normal reads or startup buffering. Reject blocked, injected, malformed, and truncated packets, and confirm that Dynamis receives the same valid updates as the other trackers.
+
+Switch Farming manually and through **Use Farming outside events**, including entering and leaving each automatic event layout. Existing customized EXP/Merits/Farming banks must return intact, and the fallback starts off. Repeat with shared layouts on and off during sequential character switches; share settings without mixing statistics. Check the Farming page, watched-item search, item IDs, unit prices, goal fill, received/recent lists, and copied summary. Name search must remain incremental and do no startup catalog scan.
+
 From the project folder with Python 3.12 and the dependencies described in [tests/README.txt](../tests/README.txt):
 
 ```powershell
@@ -41,7 +49,21 @@ For a performance change, compare operation counts with a previous archive and r
 
 For Dynamis, check a readable Perpetual Hourglass, extensions, a reload and late join, zone changes, found drops versus personal awards, duplicate pool updates, and the separate clear-totals action. Check that EXP reset and pause preserve Dynamis timing and collection, the prior layout returns on exit, unseen objectives stay unknown, and chosen alerts stay quiet during initial loading. Verify the recorded registration countdown without describing it as confirmed account eligibility. Include partial-run and saved-history behavior in the results.
 
-For Bar mode, switch among EXP, Merits, Dynamis, Assault, Limbus, BCNM, KSNM, and ENM from both settings and chat. Check that each keeps its readout edits through switching, closing settings, reloading, and zoning, with automatic switching enabled. Return to Automatic and check that it uses the saved event or earning-mode layout. Selecting a bar must not change gameplay mode, reset a session or run, or stop timers or event collection. Check manual event layouts outside their zones with unknown run readings.
+For Bar mode, switch among EXP, Merits, Farming, Dynamis, Assault, Limbus, BCNM, KSNM, and ENM from both settings and chat. Check that each keeps its readout edits through switching, closing settings, reloading, and zoning, with automatic switching enabled. Return to Automatic and check that it uses the saved event, Farming fallback, or earning-mode layout. Selecting a bar must not change gameplay mode, reset a session or run, or stop timers or event collection. Check manual event layouts outside their zones with unknown run readings.
+
+Check event alerts and saved records:
+
+- Enable each Assault or battlefield alert, then check its notice and sound through a normal observed event and its test button. Observed alerts must honor Quiet conditions and Time between alerts. Test buttons must still work while muted, and loading a saved run must not replay old alerts.
+- Save, reload, and continue Dynamis and event records with fractional timer values, including fallback-clock timing. Unchanged records must save without a false conflict, and an actual external edit must still be detected. A clean record must not encode JSON on every frame or empty save attempt.
+
+For the optional subjob display, check the following and record actual client results separately:
+
+- Fresh settings and older layouts without this option start with **Show subjob and level** off. An already saved choice must stay saved. Add or select **Job and level**, then toggle the option under **Selected readout**. Only its subjob text should change, with one main job icon and the existing labels, dividers, and order kept. Check the text fallback when no icon is available, wide and narrow bars, and centered readouts.
+- Compare both jobs and levels with the game menu before, during, and after Level Sync. Include a subjob below its possible level cap, no available subjob, and a support job restriction. A missing level stays `--`; a missing subjob does not retain an earlier job name. Pause and Reset session must leave this live information updating.
+- Give EXP and Merits different subjob choices, with **Job and level** enabled in each. Check manual switching, Automatic with **Switch saved EXP / Merits layouts** on and off, and entering and leaving each event layout. Each layout must restore its own choice through reloads and profile loading.
+- With shared layouts off, give two characters different choices, switch main-to-alt-to-main, and reload. Each must restore its own layout and show only its current job information. Repeat with **Use one layout for all characters** on: the shared choice follows both characters, while the displayed jobs and levels remain character-specific. Turn sharing off, edit the active character's layout, and switch through both again; the other character must retain its own layout. Returning to a character must not reapply an older linked job profile. Shared settings must not be polled between these actions.
+- With the option off or the Job readout disabled, there must be no subjob getters. With it on, query it only during existing player samples. Unchanged job text must reuse its cached readings and layout between frames.
+- Search for **subjob**, choose **Job and level**, and change the actual checkbox. It must not open an unrelated readout editor. Check that normal searches such as divider still open the intended editor. Profiles must omit the unsupported **Reset this section** action while other tabs retain their own resets; the separately confirmed **Reset layout** must keep saved profiles.
 
 For Time in zone and event tracking, keep source, offline, and live results separate:
 
@@ -51,8 +73,9 @@ For Time in zone and event tracking, keep source, offline, and live results sepa
 - Check Stored Beastmen's Seals and Stored Kindred's Seals against Shami after talking, depositing either seal type, buying each supported orb, and withdrawing seals. Confirmed item receipt must update the affected stored balance once. Cancelling, a full Inventory, duplicate updates, and an unrelated item receipt must not spend seals. Carried readouts must count Inventory only, including while the EXP session is paused or reset.
 - Check BCNM, KSNM, and ENM countdown packets, late entry, reloads, and normal remaining-time messages. An advertised full limit must not start a fresh countdown for an existing run. Estimates need `~`; absent timing information stays unknown. Check repeated enemies, reinforcements, changing waves, reward crates, confirmed results, and personal bests without treating every death as a win.
 - Check ENM key-item acquisition and the timer NPC's ready timestamp. Consuming the item and winning must not start another wait. Fights sharing the same key item must share one cooldown. **ENM wait on bar** must select the correct group outside the fight without claiming every ENM is ready.
-- Check Limbus at Cosmo-Cleanse consumption on entry, with the twenty-hour character wait kept separate from the optional **Limbus account reminder**. Check Dynamis at successful registration with its account-wide seventy-two-hour lockout. Use two local characters with the same **Account group**, then different groups and a blank group. Only recorded activity can be shared. A finished wait must not claim full entry eligibility.
-- Check all eight saved mode layouts through Automatic entry/exit, EXP or merit earning changes, profiles, reloads, shared layouts, and settings resets. Account grouping must remain a character preference through profiles, shared layouts, appearance Undo, and resets.
+- Check Limbus at Cosmo-Cleanse consumption on entry, with the twenty-hour character wait kept separate from the optional **Limbus account reminder**. Check Dynamis at successful registration with its account-wide seventy-two-hour lockout. Switch between two local characters with the same **Account group**, then different groups and a blank group. Only recorded activity can be shared. A finished wait must not claim full entry eligibility.
+- A successfully loaded account record must not be re-read while its countdown advances. Changing characters or groups and reloading must load the saved timers; a newly observed deadline must refresh the record before updating it. Failed reads must retry at a bounded interval.
+- Check all nine saved mode layouts through Automatic entry/exit, EXP or merit earning changes, profiles, reloads, shared layouts, and settings resets. Account grouping must remain a character preference through profiles, shared layouts, appearance Undo, and resets.
 - Reset Display in each event mode and check that its own starter returns. Reset Events while an event layout is active, then switch through EXP and Merits; their saved readouts must remain intact. These settings resets must stay separate from Reset session.
 - Check wanted-drop filtering and pagination, event history and copied summaries, corrupt/conflicting save files, alert enabled counts, and all new alerts starting off. Pause or Reset session must preserve event timers, objectives, drops, cooldowns, and the selected layout.
 - Load at launcher startup and during a run. Normal entry, menu, balance, and countdown updates during the three-second startup wait must stay in order, without adding time to a countdown or replaying EXP rewards. Zoning, changing characters, unloading, or invalid data must discard stale context.
@@ -92,6 +115,8 @@ For centered readouts, check a wide fixed-width bar and a narrow bar with overfl
 
 For sounds, check both bundled MP3s and a custom WAV, volumes, repeated Play, chosen alerts, character changes, and unload while playback is starting. File selection must not open an audio decoder. The first Play must leave the game responsive while the player starts. Record actual Windows and Proton results separately from standalone and offline tests.
 
+Include a custom MP3 and WAV with filenames longer than 160 bytes and at the supported 200-byte limit. Both food and event alerts must keep the exact filename through saving, profile loading, and reloading. A 201-byte name must be rejected without selecting an existing shorter filename. Select Dynamis outside a run and with unknown time: its progress fill must stay empty. A known active timer must fill normally, and EXP or LP progress must return when those layouts are selected.
+
 ```powershell
 python tools/build_release.py
 ```
@@ -111,6 +136,14 @@ python tools/release_notes.py --out tests/out/release-notes.md
 ```
 
 Check the notes against the final changes and include the update steps that preserve `config/addons/momentum/`. Keep verification results separate from feature claims, and do not describe a local archive as published.
+
+Before release, reload in game with the Ashita font and a selected Windows font.
+Check the chosen font after changing it in Appearance, loading a profile, and
+switching characters with sharing on and off. A missing font must use Ashita.
+Record any reload hitch separately from the normal three-second startup wait.
+Check rewards, gil changes, effect-end alerts, and event countdowns received
+while the remaining client searches finish. Queued Momentum commands must run
+once, after the bar is ready. Unloading during setup must cancel further work.
 
 ## Create a draft
 
