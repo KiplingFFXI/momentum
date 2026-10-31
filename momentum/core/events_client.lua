@@ -179,8 +179,8 @@ function methods:seed_pool(now)
     self.pool_seeded = true;
     for slot = 0, 9 do
         local item = call(inventory, 'GetTreasurePoolItem', slot);
-        if item and type(item.Id) == 'number' and item.Id > 0 and type(item.Count) == 'number' and item.Count > 0 then
-            self.core:drop({ slot = slot, item_id = item.Id, count = item.Count, old = true }, now, self:utc(now));
+        if item and type(item.ItemId) == 'number' and item.ItemId > 0 and type(item.Count) == 'number' and item.Count > 0 then
+            self.core:drop({ slot = slot, item_id = item.ItemId, count = item.Count, old = true }, now, self:utc(now));
         end
     end
 end

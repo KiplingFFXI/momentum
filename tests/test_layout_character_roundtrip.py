@@ -299,6 +299,68 @@ class LayoutCharacterRoundtripTests(unittest.TestCase):
                 assert(not app.state.broken and #MOCK.commands==0);
             ''')
 
+    def test_shared_failed_save_survives_real_logout_login_and_return(self):
+        with tempfile.TemporaryDirectory() as folder:
+            lua = self.start(folder)
+            write_settings(folder, "local s=require('ui.defaults').make();s.appearance_version=2;s.style.palette_version=1;s.bar.width=1300;s.job_links['1']='Second private';s.window.font_size=22;s.account.group='second-group';return T(s)", 'Second_1002')
+            lua.execute('''
+                local app=MOMENTUM_TEST;
+                app.settings().job_links['1']='Main private';
+                app.settings().window.font_size=17;
+                app.settings().account.group='main-group';
+                app.state.dirty=true;MOCK.frame(.25);
+                assert(app.services.shared(true));
+                local store=require('core.file_store');
+                local original=store.write;
+                local shared=MOCK_INSTALL_PATH..'/config/addons/momentum/shared_layout.json';
+                local blocked=true;
+                store.write=function(path,...)
+                    if path:gsub('\\\\','/')==shared and blocked then
+                        return false,'Test shared file is temporarily unavailable';
+                    end;
+                    return original(path,...);
+                end;
+                app.settings().display.divider=' first pending ';
+                app.state.dirty=true;MOCK.frame(.25);
+                assert(app.state.dirty and app.state.retry_at);
+
+                -- The real settings library saves the old file, loads defaults
+                -- on logout, then selects the next character before callbacks.
+                audit_logout();audit_login('Second',1002,1);
+                assert(app.settings().shared and app.settings().display.divider==' first pending ');
+                assert(app.settings().job_links['1']=='Second private');
+                assert(app.settings().window.font_size==22 and app.settings().account.group=='second-group');
+                app.settings().display.divider=' latest pending ';
+                app.state.dirty=true;MOCK.frame(.25);
+                audit_logout();audit_login('Tester',1001,1);
+                assert(app.settings().shared and app.settings().display.divider==' latest pending ');
+                assert(app.settings().job_links['1']=='Main private');
+                assert(app.settings().window.font_size==17 and app.settings().account.group=='main-group');
+                assert(app.state.dirty and app.state.retry_at);
+
+                local main=assert(loadfile(MOCK_INSTALL_PATH..'/config/addons/momentum/Tester_1001/settings.lua'))();
+                local second=assert(loadfile(MOCK_INSTALL_PATH..'/config/addons/momentum/Second_1002/settings.lua'))();
+                assert(main.job_links['1']=='Main private' and main.window.font_size==17 and main.account.group=='main-group');
+                assert(second.job_links['1']=='Second private' and second.window.font_size==22 and second.account.group=='second-group');
+                assert(store.read(shared).layout.display.divider~=' latest pending ');
+
+                blocked=false;MOCK.frame(11);
+                assert(not app.state.dirty and app.state.retry_at==nil);
+                assert(store.read(shared).layout.display.divider==' latest pending ');
+                store.write=original;
+                assert(CLIENT_SETTINGS.reload());MOCK.frame(.25);
+                assert(app.settings().display.divider==' latest pending ');
+                assert(app.settings().job_links['1']=='Main private');
+                assert(app.settings().window.font_size==17 and app.settings().account.group=='main-group');
+                assert(not app.state.broken and #MOCK.commands==0);
+            ''')
+            fresh = client_runtime(folder)
+            load_entry(fresh)
+            self.assertEqual(fresh.eval('MOMENTUM_TEST.settings().display.divider'), ' latest pending ')
+            self.assertEqual(fresh.eval("MOMENTUM_TEST.settings().job_links['1']"), 'Main private')
+            self.assertEqual(fresh.eval('MOMENTUM_TEST.settings().window.font_size'), 17)
+            self.assertEqual(fresh.eval('MOMENTUM_TEST.settings().account.group'), 'main-group')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -136,9 +136,9 @@ equal(paused_model:view(5).partial, true, 'Ignoring paused awards preserves an e
 
 local fresh = Client.new()
 local seeded = Farming.new(); seeded:observe(true, 0)
-pool[2] = { Id = 100, Count = 12 }
-pool[3] = { Id = 65535, Count = 12 }
-pool[4] = { Id = 101, Count = 0 }
+pool[2] = { ItemId = 100, Count = 12 }
+pool[3] = { ItemId = 65535, Count = 12 }
+pool[4] = { ItemId = 101, Count = 0 }
 fresh:observe(snapshot)
 equal(length(fresh.pool), 1, 'Only valid occupied native pool entries seed metadata')
 equal(seeded:view(0).pool_found, 0, 'Seeded old items do not become newly found treasure')

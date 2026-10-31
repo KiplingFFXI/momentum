@@ -15,7 +15,7 @@ ffi.load = function(name)
     return original_load(name);
 end;
 ffi.string = function(value, size)
-    equal(size, 260, 'Directory names always use a bounded read');
+    check(type(size) == 'number' and size > 0 and size <= 260 * 4, 'UTF-8 conversion always uses its bounded output length');
     bounded_reads = bounded_reads + 1;
     return original_string(value, size);
 end;
@@ -26,10 +26,11 @@ equal(libraries.kernel32, nil, 'Import does not load the directory library');
 equal(libraries.winmm, nil, 'Import does not load the audio library');
 MOCK.fs[sound.BUILT_IN], MOCK.fs[sound.FOLDER] = false, false;
 sound.refresh();
-equal(libraries.kernel32, nil, 'Absent directories do not load the library');
+equal(libraries.kernel32, 1, 'Wide file checks use one cached native library even when folders are absent');
 equal(#sound.files(), 0, 'Absent directories leave an empty list');
 
 local ansi_name = 'caf' .. string.char(233) .. '.wav';
+local unicode_name = 'caf' .. string.char(195, 169) .. '.wav';
 MOCK.fs[sound.BUILT_IN], MOCK.fs[sound.FOLDER] = true, true;
 MOCK.dirs = {
     [sound.BUILT_IN] = {
@@ -47,13 +48,13 @@ equal(libraries.kernel32, 1, 'First scan loads the library once');
 equal(libraries.winmm, nil, 'Scanning does not load audio');
 equal(MOCK.find_opened, 2, 'Both folders are enumerated');
 equal(MOCK.find_closed, 2, 'Both enumeration handles close');
-equal(MOCK.find_calls[1], sound.BUILT_IN .. '*', 'Bundled scan uses the full folder');
-equal(MOCK.find_calls[2], sound.FOLDER .. '*', 'Custom scan uses the full folder');
-equal(table.concat(sound.files(), '|'), 'B.wav|hidden.wav|linked.wav|Z.mp3|a.MP3|' .. ansi_name .. '|tail.wav',
-    'Sorting, bundled-first deduplication, ANSI bytes and filtering are preserved');
+equal(MOCK.find_calls[#MOCK.find_calls - 1], sound.BUILT_IN .. '*', 'Bundled scan uses the full folder');
+equal(MOCK.find_calls[#MOCK.find_calls], sound.FOLDER .. '*', 'Custom scan uses the full folder');
+equal(table.concat(sound.files(), '|'), 'B.wav|hidden.wav|linked.wav|Z.mp3|a.MP3|' .. unicode_name .. '|tail.wav',
+    'Sorting, bundled-first deduplication, UTF-8 names and filtering are preserved');
 check(bounded_reads > 0, 'The scanner read filenames');
 equal(sound.find('b.wav'), 'B.wav', 'The bundled duplicate remains selectable');
-MOCK.fs[sound.FOLDER .. ansi_name] = true;
+MOCK.fs[sound.FOLDER .. unicode_name] = true;
 check(sound.use(ansi_name, true), 'An ANSI filename remains playable');
 equal(#(MOCK.sound_workers or {}), 0, 'Selecting an ANSI filename does not launch a player');
 equal(#(MOCK.mci or {}), 0, 'Selecting an ANSI filename never enters MCI');
@@ -105,6 +106,7 @@ equal(sound.files()[1025], 'sound-1025.wav', 'The last valid file is retained');
 
 MOCK.no_kernel32 = true;
 package.loaded['core.sound'] = nil;
+package.loaded['core.sound_paths'] = nil;
 local unavailable = require('core.sound');
 local before = libraries.kernel32;
 for _ = 1, 3 do unavailable.refresh(); end;

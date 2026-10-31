@@ -53,14 +53,33 @@ local function newer(a, b)
     return tonumber(a.id) > tonumber(b.id)
 end
 
+local function decode(text)
+    if text == nil then return {} end
+    local ok, data = pcall(json.decode, text)
+    if not ok or type(data) ~= 'table' then
+        return nil, 'The saved file could not be read. It was kept unchanged.'
+    end
+    return data
+end
+
 local function open_store(path, options, character)
     options = options or {}
     local self = setmetatable({ path = path, read = options.read or file_store.read, write = options.write or file_store.write,
         clock = options.clock or os.time, entries = {}, next_id = 1, retention = 30, resume = true,
         tracker = tracker.new(), dirty = false, last_save = nil, last_attempt = nil }, methods)
-    local data, problem = self.read(path)
+    if not options.read and not options.write then
+        self.read_text, self.write_text = options.read_text or file_store.read_text, options.write_text or file_store.write_text
+        self.serialized = {}
+    end
+    local data, problem
+    if self.read_text then
+        self.previous_text, problem = self.read_text(path)
+        if not problem then data, problem = decode(self.previous_text) end
+    else
+        data, problem = self.read(path)
+    end
     if not data then self.blocked, self.error = true, problem or 'The session file could not be read.'; return self end
-    self.previous = copy(data)
+    if not self.read_text then self.previous = copy(data) end
     if next(data) == nil then return self end
     if data.version ~= 1 or type(data.entries) ~= 'table' or #data.entries > LIMIT then
         self.blocked, self.error = true, 'Momentum cannot read this version of the session file. The file has not been changed.'
@@ -120,21 +139,58 @@ function methods:_write(now)
     if self.blocked then return false, self.error end
     local entries = self:_trim()
     self.last_attempt = now
-    local previous, problem = self.read(self.path)
-    if not previous then self.error = problem or 'The session file could not be read.'; return false, self.error end
-    if not equal(previous, self.previous) then
+    local unchanged, problem
+    if self.read_text then
+        local text
+        text, problem = self.read_text(self.path)
+        if not problem then
+            unchanged = text == self.previous_text
+            if not unchanged then
+                local previous, baseline
+                previous, problem = decode(text)
+                baseline = decode(self.previous_text)
+                unchanged = previous and baseline and equal(previous, baseline)
+            end
+        end
+    else
+        local previous
+        previous, problem = self.read(self.path)
+        unchanged = previous and equal(previous, self.previous)
+    end
+    if problem then self.error = problem; return false, self.error end
+    if not unchanged then
         self.error = 'The saved session file changed outside Momentum. Your unsaved progress is still being tracked here; the file has not been overwritten.'
         return false, self.error
     end
     local data = { version = 1, next_id = self.next_id, entries = entries }
     local ok, encoded
-    ok, problem, encoded = self.write(self.path, data)
+    if self.write_text then
+        local fragments, cached = {}, {}
+        for index, entry in ipairs(entries) do
+            local value = self.serialized[entry]
+            if not value then
+                ok, value = pcall(json.encode, entry)
+                if not ok then self.error = 'These changes could not be saved.'; return false, self.error end
+            end
+            fragments[index], cached[entry] = value, value
+        end
+        encoded = '{"version":1,"next_id":' .. string.format('%.0f', self.next_id)
+            .. ',"entries":[' .. table.concat(fragments, ',') .. ']}'
+        ok, problem = self.write_text(self.path, encoded)
+        -- Failed writes keep valid fragments, but never replace the disk baseline.
+        self.serialized = cached
+    else
+        ok, problem, encoded = self.write(self.path, data)
+    end
     self.error = nil
     if not ok then self.error = problem or 'The session file could not be saved.' end
     if ok then
         self.entries, self.dirty, self.last_save = entries, false, now
-        -- Compare the next read with the numbers written by the JSON encoder.
-        self.previous = json.decode(encoded or json.encode(data))
+        if self.write_text then self.previous_text = encoded
+        else
+            -- Compare the next read with the numbers written by the JSON encoder.
+            self.previous = json.decode(encoded or json.encode(data))
+        end
     end
     return ok, self.error
 end
@@ -143,6 +199,7 @@ function methods:_capture(now)
     if self.entry then
         self.entry.payload = self.tracker:export(now)
         self.entry.saved = self:_stamp()
+        if self.serialized then self.serialized[self.entry] = nil end
         self.dirty = true
     end
 end
@@ -201,6 +258,7 @@ function methods:select(snapshot, now, settings)
             if not entry.closed and same(entry.payload.identity, snapshot) then
                 entry.closed = true
                 entry.payload.buckets = {}
+                if self.serialized then self.serialized[entry] = nil end
             end
         end
         self.tracker:observe(snapshot, now)
@@ -256,6 +314,7 @@ function methods:new_session(now, label)
     if not ok then return nil, problem end
     self.entry.closed = true
     self.entry.payload.buckets = {}
+    if self.serialized then self.serialized[self.entry] = nil end
     self.tracker:reset(now, true)
     self:_create(snapshot, now, label and name(label))
     ok, problem = self:checkpoint(now, true)
@@ -278,9 +337,13 @@ function methods:rename(id, label)
         if entry.id == tostring(id) then
             local previous = entry.name
             entry.name = label
+            if self.serialized then self.serialized[entry] = nil end
             self.dirty = true
             local ok, problem = self:_write(self.last_save or 0)
-            if not ok then entry.name = previous end
+            if not ok then
+                entry.name = previous
+                if self.serialized then self.serialized[entry] = nil end
+            end
             return ok, problem
         end
     end

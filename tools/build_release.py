@@ -12,7 +12,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 ADDON = ROOT / 'momentum'
 LICENSE = ROOT / 'LICENSE'
-CORE = 'chains chat cooldowns dynamis dynamis_client dynamis_runtime events events_client events_runtime farming farming_client file_store food gil goals notifications packets phoenix_status player rings sessions sound sound_worker storage tracker'.split()
+CORE = 'chains chat cooldowns dynamis dynamis_client dynamis_runtime events events_client events_runtime farming farming_client file_store food gil goals notifications packets phoenix_status player rings sessions sound sound_paths sound_worker storage tracker'.split()
 UI = 'defaults details dynamis dynamis_layout event_layout events farming fonts history hud job_icons layout migrate modes profiles readouts settings_window theme'.split()
 HELPER = 'bin/momentum-sound.exe'
 HELPER_SOURCE_MARKER = b'MOMENTUM_SOUND_PLAYER_SOURCE_SHA256='

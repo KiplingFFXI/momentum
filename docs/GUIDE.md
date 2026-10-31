@@ -14,7 +14,7 @@ Momentum waits until your character has been ready in-game for three seconds bef
 
 Tracking starts before the remaining client searches finish across frames. The bar appears when those checks are done. Saved timers use the game clock, and sound folders are read only when you open a sound list.
 
-Keep `config/addons/momentum/` when updating. Settings, profiles, shared layouts, session and event history, recorded cooldowns, and custom sounds live there, separate from the addon files. Copy that folder somewhere safe to back up your setup. Updating the addon does not require resetting settings or deleting old sessions.
+Settings, profiles, shared layouts, session and event history, recorded cooldowns, and custom sounds live in `config/addons/momentum/`, separate from the addon files. Addon updates must leave that folder untouched. You can copy it elsewhere to back up your setup. Updating the addon does not require resetting settings or deleting old sessions.
 
 ## Choose a bar mode
 
@@ -281,6 +281,8 @@ Under **Current session**, enter a **Current session name** and choose **Rename 
 
 Records are saved every 30 seconds and on normal unload in `config/addons/momentum/sessions-<character ID>.json`. An unexpected client crash can lose the last unsaved interval. Corrupt or conflicting history files are preserved and reported instead of silently overwritten. Separate characters use separate files.
 
+Normal saves reuse unchanged history records and update the current session. The file format and **Sessions to keep** options stay the same. Large histories still need more disk work than small ones.
+
 ## Phoenix status and planning
 
 The **Details** page shows **Level Sync is off** when sync is off. While synced, it shows your actual and synced levels and their level gap. Your rate uses the EXP you actually receive or retain, including any applied penalties.
@@ -325,7 +327,15 @@ All new events start off. Initial state, reloads, zoning, death, and enabling an
 
 Open **Alerts**, expand **Food**, and check **Play sound** under **Food effect wore off**. This is off by default. Choose a sound from the list, set the volume, and use **Play** to try it. The Play button works while the alert is off. **Food effect ending soon** is a separate alert in the same group, based on the time left on your food effect.
 
-The archive includes **FF VII Save.mp3** and **FF IX Moogle.mp3**. To use your own sound, put an `.mp3` or `.wav` file in `config/addons/momentum/sounds/` and click **Refresh**, then select it for the alert. The full filename stays saved for food and other alerts. If an older version shortened a saved filename, select the full name again. A bundled sound takes priority over a custom file with the same name. The bundled Square Enix sound assets are not covered by the addon's GPL license.
+The archive includes **FF VII Save.mp3** and **FF IX Moogle.mp3**. To use your own sound, put an `.mp3` or `.wav` file in `config/addons/momentum/sounds/` and click **Refresh**, then select it for the alert. **Alerts** shows the permanent folder without opening a tooltip. **Copy sound folder path** copies its full location so you can paste it into your file manager.
+
+Keep custom audio out of `addons/momentum/sounds/`. That folder comes with the addon and can be replaced during an update. If a selected custom sound is there, its warning offers **Copy to permanent folder**. This saves a copy with the same filename, keeps the original in place, and leaves your alert selection unchanged. It never overwrites an existing file. If that name is already taken, Momentum says a permanent file exists and keeps using the addon copy. It cannot tell you that the two files are identical. Give one file a different name, press **Refresh**, and select the intended sound if they are different. Refresh and reopening the menu keep recognizing existing permanent files. Copying happens only when you press the button, not during startup or playback.
+
+Custom filenames support Unicode. If a sound fails, other working sounds can still play, but the failed file stays blocked from automatic retries. Use **Play** to try it again after fixing the file, or **Refresh** to check your sound files again.
+
+Custom audio is user data. Momentum never deletes it or overwrites an existing sound file. Addon updates must leave `config/addons/momentum/sounds/` untouched.
+
+The full filename stays saved for food and other alerts. If an older version shortened a saved filename, select the full name again. A bundled sound takes priority over a custom file with the same name. The bundled Square Enix sound assets are not covered by the addon's GPL license.
 
 The notification plays once after the server reports that your active food ended. Food removal with a status message can also trigger it, so it does not prove the food expired naturally. Ordinary death, loading, zoning, turning the option on, and simply losing an icon stay quiet. A missed or stale message does not produce a delayed alert.
 
@@ -356,6 +366,8 @@ Loading a profile also restores its saved Bar mode. Job profiles keep the manual
 **Job profiles** applies a saved profile when you change main jobs on that character. Logging back in or returning from another character keeps your latest saved layout instead of reloading an older job profile. **Use one layout for all characters** uses a common appearance file; job profiles are inactive while sharing is enabled. Session records stay separate. Turning sharing off copies the current shared appearance to the active character's own settings.
 
 The shared layout loads when Momentum starts, when you switch characters, and when you change the sharing option. Layout edits save normally, without polling the shared file while you play. Turning sharing off keeps the current layout for that character; your other characters keep their own saved layouts.
+
+If a shared save fails, Momentum reports it and keeps the pending edits while you switch characters. It retries at the normal interval. Keep Momentum loaded until the save succeeds; changes that cannot be written are still at risk if the client closes.
 
 All persistent files are under `config/addons/momentum/`:
 

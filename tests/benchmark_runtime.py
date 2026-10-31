@@ -30,8 +30,13 @@ local tracker = require('core.tracker')
 local history = require('ui.history')
 local rings, chat = require('core.rings'), require('core.chat')
 local store, date = require('core.file_store'), os.date
-local file_read = store.read
-store.read = function(...) metrics.file_reads = metrics.file_reads + 1; return file_read(...) end
+if store.read_text then
+    local file_read = store.read_text
+    store.read_text = function(...) metrics.file_reads = metrics.file_reads + 1; return file_read(...) end
+else
+    local file_read = store.read
+    store.read = function(...) metrics.file_reads = metrics.file_reads + 1; return file_read(...) end
+end
 os.date = function(...) metrics.date_formats = metrics.date_formats + 1; return date(...) end
 local ring_read, chat_read = rings.read, chat.read
 rings.read = function(...) metrics.ring_scans = metrics.ring_scans + 1; return ring_read(...) end

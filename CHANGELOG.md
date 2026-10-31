@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.6.2
+
+### Sounds
+
+- **Alerts** now shows the permanent custom-sound folder, with **Copy sound folder path** and **Copy to permanent folder** for sounds still in the addon folder. Copying keeps the original file and alert selection, and never overwrites an existing file. No files are copied during startup or normal playback.
+- Permanent custom sounds are user data. The release package excludes `config/addons/momentum/`, and updates must leave it untouched. Refresh and reopening Alerts recognize an existing permanent copy without offering another copy action.
+- Custom MP3/WAV filenames now support Unicode while keeping older saved filenames working. A failed sound stays blocked from automatic retries even when another sound plays, its capitalization changes, or another alert selects None. **Play** and **Refresh** still let you retry it.
+- All bundled and custom sound choices, volume controls, the isolated sound player, and the Linux sound fix are kept.
+
+### Fixes
+
+- Fixed shared readout edits being lost when a save failed before switching characters. Pending edits keep their normal retry and stay separate from each character's private settings.
+- Fixed received-drop tracking for items already in the treasure pool when Momentum loads or reloads, across Farming, Dynamis, and other events.
+- Fixed the next Imperial Army I.D. tag readout and entry waits that could stay at **0:00** after ending.
+- Fixed **Reset this section** on Display loading EXP readouts in Farming or Automatic Merits, and corrected the active Farming layout label in Automatic.
+- Fixed one character's alert cooldown suppressing alerts on another. Normal alert throttling through zoning is kept.
+
+### Performance
+
+- Reduced session-save work and retained memory by reusing unchanged history records. History files, retention, resume, reset, pause, and protection against corrupt or externally changed files are kept.
+
+### Updating
+
+Enter `/addon unload momentum`, replace `addons/momentum/` with the release's `momentum` folder, then enter `/addon load momentum`. Settings, histories, recorded cooldowns, and custom sounds stay in the separate `config/addons/momentum/` folder. The update must leave that folder unchanged.
+
 ## 1.6.1
 
 - Refreshed the EXP, Dynamis, and event source references to Phoenix's October 30 live code.

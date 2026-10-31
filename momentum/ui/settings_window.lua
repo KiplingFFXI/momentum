@@ -83,7 +83,7 @@ local tips = {
     ['Progress style'] = 'Show progress as a thin line or a fill behind the text. Event layouts use the time left when it is known.',
     ['Fill direction'] = 'Choose which way the progress bar fills. This does not change the readout order.',
     ['Sample state'] = 'Try sample EXP, LP, Farming, Dynamis, Assault, Limbus, or battlefield readings. Your session keeps tracking normally.',
-    ['Sound'] = 'Choose a sound from the list. To add your own .mp3 or .wav, put it in config/addons/momentum/sounds and press Refresh.',
+    ['Sound'] = 'Choose a sound from the list. Keep your own .mp3 or .wav files in config/addons/momentum/sounds/ so they stay separate from addon updates. Press Refresh after adding a file.',
     ['Sound volume'] = '0 is silent. 100 is full volume.',
     ['Profile'] = 'Choose a saved layout, then press Load profile to use it or Delete profile to remove it.',
     ['Job'] = 'Choose the main job you want to set a profile for.',
@@ -413,7 +413,7 @@ local function display_page(settings, services)
     if section('Readouts and order', 'Choose what the bar shows. Drag a :: handle to change the order, or select a row and use First, Up, Down, and Last.', true) then
         if settings.modes.selected == 'auto' then
             local active = settings.events.active_kind and require('ui.modes').names[settings.events.active_kind]
-                or settings.dynamis.layout_active and 'Dynamis' or settings.modes.active == 'merits' and 'Merits' or 'EXP';
+                or settings.dynamis.layout_active and 'Dynamis' or require('ui.modes').names[settings.modes.active] or 'EXP';
             note('Editing ' .. active .. ' layout');
             tip('Your readout edits are saved to this layout. Automatic can switch to another saved layout when its switching options are on.');
         end

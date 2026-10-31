@@ -19,7 +19,9 @@ Author: **Kipling**.
 
 Momentum starts about three seconds after your character is ready in-game. This also applies when loading it from the launcher or reloading it during play.
 
-Updates replace `addons/momentum/`. Leave `config/addons/momentum/` in place; it holds your settings, profiles, session and event history, recorded cooldowns, and custom sounds.
+Updates replace `addons/momentum/`. Your settings, profiles, session and event history, recorded cooldowns, and custom sounds live separately in `config/addons/momentum/`. The release package excludes that folder, and updates must leave it unchanged.
+
+Put custom `.mp3` and `.wav` files in `config/addons/momentum/sounds/`. **Alerts** shows this permanent folder and has **Copy sound folder path**. If a selected custom sound is in the addon folder, use **Copy to permanent folder** before updating. Existing files are never overwritten.
 
 ## Start here
 

@@ -1,0 +1,43 @@
+local rules = require('data.phoenix_rules');
+local defaults = require('ui.defaults');
+local engine = require('core.notifications');
+local checks = 0;
+local function check(value, message)
+    checks = checks + 1;
+    assert(value, message);
+end
+MOCK.load_addon();
+MOCK.fire('load');
+local app = MOMENTUM_TEST;
+local alert = app.settings().alerts.events.level;
+alert.visual, alert.sound, alert.cooldown = true, false, 3600;
+MOCK.now = 4;
+app.sample(MOCK.now);
+MOCK.player.main_level, MOCK.player.exp_needed = 51, rules.tnl[51];
+MOCK.now = 4.25;
+app.sample(MOCK.now);
+check(#app.notifications:take(MOCK.now) == 1, 'The first character gets its real level-up alert');
+local second = defaults.make();
+second.alerts.events.level.visual, second.alerts.events.level.cooldown = true, 3600;
+MOCK.player.server_id, MOCK.player.name = 1002, 'Second';
+MOCK.player.main_level, MOCK.player.exp, MOCK.player.exp_needed = 1, 0, rules.tnl[1];
+MOCK.now = 100;
+MOCK.settings.switch_character(second);
+app.sample(MOCK.now);
+check(#app.notifications:take(MOCK.now) == 0, 'A new character baseline does not fabricate a level-up');
+MOCK.player.main_level, MOCK.player.exp_needed = 2, rules.tnl[2];
+MOCK.now = 100.25;
+app.sample(MOCK.now);
+check(#app.notifications:take(MOCK.now) == 1, 'The previous character cooldown does not suppress the next character');
+
+local settings = defaults.make();
+settings.alerts.events.farm_item.visual, settings.alerts.events.farm_item.cooldown = true, 3600;
+local n = engine.new();
+local event = { id = 'farm_item', message = 'Received item.' };
+check(n:farming(event, 1, settings, false), 'The first farming alert is emitted');
+n:discontinuity();
+check(not n:farming(event, 2, settings, false), 'An ordinary zone discontinuity preserves alert cooldowns');
+n:reset_character();
+check(n:farming(event, 3, settings, false), 'A character reset clears cooldowns for event alert engines too');
+check(#n.token_order == 0, 'Character reset clears prior packet-token ownership');
+return { count = checks };

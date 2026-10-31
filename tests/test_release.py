@@ -40,6 +40,33 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Unexpected'):
             release.addon_files(self.addon)
 
+    def test_release_update_leaves_user_config_and_sounds_untouched(self):
+        install = self.folder / 'client'
+        addons = install / 'addons'
+        addons.mkdir(parents=True)
+        user_folder = install / 'config/addons/momentum'
+        (user_folder / 'sounds').mkdir(parents=True)
+        preserved = {
+            'sounds/Custom.wav': b'original custom audio',
+            'sounds/FF VII Save.mp3': b'personal file with a bundled filename',
+            'settings.lua': b'return { shared = false }',
+            'shared_layout.json': b'{"enabled":false}',
+            'sessions-1001.json': b'{"version":1,"entries":[]}',
+        }
+        for name, data in preserved.items():
+            (user_folder / name).write_bytes(data)
+        package, _, _ = release.build(self.folder / 'candidate', self.addon)
+        with zipfile.ZipFile(package) as archive:
+            for member in archive.infolist():
+                relative = Path(member.filename)
+                self.assertEqual(relative.parts[0], 'momentum')
+                self.assertNotIn('config', relative.parts)
+                self.assertNotIn('..', relative.parts)
+            archive.extractall(addons)
+        self.assertTrue((addons / 'momentum/momentum.lua').is_file())
+        for name, data in preserved.items():
+            self.assertEqual((user_folder / name).read_bytes(), data)
+
     def test_cli_custom_output_directory(self):
         import subprocess
         import sys

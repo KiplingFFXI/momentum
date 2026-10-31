@@ -25,7 +25,7 @@ local inventory = {
     end,
     GetTreasurePoolItem = function(_, slot)
         pool_reads = pool_reads + 1;
-        if slot == 0 then return { Id = 1455, Count = 1, DropTime = 55 }; end
+        if slot == 0 then return { ItemId = 1455, Count = 1, DropTime = 55 }; end
     end,
 };
 local stats = { GetBuffs = function() return { [0] = 157 }; end, HasKeyItem = function() return false; end };

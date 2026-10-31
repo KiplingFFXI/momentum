@@ -35,7 +35,7 @@ memory.GetInventory = function()
             if bag == 0 and slot == 0 then return { Id = 65535, Count = balance }; end;
             if bag == 0 and slot == 1 then return ring; end;
         end,
-        GetTreasurePoolItem = function() return { Id = 0, Count = 0 }; end,
+        GetTreasurePoolItem = function() return { ItemId = 0, Count = 0 }; end,
     };
 end;
 local player = require('core.player');

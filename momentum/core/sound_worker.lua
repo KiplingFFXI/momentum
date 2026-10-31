@@ -1,4 +1,5 @@
 local ffi = require('ffi');
+local paths = require('core.sound_paths');
 local worker = {};
 local methods = {};
 methods.__index = methods;
@@ -41,6 +42,9 @@ local function native()
         int __stdcall momentum_sound_terminate(void*, uint32_t) __asm__("TerminateProcess");
         int __stdcall momentum_sound_close_handle(void*) __asm__("CloseHandle");
         uint32_t __stdcall momentum_sound_last_error(void) __asm__("GetLastError");
+        void* __stdcall momentum_sound_load_library_w(const uint16_t*) __asm__("LoadLibraryW");
+        void* __stdcall momentum_sound_proc_address(void*, const char*) __asm__("GetProcAddress");
+        int __stdcall momentum_sound_free_library(void*) __asm__("FreeLibrary");
     ]]);
     local ok, library = pcall(ffi.load, 'kernel32');
     native_library = ok and library or false;
@@ -52,17 +56,9 @@ local function error_code(library)
     return ok and value or nil;
 end
 
-local function wide(library, value)
-    if type(value) ~= 'string' or #value > 32000 or value:find('%z') then return nil; end
-    local count = library.momentum_sound_multibyte_to_wide(0, 0, value, -1, nil, 0);
-    if count <= 0 or count > 32767 then return nil; end
-    local output = ffi.new('uint16_t[?]', count);
-    if library.momentum_sound_multibyte_to_wide(0, 0, value, -1, output, count) ~= count then return nil; end
-    return output;
-end
-
 function worker.new(path, options)
     options = options or {};
+    path = paths.utf8(path) or path;
     local folder = path:match('^(.*[\\/])') or '';
     return setmetatable({ path = path, launcher_path = folder .. 'momentum-sound-launch.dll',
         backend = options.backend, trace = options.trace, log_path = '' }, methods);
@@ -70,7 +66,7 @@ end
 
 function methods:set_trace(callback, path)
     self.trace = type(callback) == 'function' and callback or nil;
-    self.log_path = type(path) == 'string' and not path:find('%z') and path or '';
+    self.log_path = paths.utf8(path) or '';
 end
 
 function methods:log(event, fields)
@@ -87,7 +83,26 @@ end
 
 function methods:launcher()
     if self.launcher_library ~= nil then return self.launcher_library or nil; end
-    local ok, library = pcall(ffi.load, self.launcher_path);
+    local ok, library = pcall(function()
+        if not self.launcher_path:find('[\128-\255]') then return ffi.load(self.launcher_path); end
+        local system = self:library();
+        local path = system and paths.wide(system, self.launcher_path);
+        local handle = path and system.momentum_sound_load_library_w(path);
+        if handle == nil then return nil; end
+        handle = ffi.gc(handle, system.momentum_sound_free_library);
+        local result = { handle = handle };
+        for name, signature in pairs({
+            momentum_launch_begin = 'void* (__cdecl *)(const uint16_t*, const uint16_t*)',
+            momentum_launch_poll = 'int (__cdecl *)(void*, momentum_sound_process_info*, uint32_t*, uint32_t*)',
+            momentum_launch_cancel = 'void (__cdecl *)(void*)',
+            momentum_launch_release = 'void (__cdecl *)(void*)',
+        }) do
+            local address = system.momentum_sound_proc_address(handle, name);
+            if address == nil then return nil; end
+            result[name] = ffi.cast(signature, address);
+        end
+        return result;
+    end);
     self.launcher_library = ok and library or false;
     return self.launcher_library or nil;
 end
@@ -181,6 +196,8 @@ function methods:start(path, volume)
         or type(volume) ~= 'number' or volume ~= volume or volume < 0 or volume > 1000 or volume % 1 ~= 0 then
         return false, 'That sound could not play. Try another file.';
     end
+    path = paths.utf8(path);
+    if not path then return false, 'That sound filename could not be read. Try another file.'; end
     local stopped, problem = self:stop();
     if not stopped then
         self.pending = { path = path, volume = volume };
@@ -193,7 +210,7 @@ function methods:start(path, volume)
         local parent = tonumber(library.momentum_sound_current_process_id());
         if not parent or parent <= 0 or parent > 4294967295 or parent % 1 ~= 0 then return false; end
         local command = quote(self.path) .. ' ' .. quote(path) .. ' ' .. tostring(volume) .. ' ' .. tostring(parent) .. ' ' .. quote(self.log_path);
-        local application, arguments = wide(library, self.path), wide(library, command);
+        local application, arguments = paths.wide(library, self.path), paths.wide(library, command);
         if not application or not arguments then return false; end
         local launcher = self:launcher();
         if not launcher then return false; end

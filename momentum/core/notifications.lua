@@ -27,6 +27,11 @@ function methods:discontinuity()
     self.queue, self.notice, self.enabled = {}, nil, {}
 end
 
+function methods:reset_character()
+    self:discontinuity()
+    self.last, self.tokens, self.token_order = {}, {}, {}
+end
+
 function methods:reset_session(view)
     -- Keep active effect warnings when a new session starts.
     if self.before then

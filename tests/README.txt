@@ -39,6 +39,8 @@ For focused checks:
   tests/.venv/Scripts/python tests/run.py test_farming_modes.lua test_farming_readouts.lua test_farming_ui.lua
   tests/.venv/Scripts/python tests/test_farming_persistence.py
   tests/.venv/Scripts/python tests/run.py test_sound_filename_settings.lua test_ui_audit_regressions.lua
+  tests/.venv/Scripts/python tests/run.py test_sound_storage.lua test_sound_storage_ui.lua test_sound_storage_entry.lua
+  tests/.venv/Scripts/python tests/test_sound_storage_native.py
   tests/.venv/Scripts/python tests/preview/verify_preview.py settings-shared-characters
   tests/.venv/Scripts/python tests/test_layout_character_roundtrip.py
   tests/.venv/Scripts/python tests/test_settings_client.py
@@ -87,8 +89,13 @@ The focused suites cover:
   pause/resume edges, sound throttling, failures, and retries.
 - Sound-folder scans, bundled/custom ordering, duplicate names, bounded native
   filename reads, and search-handle cleanup when enumeration fails.
+- Permanent-folder guidance, cached addon-folder warnings, and explicit sound
+  copies that keep the original, refuse overwrites, and preserve alert choices.
+  Native temporary-file checks cover case-only collisions and playback after
+  the addon-folder copy is removed. Copying never starts an audio decoder.
 - Complete custom sound filenames through tidying and JSON profile saves at
-  the 200-byte player limit; overlong names cannot become another selected file.
+  the 200-character limit, subject to filesystem path limits; overlong names
+  cannot become another selected file. Unicode names may use more UTF-8 bytes.
 - Empty progress fills for inactive or unknown Dynamis timers, direct subjob
   search results, and supported reset actions on the intended settings tabs.
 - Normal client status, observation gaps, identity, packet bounds, and ring data.
@@ -270,7 +277,34 @@ fonts, safe loading between frames, and cached choices across profiles and
 sequential character changes. These checks do not measure a live reload hitch.
 Startup regressions also cover one client search per frame, tracking during
 resource setup, cancellation on unload, and saved event timers with a different
-computer clock. Sound lists stay lazy, and session saves encode once.
+computer clock. Sound lists stay lazy. Session checkpoints encode only the current
+record and reuse unchanged archived JSON without changing the history format.
 Client-only regression checks cover normal buff timers, local chain estimates,
 Level Sync levels, and migration of removed server-dependent settings. Former
 custom status messages remain ordinary chat and cannot change tracking.
+
+Adversarial regression coverage
+-----------------------------
+
+The native pending-pool fixture uses userdata that rejects unsupported fields,
+matching the installed treasureitem_t ItemId contract. It exercises received-drop
+packets through the production observers, including reloads and duplicates.
+Deadline checks cover Imperial Army I.D. tags, Limbus, and ENM waits, including
+fractional seconds and the transition to Wait ended. Display reset follows each
+active bank, and the rendered Automatic label names Farming correctly.
+
+Shared-save recovery covers temporarily failed writes through actual Ashita
+settings-library logout/login callbacks, sequential characters, private settings,
+and a fresh reload. Alert tests separate character cooldowns from zone throttling.
+Sound checks cover per-file failures, independent retries, permanent-file status,
+and native Unicode enumeration/copy with no-overwrite protection. Standalone sound
+playback uses zero volume and does not establish live Phoenix or Wine behavior.
+
+Session serialization tests check archive cache invalidation, rename/delete/reset,
+retention, formatting-only external edits, genuine conflicts, corruption, failed
+writes, and reload totals. To compare old and new saves using real temporary files:
+
+  tests/.venv/Scripts/python tests/benchmark_session_saves.py
+
+These are offline timings. Checkpoints still read and atomically replace the
+whole JSON file; the optimization removes repeated conversion of cold history.

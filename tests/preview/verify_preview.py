@@ -382,6 +382,25 @@ def main():
                 '--set', 'visibility.mode=' + mode, '--set', 'bar.anchor=' + anchor,
                 '--set', 'bar.chat_alignment=center', '--exec', 'settings.preview.show=false',
                 '--input-script', str(HERE / 'chat_center_hold_input.json')]))
+    for kind in ('food', 'event'):
+        for suffix, extra in (
+            ('wide', ['--window-size', '920', '660']),
+            ('narrow', ['--window-size', '400', '660']),
+            ('large-font', ['--window-size', '400', '660', '--set', 'window.font_size=28']),
+        ):
+            cases.append(('sound-storage-' + kind + '-' + suffix, [
+                '--window', 'settings', '--tab', 'Alerts', '--frames', '26',
+                '--exec', "PREVIEW.sound_storage_case='%s'; dofile('tests/preview/sound_storage_fixture.lua')" % kind,
+                '--input-script', str(HERE / ('sound_storage_' + ('event_' if kind == 'event' else '') + 'input.json')),
+            ] + extra))
+    for suffix, extra in (
+        ('narrow', ['--window-size', '400', '660']),
+        ('large-font', ['--window-size', '400', '660', '--set', 'window.font_size=28']),
+    ):
+        cases.append(('sound-storage-existing-' + suffix, [
+            '--window', 'settings', '--tab', 'Alerts', '--frames', '4',
+            '--exec', "PREVIEW.sound_storage_case='food'; dofile('tests/preview/sound_storage_fixture.lua'); PREVIEW.sound_storage_exists=true; PREVIEW.scroll_target='food_end/Refresh##food_sound'",
+        ] + extra))
     if len(sys.argv) > 1:
         selected = set(sys.argv[1:])
         missing = selected - {name for name, _ in cases}

@@ -72,8 +72,8 @@ function methods:observe(snapshot)
     self.seeded = true;
     for slot = 0, 9 do
         local item = call(inventory, 'GetTreasurePoolItem', slot);
-        if item and integer(item.Id, 65534) and item.Id > 0 and integer(item.Count, 999) and item.Count > 0 then
-            self.pool[slot] = { id = item.Id, count = item.Count, seeded = true };
+        if item and integer(item.ItemId, 65534) and item.ItemId > 0 and integer(item.Count, 999) and item.Count > 0 then
+            self.pool[slot] = { id = item.ItemId, count = item.Count, seeded = true };
         end
     end
 end

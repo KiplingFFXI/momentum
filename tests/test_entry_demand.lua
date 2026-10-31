@@ -16,7 +16,8 @@ end
 local player, tracker, rings = require('core.player'), require('core.tracker'), require('core.rings')
 local file_store, rules = require('core.file_store'), require('data.phoenix_rules')
 local reads, views, scans, writes, hud_draws, window_draws = 0, 0, 0, 0, 0, 0
-local read, new, write = player.read, tracker.new, file_store.write
+local read, new, write_text = player.read, tracker.new, file_store.write_text
+local session_path
 player.read = function(...) reads = reads + 1; return read(...) end
 player.utc = function() return 1800000000 + math.floor(MOCK.now) end
 tracker.new = function(...)
@@ -25,7 +26,14 @@ tracker.new = function(...)
     instance.view = function(...) views = views + 1; return view(...) end
     return instance
 end
-file_store.write = function(...) writes = writes + 1; return write(...) end
+file_store.write_text = function(path, text)
+    local okay, problem, encoded = write_text(path, text)
+    if okay and path:match('sessions%-%d+%.json$') then
+        writes = writes + 1
+        session_path = path
+    end
+    return okay, problem, encoded
+end
 local ready_at, last_ring_utc = 0, nil
 rings.read = function(utc)
     scans, last_ring_utc = scans + 1, utc
@@ -67,6 +75,8 @@ equal(app.tracker().session_exp, 123, 'Hidden collection retains reward')
 local previous_writes = writes
 MOCK.frame(31)
 equal(writes > previous_writes, true, 'Scheduled session save continues while hidden')
+local durable = assert(file_store.read(session_path))
+equal(durable.entries[1].payload.session_exp, 123, 'Hidden scheduled checkpoint writes the collected EXP to disk')
 settings.alerts.events.level.visual = true
 MOCK.frame(0.25)
 MOCK.player.main_level, MOCK.player.exp_needed = 51, rules.tnl[51]

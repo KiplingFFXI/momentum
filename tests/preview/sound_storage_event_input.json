@@ -1,0 +1,18 @@
+[
+  {"frame":2,"target":"Copy sound folder path"},
+  {"frame":3,"target":"Copy sound folder path","down":true},
+  {"frame":4,"down":false},
+  {"frame":5,"lua":"assert(PREVIEW.sound_storage_clipboard,'Folder path was not copied');PREVIEW.scroll_target=PREVIEW.sound_storage_row..'/Copy to permanent folder'"},
+  {"frame":7,"target":"Copy to permanent folder"},
+  {"frame":8,"target":"Copy to permanent folder","down":true},
+  {"frame":9,"down":false},
+  {"frame":11,"lua":"PREVIEW.assert_sound_storage_copy(1);PREVIEW.scroll_target=PREVIEW.sound_storage_row..'/'..(PREVIEW.sound_storage_case=='event' and 'Refresh##alert_sound' or 'Refresh##alert_sound')"},
+  {"frame":14,"target":"Refresh##alert_sound"},
+  {"frame":15,"target":"Refresh##alert_sound","down":true},
+  {"frame":16,"down":false},
+  {"frame":18,"lua":"assert(PREVIEW.sound_storage_refreshes==1,'Refresh did not remain available');assert(not PREVIEW.sound_storage_saved,'Refresh kept stale copy protection');PREVIEW.scroll_target=PREVIEW.sound_storage_row..'/Copy to permanent folder'"},
+  {"frame":20,"target":"Copy to permanent folder"},
+  {"frame":21,"target":"Copy to permanent folder","down":true},
+  {"frame":22,"down":false},
+  {"frame":24,"mouse":[-100,-100],"lua":"PREVIEW.assert_sound_storage_copy(2)"}
+]

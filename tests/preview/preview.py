@@ -161,6 +161,10 @@ PREVIEW.services = {
         return require('core.phoenix_status').plan(actual,sync,population)
     end,
     sound_files = function () return { 'FF VII Save.mp3', 'FF IX Moogle.mp3', 'Custom.wav' } end,
+    sound_folder = function () return 'X:\\\\PhoenixXI\\\\config\\\\addons\\\\momentum\\\\sounds\\\\' end,
+    sound_location = function (name)
+        return { kind = (name == 'FF VII Save.mp3' or name == 'FF IX Moogle.mp3') and 'bundled' or 'permanent' }
+    end,
     sound_refresh = function () PREVIEW.sound_refreshes = (PREVIEW.sound_refreshes or 0) + 1 end,
     sound_play = function () PREVIEW.sound_plays = (PREVIEW.sound_plays or 0) + 1; return true end,
     sound_problem = function () return nil end,

@@ -12,6 +12,8 @@ local current_name = { '' };
 local current_status;
 local food_sound_status;
 local history_cache;
+local sound_status_settings;
+local sound_status = {};
 
 local num, time = readouts.format_number, readouts.format_time;
 local function known(value, suffix)
@@ -191,17 +193,43 @@ local alert_groups = {
 local alert_names = { food_end = 'Food effect wore off' };
 for _, event in ipairs(defaults.ALERTS) do alert_names[event[1]] = event[2]; end
 
+local function sound_storage(id, name, services, ui)
+    if name == '' or not services.sound_location then return; end
+    local location = services.sound_location(name);
+    if not location or location.kind ~= 'addon' then return; end
+    ui.note('Update warning: this custom sound is in addons/momentum/sounds/. An update can replace that folder.');
+    local status = sound_status[id];
+    if status and (status.name ~= name or status.saved and not location.saved_copy) then sound_status[id], status = nil, nil; end
+    if not location.saved_copy and location.can_save ~= false then
+        if imgui.Button('Copy to permanent folder') and services.sound_save_custom then
+            local okay, message = services.sound_save_custom(name);
+            status = { name = name, saved = okay == true,
+                message = message or (okay and 'A copy is saved in the permanent folder.'
+                    or 'That sound could not be copied. Your original file was kept.') };
+            sound_status[id] = status;
+        end
+        ui.tip('Copy this sound to config/addons/momentum/sounds/. Your original stays where it is, and existing files are never replaced.');
+    end
+    if status then ui.note(status.message);
+    elseif location.saved_copy then ui.note('A copy is saved in the permanent folder.');
+    elseif location.permanent_exists then
+        ui.note('A file with this name is already in the permanent folder. Momentum is using the addon copy. Rename one if they are different.');
+    end
+end
+
 local function food_alert(settings, services, ui, files)
     ui.checkbox(settings.alerts, 'food_enabled', 'Play sound', 'Play your chosen sound when your food effect wears off. Uncheck this to turn it off.');
     ui.combo('Sound', settings.alerts.food_sound ~= '' and settings.alerts.food_sound or '(none)', files, function(value)
         settings.alerts.food_sound, food_sound_status = value, nil;
+        sound_status.food_end = nil;
         ui.changed();
     end);
+    sound_storage('food_end', settings.alerts.food_sound, services, ui);
     if settings.alerts.food_sound == '' then ui.note('Choose a sound to hear this alert.'); end
     if #files == 1 then ui.note('No .mp3 or .wav files were found. Add one, then press Refresh.'); end
     if imgui.Button('Refresh##food_sound') then
         if services.sound_refresh then services.sound_refresh(); end
-        food_sound_status = nil;
+        food_sound_status, sound_status = nil, {};
     end
     ui.tip('Refresh the list after adding a sound file.');
     ui.slider(settings.alerts, 'food_volume', 'Sound volume', 0, 100, '%.0f%%', 'Volume for the food effect alert. Zero is silent.');
@@ -224,10 +252,17 @@ local function event_alert(settings, id, services, ui, sound_files)
     if not event.visual and not event.sound then return; end
     if event.sound then
         local files = sound_files();
-        ui.combo('Sound', event.file ~= '' and event.file or '(none)', files, function(value) event.file = value; ui.changed(); end);
+        ui.combo('Sound', event.file ~= '' and event.file or '(none)', files, function(value)
+            event.file, sound_status[id] = value, nil;
+            ui.changed();
+        end);
+        sound_storage(id, event.file, services, ui);
         if event.file == '' then ui.note('Choose a sound to hear this alert.'); end
         if #files == 1 then ui.note('No .mp3 or .wav files were found. Add one, then press Refresh.'); end
-        if imgui.Button('Refresh##alert_sound') and services.sound_refresh then services.sound_refresh(); end
+        if imgui.Button('Refresh##alert_sound') then
+            if services.sound_refresh then services.sound_refresh(); end
+            sound_status = {};
+        end
         ui.tip('Refresh the list after adding a sound file.');
         ui.slider(event, 'volume', 'Sound volume', 0, 100, '%.0f%%', 'Volume for this alert. Zero is silent.');
     end
@@ -265,7 +300,15 @@ local function event_alert(settings, id, services, ui, sound_files)
 end
 
 function details.alerts(settings, _, services, ui)
-    ui.note('Open an alert type, then check Show notice, Play sound, or both. Uncheck both to turn an alert off.');
+    if sound_status_settings ~= settings.alerts then sound_status_settings, sound_status = settings.alerts, {}; end
+    ui.note('Custom sounds go in config/addons/momentum/sounds/.');
+    imgui.BeginDisabled(not services.sound_folder or not services.copy);
+    if imgui.Button('Copy sound folder path') and services.sound_folder and services.copy then
+        services.copy(services.sound_folder());
+    end
+    ui.tip('Copy the full path to your permanent sound folder. Add .mp3 or .wav files there, then press Refresh on the alert.');
+    imgui.EndDisabled();
+    ui.note('Open an alert type to choose notices and sounds.');
     local files;
     local function sound_files()
         if not files then
@@ -430,6 +473,7 @@ end
 
 function details.cancel_pending()
     history_confirmation = nil;
+    sound_status_settings, sound_status = nil, {};
 end
 
 return details;

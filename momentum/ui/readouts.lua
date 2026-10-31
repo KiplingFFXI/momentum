@@ -42,7 +42,7 @@ local independent = {};
 for _, item in ipairs(defaults.READOUTS) do
     local id = item.id;
     independent[id] = id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_'
-        or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil
+        or id:sub(1, 8) == 'assault_' or id:sub(1, 5) == 'zone_' or id:sub(1, 5) == 'dyna_' or currency_fields[id] ~= nil
         or inventory_fields[id] ~= nil or gil_fields[id] ~= nil or storage_fields[id] ~= nil or id:sub(1, 5) == 'farm_';
 end
 
@@ -54,6 +54,11 @@ local function cooldown_for(view, key)
     for _, cooldown in ipairs(view.events and view.events.cooldowns or {}) do
         if cooldown.key == key then return cooldown; end
     end
+end
+
+local function cooldown_text(cooldown)
+    return cooldown and cooldown.remaining == 0 and 'Wait ended'
+        or (cooldown and cooldown.estimated and '~' or '') .. readouts.format_time(cooldown and cooldown.remaining);
 end
 
 local function item_count(items)
@@ -80,7 +85,7 @@ local function event_value(id, view, settings)
             or settings.events.enm_group > 0 and 'enm:' .. settings.events.enm_group or event.cooldown_key;
         if id == 'enm_next_entry' and key and key:sub(1, 4) ~= 'enm:' then key = nil; end
         local cooldown = key and cooldown_for(view, key);
-        return cooldown and cooldown.remaining == 0 and 'Wait ended' or (cooldown and cooldown.estimated and '~' or '') .. readouts.format_time(cooldown and cooldown.remaining);
+        return cooldown_text(cooldown);
     end
     if not event.active then return '--'; end
     if id == 'event_name' then return event.name or '--';
@@ -200,7 +205,7 @@ local function value_for(id, view, settings)
         if bag.used == nil or bag.capacity == nil then return '--'; end
         return readouts.format_number(bag.used, false) .. ' / ' .. readouts.format_number(bag.capacity, false);
     end
-    if id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_' or id:sub(1, 7) == 'assault_' or id:sub(1, 5) == 'zone_' or currency_fields[id] or inventory_fields[id] then
+    if id:sub(1, 6) == 'event_' or id:sub(1, 7) == 'limbus_' or id:sub(1, 4) == 'enm_' or id:sub(1, 8) == 'assault_' or id:sub(1, 5) == 'zone_' or currency_fields[id] or inventory_fields[id] then
         return event_value(id, view, settings);
     end
     if id:sub(1, 5) == 'dyna_' then return dynamis_value(id, view, settings.display.short); end
@@ -428,7 +433,7 @@ local function append_dependency(parts, view, id, field, short, settings)
             or settings.events.enm_group > 0 and 'enm:' .. settings.events.enm_group or view.events and view.events.cooldown_key;
         if id == 'enm_next_entry' and key and key:sub(1, 4) ~= 'enm:' then key = nil; end
         local cooldown = key and cooldown_for(view, key);
-        value = cooldown and (tostring(cooldown.estimated) .. ':' .. tostring(math.floor((cooldown.remaining or 0) + 0.5))) or nil;
+        value = cooldown_text(cooldown);
     elseif field == 'events.inventory' then
         value = value and value[inventory_fields[id]];
     elseif id == 'farm_rate' or id == 'farm_watched_rate' then

@@ -178,9 +178,9 @@ end
 package.loaded.ffi = {
     os = 'Windows', cdef = function () end,
     new = function(kind)
-        if kind == 'uint16_t[?]' then return {}; end
+        if kind == 'uint16_t[?]' or kind == 'char[?]' then return {}; end
         if kind == 'uint32_t[1]' then return { [0] = 0 }; end
-        assert(kind == 'momentum_find_data_a[1]' or kind == 'momentum_sound_startup_w[1]'
+        assert(kind == 'momentum_find_data_w[1]' or kind == 'momentum_sound_startup_w[1]'
             or kind == 'momentum_sound_process_info[1]', 'Unexpected mock FFI allocation: ' .. tostring(kind));
         return { [0] = {} };
     end,
@@ -192,7 +192,7 @@ package.loaded.ffi = {
         assert(kind == 'void*', 'Unexpected mock FFI cast: ' .. tostring(kind));
         return value;
     end,
-    string = function(value, size) return value:sub(1, size); end,
+    string = function(value, size) return (type(value) == 'table' and value.text or value):sub(1, size); end,
     load = function (name)
         if name:match('momentum%-sound%-launch%.dll$') then
             if MOCK.no_sound_launcher then error('Sound launcher unavailable'); end
@@ -244,17 +244,118 @@ package.loaded.ffi = {
         end
         if name == 'kernel32' then
             if MOCK.no_kernel32 then error('Directory library unavailable'); end
+            local function file_key(path) return path:gsub('/', '\\'):gsub('\\+$', ''):lower(); end
+            local function known_file(path)
+                local wanted = file_key(path);
+                for key, value in pairs(MOCK.fs) do if file_key(key) == wanted then return value; end end
+                return ashita.fs.exists(path) and true or nil;
+            end
+            local function utf16(text, codepage)
+                local result, length, index = {}, 0, 1;
+                while index <= #text do
+                    local first, value, width = text:byte(index), nil, 1;
+                    if first == 0 then break; end
+                    if codepage == 0 or first < 128 then value = first;
+                    elseif first >= 194 and first <= 244 then
+                        width = first < 224 and 2 or first < 240 and 3 or 4;
+                        value = first % (width == 2 and 32 or width == 3 and 16 or 8);
+                        if index + width - 1 > #text then return nil; end
+                        for offset = 1, width - 1 do
+                            local next_byte = text:byte(index + offset);
+                            if next_byte < 128 or next_byte > 191 then return nil; end
+                            value = value * 64 + next_byte - 128;
+                        end
+                        if value < (width == 2 and 128 or width == 3 and 2048 or 65536)
+                            or value > 1114111 or value >= 55296 and value <= 57343 then return nil; end
+                    else return nil; end
+                    if value > 65535 then
+                        value = value - 65536;
+                        result[length], result[length + 1] = 55296 + math.floor(value / 1024), 56320 + value % 1024;
+                        length = length + 2;
+                    else result[length], length = value, length + 1; end
+                    index = index + width;
+                end
+                result[length] = 0;
+                return result, length;
+            end
+            local function utf8_text(input, length)
+                local result, index = {}, 0;
+                while index < length do
+                    local value = input[index];
+                    if value >= 55296 and value <= 56319 then
+                        local tail = input[index + 1];
+                        if not tail or tail < 56320 or tail > 57343 or index + 1 >= length then return nil; end
+                        value = 65536 + (value - 55296) * 1024 + tail - 56320;
+                        index = index + 1;
+                    elseif value >= 56320 and value <= 57343 then return nil; end
+                    if value < 128 then result[#result + 1] = string.char(value);
+                    elseif value < 2048 then result[#result + 1] = string.char(192 + math.floor(value / 64), 128 + value % 64);
+                    elseif value < 65536 then result[#result + 1] = string.char(224 + math.floor(value / 4096), 128 + math.floor(value / 64) % 64, 128 + value % 64);
+                    else result[#result + 1] = string.char(240 + math.floor(value / 262144), 128 + math.floor(value / 4096) % 64, 128 + math.floor(value / 64) % 64, 128 + value % 64); end
+                    index = index + 1;
+                end
+                return table.concat(result);
+            end
             local function fill(data, entry)
                 local name = type(entry) == 'table' and entry.name or entry;
                 data[0].dwFileAttributes = type(entry) == 'table' and entry.attributes or 0;
                 local value = type(entry) == 'table' and entry.raw or (name .. '\0');
-                data[0].cFileName = (value .. string.rep('\0', 260)):sub(1, 260);
+                local wide = utf16(value, 65001) or utf16(value, 0);
+                data[0].cFileName = {};
+                for i = 0, 259 do data[0].cFileName[i] = wide[i] or 0; end
             end
             return {
-                momentum_sound_multibyte_to_wide = function(_, _, input, _, output)
+                momentum_sound_attributes_w = function(wide)
+                    local path = wide.text;
+                    MOCK.sound_attribute_reads = (MOCK.sound_attribute_reads or 0) + 1;
+                    local key = file_key(path);
+                    local override = MOCK.sound_attributes and MOCK.sound_attributes[key];
+                    if override ~= nil then
+                        if override == false then MOCK.sound_copy_last_error = 2; return 4294967295; end
+                        return override;
+                    end
+                    local exists = known_file(path);
+                    if exists == false or exists == nil and key:match('%.%w+$') then
+                        MOCK.sound_copy_last_error = 2;
+                        return 4294967295;
+                    end
+                    return key:match('%.%w+$') and 0x80 or 0x10;
+                end,
+                momentum_sound_path_error = function() return MOCK.sound_copy_last_error or 5; end,
+                momentum_copy_sound_file_w = function(source_w, destination_w, fail_if_exists)
+                    local source, destination = source_w.text, destination_w.text;
+                    assert(fail_if_exists == 1, 'Sound copies must never overwrite an existing file');
+                    MOCK.sound_copies = MOCK.sound_copies or {};
+                    MOCK.sound_copies[#MOCK.sound_copies + 1] = { source = source, destination = destination };
+                    if known_file(destination) then MOCK.sound_copy_last_error = 80; return 0; end
+                    if MOCK.sound_copy_error then MOCK.sound_copy_last_error = MOCK.sound_copy_error; return 0; end
+                    MOCK.fs[destination] = true;
+                    if MOCK.sound_contents then MOCK.sound_contents[destination] = MOCK.sound_contents[source]; end
+                    return 1;
+                end,
+                momentum_sound_multibyte_to_wide = function(codepage, flags, input, _, output)
+                    MOCK.sound_conversions = (MOCK.sound_conversions or 0) + 1;
                     if MOCK.sound_conversion_error then return 0; end
-                    if output then output.text = input; end
-                    return #input + 1;
+                    local values, length = utf16(input, codepage);
+                    if not values then return 0; end
+                    if output then
+                        for index = 0, length do output[index] = values[index]; end
+                        output.text = utf8_text(values, length);
+                    end
+                    return length + 1;
+                end,
+                momentum_sound_wide_to_multibyte = function(codepage, _, input, length, output)
+                    assert(codepage == 65001, 'Converted sound names must be UTF-8');
+                    if MOCK.sound_conversion_error then return 0; end
+                    local text = utf8_text(input, length);
+                    if not text then return 0; end
+                    if output then output.text = text; end
+                    return #text;
+                end,
+                momentum_sound_create_directory_w = function(wide)
+                    if MOCK.sound_mkdir_error then MOCK.sound_copy_last_error = 5; return 0; end
+                    MOCK.fs[wide.text] = true;
+                    return 1;
                 end,
                 momentum_sound_current_process_id = function() return 1234; end,
                 momentum_sound_last_error = function() return MOCK.sound_last_error or 5; end,
@@ -294,7 +395,8 @@ package.loaded.ffi = {
                     handle.closed = true;
                     return 1;
                 end,
-                momentum_find_first_file_a = function(pattern, data)
+                momentum_find_first_file_w = function(wide, data)
+                    local pattern = wide.text;
                     MOCK.find_calls = MOCK.find_calls or {};
                     MOCK.find_calls[#MOCK.find_calls + 1] = pattern;
                     if MOCK.find_first_error then error('Directory open failed'); end
@@ -305,7 +407,7 @@ package.loaded.ffi = {
                     MOCK.find_opened = (MOCK.find_opened or 0) + 1;
                     return handle;
                 end,
-                momentum_find_next_file_a = function(handle, data)
+                momentum_find_next_file_w = function(handle, data)
                     if MOCK.find_next_error then error('Directory enumeration failed'); end
                     handle.index = handle.index + 1;
                     if handle.index > #handle.entries then return 0; end

@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.6.1';
+addon.version = '1.6.2';
 addon.desc = 'A compact EXP, merit, gil, inventory and event tracking bar for Phoenix.';
 
 local flush_commands;
@@ -53,9 +53,9 @@ local account_cooldowns = require('core.cooldowns').new(folder, {
     report = function(message) print('[Momentum] ' .. message); end });
 local shared_file = folder .. 'shared_layout.json';
 local saved_profiles = profiles.new(folder);
-local saved_sessions = sessions.new(folder .. 'sessions.json', { write = function(path, data)
+local saved_sessions = sessions.new(folder .. 'sessions.json', { write_text = function(path, text)
     ashita.fs.create_dir(folder);
-    return store.write(path, data);
+    return store.write_text(path, text);
 end });
 local undo = history.new();
 local migration_pending = false;
@@ -205,6 +205,11 @@ local function apply_shared(data)
 end
 
 local function refresh_shared()
+    if state.pending_shared then
+        apply_shared(state.pending_shared);
+        state.dirty = true;
+        return;
+    end
     local data, err = store.read(shared_file);
     if (data == nil) then
         if (not state.shared_error) then say(err .. ' Check shared_layout.json.'); end
@@ -219,7 +224,9 @@ local function write_shared(data)
     local current, err = store.read(shared_file);
     if not current then return false, err; end
     ashita.fs.create_dir(folder);
-    return store.write(shared_file, data);
+    local ok, problem = store.write(shared_file, data);
+    if ok then state.pending_shared = nil; end
+    return ok, problem;
 end
 
 local function save()
@@ -402,7 +409,8 @@ services.reset_section = function(section)
         if section == 'display' then
             if s.events.active_kind then defaults.apply_starter(s, event_layout.names[s.events.active_kind]);
             elseif s.dynamis.layout_active then defaults.apply_starter(s, 'Dynamis');
-            elseif s.modes.selected == 'merits' then defaults.apply_starter(s, 'Merits'); end
+            elseif s.modes.active == 'merits' then defaults.apply_starter(s, 'Merits');
+            elseif s.modes.active == 'farming' then defaults.apply_starter(s, 'Farming'); end
         end
         if (section == 'tracking') then s.visibility, s.display.mode = fresh.visibility, fresh.display.mode; end
     end);
@@ -504,6 +512,12 @@ services.fonts = fonts.names;
 services.capabilities = player.capabilities;
 services.sound_files = sound.files;
 services.sound_refresh = sound.refresh;
+services.sound_folder = function()
+    pcall(sound.make_folder);
+    return sound.FOLDER;
+end;
+services.sound_location = sound.location;
+services.sound_save_custom = sound.save_custom;
 services.farming_item = function(id) return farming_client:item(id); end;
 services.farming_items = function(query) return farming_client:search(query); end;
 services.farming_storage_visible = function(open)
@@ -1043,6 +1057,7 @@ end
 
 ashita.events.register('unload', 'momentum_unload', function()
     state.startup_stopped, state.startup_task = true, nil;
+    state.retry_at = nil;
     finish_edit();
     checkpoint(now(), true);
     local saved, issue = dynamis:save(now(), true);
@@ -1059,9 +1074,9 @@ settings.register('settings', 'momentum_settings', function(loaded)
     dynamis:detach(now());
     events:detach(now());
     account_cooldowns:detach();
-    dynamis_notifications:discontinuity();
-    event_notifications:discontinuity();
-    farming_notifications:discontinuity();
+    dynamis_notifications:reset_character();
+    event_notifications:reset_character();
+    farming_notifications:reset_character();
     farming_client:reset();
     state.farming_space = nil;
     state.dynamis_edit = nil;
@@ -1070,14 +1085,19 @@ settings.register('settings', 'momentum_settings', function(loaded)
     tracker = detached;
     session_result(session_problem == nil, session_problem);
     -- The settings library already selected the new character's file.
+    local shared_retry = state.retry_at;
     if (state.settings.shared and state.dirty) then
-        local ok, err = write_shared({ enabled = true, layout = profiles.capture(state.settings) });
-        if not ok then say(err); end
+        local pending = { enabled = true, layout = profiles.capture(state.settings) };
+        local ok, err = write_shared(pending);
+        if not ok then
+            state.pending_shared, shared_retry = pending, now() + 10;
+            say(err);
+        end
     end
     hud.cancel_layout_gesture();
     food:discontinuity();
     phoenix:discontinuity();
-    notifications:discontinuity();
+    notifications:reset_character();
     state.rings, state.rings_at, state.rings_details, state.rings_needed, state.snapshot = nil, nil, nil, nil, nil;
     sound.close();
     state.food_pending, state.food_enabled, state.food_sound = nil, nil, nil;
@@ -1085,6 +1105,7 @@ settings.register('settings', 'momentum_settings', function(loaded)
     state.own = own_settings(loaded);
     state.settings = state.own;
     state.before, state.edit_baseline, state.dirty, state.last_job, state.retry_at = nil, nil, migration_pending, nil, nil;
+    if state.pending_shared then state.retry_at = shared_retry; end
     state.player_id, state.sampled, state.last_job_id = nil, -1, nil;
     chat_window.reset();
     hud.reset_chat_anchor();

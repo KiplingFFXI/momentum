@@ -10,22 +10,31 @@ if (ffi.os == 'Windows') then
     ]]);
 end
 
-function store.read(path)
+function store.read_text(path)
     local file = io.open(path, 'rb');
     if (file == nil) then
         if (ashita.fs.exists(path)) then return nil, 'The saved file could not be opened.'; end
-        return {};
+        return nil;
     end
     local text = file:read('*a');
     file:close();
+    if text == nil then return nil, 'The saved file could not be read.'; end
+    return text;
+end
+
+function store.read(path)
+    local text, problem = store.read_text(path);
+    if text == nil then
+        if problem then return nil, problem; end
+        return {};
+    end
     local ok, value = pcall(json.decode, text);
     if (not ok or type(value) ~= 'table') then return nil, 'The saved file could not be read. It was kept unchanged.'; end
     return value;
 end
 
-function store.write(path, value)
-    local ok, text = pcall(json.encode, value);
-    if (not ok) then return false, 'These changes could not be saved.'; end
+function store.write_text(path, text)
+    if type(text) ~= 'string' then return false, 'These changes could not be saved.'; end
     serial = serial + 1;
     local process = ffi.os == 'Windows' and tonumber(ffi.C.GetCurrentProcessId()) or 0;
     local temp = ('%s.%d.%d.tmp'):format(path, process, serial);
@@ -39,14 +48,22 @@ function store.write(path, value)
     end
     local moved;
     if (ffi.os == 'Windows') then
+        local ok;
         ok, result = pcall(ffi.C.MoveFileExA, temp, path, 9);
         moved = ok and result ~= 0;
     else
+        local ok;
         ok, result = pcall(os.rename, temp, path);
         moved = ok and result ~= nil;
     end
     if (not moved) then os.remove(temp); return false, 'The saved file could not be replaced.'; end
     return true, nil, text;
+end
+
+function store.write(path, value)
+    local ok, text = pcall(json.encode, value);
+    if (not ok) then return false, 'These changes could not be saved.'; end
+    return store.write_text(path, text);
 end
 
 return store;
