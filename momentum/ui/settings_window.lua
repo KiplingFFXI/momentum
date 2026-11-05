@@ -657,7 +657,7 @@ local function tracking_page(settings, view, services)
             { name = 'Always visible', value = 'always' },
         });
         if settings.visibility.mode == 'always' then
-            note('Keep the bar up while typing, viewing the map, and during cutscenes. Your other hide settings are saved but do not apply. /momentum hide still works when Sample preview is off.');
+            note('Keep the bar up while typing, reading the chat log, viewing the map, and during cutscenes. Your other hide settings are saved but do not apply. /momentum hide still works when Sample preview is off.');
         else
             if settings.visibility.mode == 'chat' then
                 note('Hide when your main chat log closes, including in Free placement.');
@@ -665,6 +665,7 @@ local function tracking_page(settings, view, services)
                 note('Keep the bar up when chat closes. Your other hide settings still apply.');
             end
             checkbox(settings.tracking, 'hide_idle', 'Hide until the session starts', 'Keep the bar hidden until your session timer starts. Sample previews still appear.');
+            checkbox(settings.visibility, 'chat_log', 'Hide while the chat log is open', 'Hide the bar while you read the expanded chat log. Typing uses Hide while typing. Tracking and timers keep running.');
             checkbox(settings.visibility, 'map', 'Hide while the map is open', 'Hide the bar while viewing the in-game map.');
             checkbox(settings.visibility, 'event', 'Hide during cutscenes', 'Hide the bar during cutscenes and NPC conversations.');
             checkbox(settings.visibility, 'game_ui', 'Hide with the game UI', 'Hide the bar when the game interface is hidden.');
@@ -863,7 +864,7 @@ local search_sections = {
     { 'Display', 'Dividers and formatting', 'divider custom spacing separator short numbers hover chain strip' },
     { 'Tracking', 'EXP and merits', 'rate hour window exp limit points mode merits reward sample earned net' },
     { 'Tracking', 'Progress goal', 'goal target level session buffer merit' },
-    { 'Tracking', 'Visibility', 'hide map event game ui visibility chat close disappear keep always permanent typing idle' },
+    { 'Tracking', 'Visibility', 'hide map event game ui visibility chat log expanded full screen open close disappear keep always permanent typing idle' },
     { 'Farming', 'Farming options', 'farming items hour automatic layout profile pool drops received copy summary' },
     { 'Farming', 'Watched items and goal', 'farming wanted item search number watched stacks quantity goal fill last drop' },
     { 'Farming', 'Items received', 'farming item loot received count breakdown rate per hour last drop filter' },

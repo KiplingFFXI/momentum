@@ -107,8 +107,10 @@ Choose **Chat alignment > Center** to center a compact bar above or below chat. 
 Under **Tracking > Visibility**, **Bar visibility** controls what happens when chat closes:
 
 - **Hide with chat** hides when your main chat log closes, even in Free placement. Your other hide settings apply.
-- **Keep visible when chat closes** keeps the bar up when chat closes. Your typing, map, cutscene, game UI, and idle hide settings still apply.
-- **Always visible** also keeps the bar up while typing, viewing the map, during cutscenes and NPC conversations, while the game UI is hidden, and before a session starts. Your other hide settings are saved for when you switch back.
+- **Keep visible when chat closes** keeps the bar up when chat closes. Your typing, expanded chat log, map, cutscene, game UI, and idle hide settings still apply.
+- **Always visible** also keeps the bar up while typing, reading the expanded chat log, viewing the map, during cutscenes and NPC conversations, while the game UI is hidden, and before a session starts. Your other hide settings are saved for when you switch back.
+
+**Hide while the chat log is open** starts off. Turn it on under **Tracking > Visibility** to hide the bar while reading the expanded chat log. The bar returns when you close it. Settings stay available, and tracking and timers keep running. **Hide while typing** remains a separate choice.
 
 New or reset settings start with **Keep visible when chat closes**. Momentum also uses this default when no usable choice was saved. Your saved Hide with chat, Keep visible when chat closes, or Always visible choice is kept. The old placement-based setting still becomes Hide with chat for an attached bar, or Keep visible when chat closes for Free placement. Attaching or freely placing the bar afterward does not change your choice.
 

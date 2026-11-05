@@ -191,7 +191,7 @@ function defaults.make()
         style = { preset = 'Phoenix', palette_version = 0, font = 'Segoe UI', font_size = 13, opacity = 0.96, rounding = 5, fill_style = 'rail',
             fill_direction = 'right', border = false, text_shadow = false,
             colors = theme.colors('Phoenix'), window_colors = theme.window_colors('Phoenix') },
-        visibility = { mode = 'keep', map = true, event = true, game_ui = true },
+        visibility = { mode = 'keep', chat_log = false, map = true, event = true, game_ui = true },
         window = { open = false, width = 920, height = 660, x = 80, y = 60, tab = 'Display', font_size = 18,
             sections = {}, compact_navigation = false },
         preview = { show = false, scenario = 'Leveling' }, shared = false, job_links = {},

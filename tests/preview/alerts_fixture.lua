@@ -4,7 +4,9 @@ local settings = PREVIEW.settings;
 local ids = {};
 PREVIEW.alert_sections, PREVIEW.alert_widgets, PREVIEW.alert_headers = {}, {}, {};
 PREVIEW.notification_calls = 0;
-if PREVIEW.alert_case == 'notification' then
+if PREVIEW.alert_case == 'food' then
+    PREVIEW.scroll_target = 'header/Food';
+elseif PREVIEW.alert_case == 'notification' then
     settings.alerts.events.level.file = 'Custom.wav';
     settings.alerts.events.level.volume = 37;
     settings.alerts.events.level.cooldown = 12;

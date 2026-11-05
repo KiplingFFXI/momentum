@@ -1,6 +1,6 @@
 addon.name = 'momentum';
 addon.author = 'Kipling';
-addon.version = '1.6.2';
+addon.version = '1.6.3';
 addon.desc = 'A compact EXP, merit, gil, inventory and event tracking bar for Phoenix.';
 
 local flush_commands;
@@ -953,13 +953,15 @@ local function render()
     refresh_storage(state.snapshot, t);
     local visibility = state.settings.visibility.mode;
     local always = visibility == 'always';
-    if not always and player.hidden(state.settings.visibility) then hud.cancel_layout_gesture(); finish_edit(); return; end
+    local game_hidden, chat_log_hidden;
+    if not always then game_hidden, chat_log_hidden = player.hidden(state.settings.visibility); end
+    if game_hidden then hud.cancel_layout_gesture(); finish_edit(); return; end
     local typing = player.typing();
     local hide_idle = not always and state.settings.tracking.hide_idle and not dynamis:view(t, state.settings).active
         and not events:view(t, state.settings).active
         and tracker:_elapsed(math.max(t, tracker.last_time or t)) == 0 and not tracker.farming.started and not tracker.gil.started;
     local hud_visible = ((not state.hidden and not hide_idle) or state.settings.preview.show)
-        and not (not always and state.settings.bar.hide_typing and typing);
+        and not (not always and state.settings.bar.hide_typing and typing) and not chat_log_hidden;
     if not hud_visible and not state.settings.window.open then hud.cancel_layout_gesture(); finish_edit(); return; end
     local context = { typing = typing, now = t, preview = state.settings.preview.show };
     local display = imgui.GetIO().DisplaySize;

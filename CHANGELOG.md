@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.3
+
+- Added **Hide while the chat log is open** under **Tracking > Visibility**. It starts off and hides the bar while you read the expanded log. The bar returns when you close it. Tracking, alerts, timers, and settings stay available.
+- The choice stays saved with profiles and shared layouts. **Hide while typing** remains separate, and **Always visible** keeps the bar up without clearing your saved hide choices.
+- All sound options, the Linux fix, and permanent custom-sound protections are kept.
+
+### Updating
+
+Enter `/addon unload momentum`, replace `addons/momentum/` with the release's `momentum` folder, then enter `/addon load momentum`. Settings, histories, recorded cooldowns, and custom sounds stay in the separate `config/addons/momentum/` folder. The update must leave that folder unchanged.
+
 ## 1.6.2
 
 ### Sounds

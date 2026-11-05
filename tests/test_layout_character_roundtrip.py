@@ -135,6 +135,44 @@ class LayoutCharacterRoundtripTests(unittest.TestCase):
             self.assertFalse(fresh.eval('MOMENTUM_TEST.settings().display.show_subjob'))
             self.assertFalse(fresh.eval('MOMENTUM_TEST.state.broken'))
 
+    def test_chat_log_hide_choice_survives_private_and_shared_character_roundtrips(self):
+        for shared in (False, True):
+            with self.subTest(shared=shared), tempfile.TemporaryDirectory() as folder:
+                lua = self.start(folder)
+                self.assertFalse(lua.eval('MOMENTUM_TEST.settings().visibility.chat_log'))
+                lua.execute('''
+                    local app=MOMENTUM_TEST;
+                    app.settings().visibility.chat_log=true;
+                    app.settings().bar.hide_typing=false;
+                    app.state.dirty=true;app.services.save();MOCK.frame(.25);
+                    assert(CLIENT_SETTINGS.reload());MOCK.frame(.25);
+                    assert(app.settings().visibility.chat_log);
+                    assert(not app.settings().bar.hide_typing);
+                ''')
+                if shared:
+                    lua.execute('assert(MOMENTUM_TEST.services.shared(true))')
+                lua.execute("audit_logout();audit_login('Second',1002,1)")
+                self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.chat_log'), shared)
+                lua.execute('''
+                    local app=MOMENTUM_TEST;
+                    app.settings().visibility.chat_log=false;
+                    app.state.dirty=true;app.services.save();MOCK.frame(.25);
+                    assert(CLIENT_SETTINGS.reload());MOCK.frame(.25);
+                    assert(not app.settings().visibility.chat_log);
+                    audit_logout();audit_login('Tester',1001,1);
+                ''')
+                self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.chat_log'), not shared)
+                self.assertFalse(lua.eval('MOMENTUM_TEST.settings().bar.hide_typing'))
+                self.assertTrue(lua.eval('CLIENT_SETTINGS.reload()'))
+                lua.execute('MOCK.frame(.25)')
+                self.assertEqual(lua.eval('MOMENTUM_TEST.settings().visibility.chat_log'), not shared)
+                self.assertFalse(lua.eval('MOMENTUM_TEST.state.broken'))
+                fresh = client_runtime(folder)
+                load_entry(fresh)
+                self.assertEqual(fresh.eval('MOMENTUM_TEST.settings().visibility.chat_log'), not shared)
+                self.assertFalse(fresh.eval('MOMENTUM_TEST.settings().bar.hide_typing'))
+                self.assertFalse(fresh.eval('MOMENTUM_TEST.state.broken'))
+
     def test_shared_layout_follows_sequential_characters_modes_and_reload(self):
         with tempfile.TemporaryDirectory() as folder:
             lua = self.start(folder)

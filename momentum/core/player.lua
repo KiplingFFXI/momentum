@@ -91,23 +91,42 @@ function player.typing()
     return bit.band(AshitaCore:GetChatManager():IsInputOpen(), 1) ~= 0;
 end
 
+local function menu_pointer(value, extra)
+    return type(value) == 'number' and value >= 0x10000 and value <= 0xFFFFFFFF - extra
+        and value == math.floor(value);
+end
+
+-- Reuse the map's focus slot. Ordinary chat input has a different native menu name.
+local function menu_visibility(want_map, want_log)
+    local menu = ashita.memory.read_uint32(focus_slot);
+    if not menu_pointer(menu, 7) then return false, false; end
+    local header = ashita.memory.read_uint32(menu + 4);
+    if not menu_pointer(header, 0x55) then return false, false; end
+    local low = ashita.memory.read_uint32(header + 0x4E);
+    if type(low) ~= 'number' or low < 0 or low > 0xFFFFFFFF or low ~= math.floor(low) then return false, false; end
+    local map = want_map and bit.band(low, 0xFFFFFF) == 0x70616D or false;
+    if map or not want_log or low ~= 0x6C6C7566 then return map, false; end
+    -- The full name is "menu    fulllog", with a final space or zero byte.
+    if ashita.memory.read_uint32(header + 0x46) ~= 0x756E656D
+        or ashita.memory.read_uint32(header + 0x4A) ~= 0x20202020 then return false, false; end
+    local high = ashita.memory.read_uint32(header + 0x52);
+    return false, high == 0x20676F6C or high == 0x00676F6C;
+end
+
 function player.hidden(visibility)
     local entity = GetPlayerEntity();
     if (visibility.event and ((event_flag ~= 0 and ashita.memory.read_uint8(event_flag) == 1)
         or (event_flag == 0 and entity ~= nil and entity.StatusServer == 4))) then return true; end
     if (visibility.game_ui and interface ~= 0 and ashita.memory.read_uint8(interface + 0xB4) == 1) then return true; end
-    if (visibility.map and focus_slot ~= 0) then
-        local menu = ashita.memory.read_uint32(focus_slot);
-        if (menu ~= 0) then
-            local header = ashita.memory.read_uint32(menu + 4);
-            if (header ~= 0 and bit.band(ashita.memory.read_uint32(header + 0x4E), 0xFFFFFF) == 0x70616D) then return true; end
-        end
+    if (visibility.map or visibility.chat_log) and menu_pointer(focus_slot, 3) then
+        local ok, map, log = pcall(menu_visibility, visibility.map, visibility.chat_log);
+        if ok then return map, log; end
     end
-    return false;
+    return false, false;
 end
 
 function player.capabilities()
-    return { map = focus_slot ~= 0, game_ui = interface ~= 0, status_time = time_struct ~= 0 };
+    return { map = focus_slot ~= 0, chat_log = menu_pointer(focus_slot, 3), game_ui = interface ~= 0, status_time = time_struct ~= 0 };
 end
 
 function player.utc()
